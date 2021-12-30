@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"reflect"
 	"strconv"
 	"strings"
@@ -146,7 +147,7 @@ func (e *Encoding) Deserialize(r io.Reader, i interface{}) error {
 		return err
 	}
 
-	buf, err := io.ReadAll(r)
+	buf, err := ioutil.ReadAll(r)
 	if err != nil {
 		return fmt.Errorf("ascii: failed reading incoming buffer")
 	}
