@@ -1,0 +1,10 @@
+The current ASCII package implements general key-value parsing for types.  It
+is more complicated than it needs to be, especially since we have so few types.
+
+Consider replacing the general ASCII package with something simpler.  For
+example, just parse values into
+
+	type Map map[string][]string
+
+and add methods to dequeue a value for a key.  Each type could then extract its
+own values without too much code duplication.
