@@ -1,0 +1,3 @@
+The requests for Leaves, InclusionProof, and ConsistencyProof in pkg/requests
+needs to be updated to reflect that we are not longer HTTP POSTing get-*
+endpoints.  See 2022-01-04-proposal-get-endpoints for further details.
