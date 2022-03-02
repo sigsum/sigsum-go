@@ -1,0 +1,9 @@
+The following constants should be reversed:
+
+	pkg/types/crypto.go:13: InteriorNodePrefix = byte(0x00)
+	pkg/types/crypto.go:14: LeafNodePrefix     = byte(0x01)
+
+(LeafNodePrefix should be 0x00 as we follow the RFC 6962 hash strategy.)
+
+Prints in sigsum-log-go are affected by this bug but not the log's Merkle tree
+as it is computed by Trillian and not sigsum-log-go.  Fix until next tag.
