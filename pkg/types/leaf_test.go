@@ -140,7 +140,7 @@ func TestLeafFromASCII(t *testing.T) {
 		},
 		{
 			desc:       "invalid: not a tree leaf (too many key-value pairs)",
-			serialized: bytes.NewBuffer(append(validLeafBytes(t)[:], []byte("key=value\n")...)),
+			serialized: bytes.NewBuffer(append([]byte(validLeafASCII(t)), []byte("key=value\n")...)),
 			wantErr:    true,
 		},
 		{
@@ -177,7 +177,7 @@ func TestLeavesFromASCII(t *testing.T) {
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too many key-value pairs)",
-			serialized: bytes.NewBuffer(append(validLeafBytes(t)[:], []byte("key=value\n")...)),
+			serialized: bytes.NewBuffer(append([]byte(validLeafASCII(t)), []byte("key=value\n")...)),
 			wantErr:    true,
 		},
 		{
