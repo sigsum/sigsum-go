@@ -24,9 +24,16 @@ type Leaf struct {
 type Leaves []Leaf
 
 func (s *Statement) ToBinary() []byte {
-	b := make([]byte, 40)
-	binary.BigEndian.PutUint64(b[0:8], s.ShardHint)
-	copy(b[8:40], s.Checksum[:])
+	namespace := fmt.Sprintf("tree_leaf:v0:%d@sigsum.org", s.ShardHint)
+	b := make([]byte, 6+4+len(namespace)+4+0+4+6+4+HashSize)
+
+	copy(b[0:6], "SSHSIG")
+	i := 6
+	i += putSSHString(b[i:], namespace)
+	i += putSSHString(b[i:], "")
+	i += putSSHString(b[i:], "sha256")
+	i += putSSHString(b[i:], string(s.Checksum[:]))
+
 	return b
 }
 

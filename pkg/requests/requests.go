@@ -8,7 +8,8 @@ import (
 )
 
 type Leaf struct {
-	types.Statement
+	ShardHint       uint64          `ascii:"shard_hint"`
+	Preimage        types.Hash      `ascii:"preimage"`
 	Signature       types.Signature `ascii:"signature"`
 	VerificationKey types.PublicKey `ascii:"verification_key"`
 	DomainHint      string          `ascii:"domain_hint"`

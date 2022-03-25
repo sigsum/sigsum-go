@@ -7,6 +7,8 @@ import (
 	"io"
 	"reflect"
 	"testing"
+
+	"git.sigsum.org/sigsum-lib-go/pkg/hex"
 )
 
 func TestTreeHeadToBinary(t *testing.T) {
@@ -186,11 +188,18 @@ func validTreeHead(t *testing.T) *TreeHead {
 }
 
 func validTreeHeadBytes(t *testing.T, keyHash *Hash) []byte {
-	return bytes.Join([][]byte{
+	ns := fmt.Sprintf("tree_head:v0:%s@sigsum.org", hex.Serialize((*keyHash)[:]))
+	th := bytes.Join([][]byte{
 		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
 		[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01},
 		newHashBufferInc(t)[:],
-		keyHash[:],
+	}, nil)
+	return bytes.Join([][]byte{
+		[]byte("SSHSIG"),
+		[]byte{0, 0, 0, 88}, []byte(ns),
+		[]byte{0, 0, 0, 0},
+		[]byte{0, 0, 0, 6}, []byte("sha256"),
+		[]byte{0, 0, 0, 32}, (*HashFn(th))[:],
 	}, nil)
 }
 

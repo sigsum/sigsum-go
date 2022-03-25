@@ -223,14 +223,17 @@ func TestLeavesFromASCII(t *testing.T) {
 func validStatement(t *testing.T) *Statement {
 	return &Statement{
 		ShardHint: 72623859790382856,
-		Checksum:  *newHashBufferInc(t),
+		Checksum:  *HashFn(newHashBufferInc(t)[:]),
 	}
 }
 
 func validStatementBytes(t *testing.T) []byte {
 	return bytes.Join([][]byte{
-		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
-		newHashBufferInc(t)[:],
+		[]byte("SSHSIG"),
+		[]byte{0, 0, 0, 41}, []byte("tree_leaf:v0:72623859790382856@sigsum.org"),
+		[]byte{0, 0, 0, 0},
+		[]byte{0, 0, 0, 6}, []byte("sha256"),
+		[]byte{0, 0, 0, 32}, HashFn(newHashBufferInc(t)[:])[:],
 	}, nil)
 }
 
@@ -238,7 +241,7 @@ func validLeaf(t *testing.T) *Leaf {
 	return &Leaf{
 		Statement: Statement{
 			ShardHint: 72623859790382856,
-			Checksum:  *newHashBufferInc(t),
+			Checksum:  *HashFn(newHashBufferInc(t)[:]),
 		},
 		Signature: *newSigBufferInc(t),
 		KeyHash:   *newHashBufferInc(t),
@@ -248,7 +251,7 @@ func validLeaf(t *testing.T) *Leaf {
 func validLeafBytes(t *testing.T) []byte {
 	return bytes.Join([][]byte{
 		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
-		newHashBufferInc(t)[:],
+		HashFn(newHashBufferInc(t)[:])[:],
 		newSigBufferInc(t)[:],
 		newHashBufferInc(t)[:],
 	}, nil)
@@ -257,7 +260,7 @@ func validLeafBytes(t *testing.T) []byte {
 func validLeafASCII(t *testing.T) string {
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x\n",
 		"shard_hint", 72623859790382856,
-		"checksum", newHashBufferInc(t)[:],
+		"checksum", HashFn(newHashBufferInc(t)[:])[:],
 		"signature", newSigBufferInc(t)[:],
 		"key_hash", newHashBufferInc(t)[:],
 	)

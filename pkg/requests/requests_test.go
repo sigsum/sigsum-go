@@ -243,10 +243,8 @@ func TestCosignatureFromASCII(t *testing.T) {
 func validLeaf(t *testing.T) *Leaf {
 	t.Helper()
 	return &Leaf{
-		Statement: types.Statement{
-			ShardHint: 1,
-			Checksum:  *newHashBufferInc(t),
-		},
+		ShardHint:       1,
+		Preimage:        *types.HashFn(newHashBufferInc(t)[:]),
 		Signature:       *newSigBufferInc(t),
 		VerificationKey: *newPubBufferInc(t),
 		DomainHint:      "example.com",
@@ -257,7 +255,7 @@ func validLeafASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x\n%s=%s\n",
 		"shard_hint", 1,
-		"checksum", newHashBufferInc(t)[:],
+		"preimage", types.HashFn(newHashBufferInc(t)[:])[:],
 		"signature", newSigBufferInc(t)[:],
 		"verification_key", newPubBufferInc(t)[:],
 		"domain_hint", "example.com",
