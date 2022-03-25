@@ -108,19 +108,19 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 func TestSignedTreeHeadVerify(t *testing.T) {
 	th := validTreeHead(t)
 	signer, pub := newKeyPair(t)
-	ctx := HashFn(pub[:])
+	kh := HashFn(pub[:])
 
-	sth, err := th.Sign(signer, ctx)
+	sth, err := th.Sign(signer, kh)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !sth.Verify(&pub, ctx) {
+	if !sth.Verify(&pub, kh) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
 
 	sth.TreeSize += 1
-	if sth.Verify(&pub, ctx) {
+	if sth.Verify(&pub, kh) {
 		t.Errorf("succeeded verifying an invalid signed tree head")
 	}
 }
