@@ -244,7 +244,7 @@ func validLeaf(t *testing.T) *Leaf {
 	t.Helper()
 	return &Leaf{
 		ShardHint:       1,
-		Preimage:        *types.HashFn(newHashBufferInc(t)[:]),
+		Preimage:        *newHashBufferInc(t),
 		Signature:       *newSigBufferInc(t),
 		VerificationKey: *newPubBufferInc(t),
 		DomainHint:      "example.com",
@@ -255,7 +255,7 @@ func validLeafASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x\n%s=%s\n",
 		"shard_hint", 1,
-		"preimage", types.HashFn(newHashBufferInc(t)[:])[:],
+		"preimage", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
 		"verification_key", newPubBufferInc(t)[:],
 		"domain_hint", "example.com",
