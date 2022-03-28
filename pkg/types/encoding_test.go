@@ -27,37 +27,3 @@ func TestPutSSHString(t *testing.T) {
 		}
 	}
 }
-
-func TestGetSSHString(t *testing.T) {
-	for _, tbl := range []struct {
-		desc    string
-		in      []byte
-		want    string
-		wantErr bool
-	}{
-		{
-			desc: "valid",
-			in:   []byte{0, 0, 0, 5, 65, 108, 108, 97, 110},
-			want: "Allan",
-		},
-		{
-			desc:    "invalid: short",
-			in:      []byte{0, 0, 0},
-			wantErr: true,
-		},
-	} {
-		str, err := getSSHString(tbl.in)
-
-		if got, want := err != nil, tbl.wantErr; got != want {
-			t.Errorf("%q: error: got %v but wanted %v: %v", tbl.desc, got, want, err)
-		}
-
-		if err != nil {
-			continue
-		}
-
-		if got, want := str, tbl.want; *got != want {
-			t.Errorf(`%q: got "%v" but wanted "%v"`, tbl.desc, *got, want)
-		}
-	}
-}
