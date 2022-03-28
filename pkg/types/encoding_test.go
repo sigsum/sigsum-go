@@ -15,7 +15,7 @@ func TestPutSSHString(t *testing.T) {
 			in:   "ö foo is a bar",
 		},
 	} {
-		var b [128]byte
+		b := make([]byte, 4+len(tbl.in))
 		i := putSSHString(b[:], tbl.in)
 
 		if got, want := i, len(tbl.in)+4; got != want {
