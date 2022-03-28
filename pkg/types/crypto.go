@@ -10,8 +10,8 @@ const (
 	SignatureSize = ed25519.SignatureSize
 	PublicKeySize = ed25519.PublicKeySize
 
-	InteriorNodePrefix = byte(0x00)
-	LeafNodePrefix     = byte(0x01)
+	LeafNodePrefix     = byte(0x00)
+	InteriorNodePrefix = byte(0x01)
 )
 
 type (
