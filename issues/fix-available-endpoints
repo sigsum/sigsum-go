@@ -1,8 +1,0 @@
-The latest round of proposals updated endpoints.  Changes are needed in
-
-	pkg/type/endpoint.go
-
-so that the following endpoints are up-to-date:
-
-	- EndpointGetTreeHeadLatest (remove)
-	- EndpointGetTreeHeadToSign (s/to-sign/to-cosign/)
