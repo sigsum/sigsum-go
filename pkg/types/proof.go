@@ -3,7 +3,7 @@ package types
 import (
 	"io"
 
-	"git.sigsum.org/sigsum-lib-go/pkg/ascii"
+	"git.sigsum.org/sigsum-go/pkg/ascii"
 )
 
 type InclusionProof struct {

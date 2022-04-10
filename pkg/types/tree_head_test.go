@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"git.sigsum.org/sigsum-lib-go/pkg/hex"
+	"git.sigsum.org/sigsum-go/pkg/hex"
 )
 
 func TestTreeHeadToBinary(t *testing.T) {

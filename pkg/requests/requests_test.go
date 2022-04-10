@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"git.sigsum.org/sigsum-lib-go/pkg/types"
+	"git.sigsum.org/sigsum-go/pkg/types"
 )
 
 func TestLeafToASCII(t *testing.T) {
