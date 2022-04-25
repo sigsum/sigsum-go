@@ -45,36 +45,36 @@ const (
 )
 
 type logger struct {
-	log.Logger
+	log.Logger		// Default writer: os.Stderr.
 
-	lv    level
-	date  bool
-	color bool
+	lv    level		// Logging level. Default: InfoLevel.
+	date  bool		// Logging dates or not: Default: true.
+	color bool		// Using colors or not: Default: false.
 }
 
 var l logger
 
 func init() {
-	l = newLogger(InfoLevel, os.Stderr, false, false)
+	l = newLogger(InfoLevel, os.Stderr, true, false)
 }
 
 // SetLevel sets the logging level.  Available options: DebugLevel, InfoLevel,
-// WarningLevel, ErrorLevel, FatalLevel.  Default: InfoLevel.
+// WarningLevel, ErrorLevel, FatalLevel.
 func SetLevel(lv level) {
 	l.lv = lv
 }
 
-// SetOutput sets the logging output to a particular writer. Default: os.Stderr.
+// SetOutput sets the logging output to a particular writer.
 func SetOutput(writer io.Writer) {
 	l = newLogger(l.lv, writer, l.date, l.color)
 }
 
-// SetDate (un)sets date output.  Default: off.
+// SetDate (un)sets date output.
 func SetDate(ok bool) {
 	l.date = ok
 }
 
-// SetColor (un)sets terminal colors.  Default: off.
+// SetColor (un)sets terminal colors.
 func SetColor(ok bool) {
 	l.color = ok
 }
