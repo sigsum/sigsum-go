@@ -1,9 +1,13 @@
 package requests
 
 import (
+	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"git.sigsum.org/sigsum-go/pkg/ascii"
+	"git.sigsum.org/sigsum-go/pkg/hex"
 	"git.sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -16,18 +20,18 @@ type Leaf struct {
 }
 
 type Leaves struct {
-	StartSize uint64 `ascii:"start_size"`
-	EndSize   uint64 `ascii:"end_size"`
+	StartSize uint64
+	EndSize   uint64
 }
 
 type InclusionProof struct {
-	LeafHash types.Hash `ascii:"leaf_hash"`
-	TreeSize uint64     `ascii:"tree_size"`
+	TreeSize uint64
+	LeafHash types.Hash
 }
 
 type ConsistencyProof struct {
-	NewSize uint64 `ascii:"new_size"`
-	OldSize uint64 `ascii:"old_size"`
+	OldSize uint64
+	NewSize uint64
 }
 
 type Cosignature struct {
@@ -39,16 +43,19 @@ func (req *Leaf) ToASCII(w io.Writer) error {
 	return ascii.StdEncoding.Serialize(w, req)
 }
 
-func (req *Leaves) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, req)
+// ToURL encodes request parameters at the end of a slash-terminated URL
+func (req *Leaves) ToURL(url string) string {
+	return url + fmt.Sprintf("%d/%d", req.StartSize, req.EndSize)
 }
 
-func (req *InclusionProof) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, req)
+// ToURL encodes request parameters at the end of a slash-terminated URL
+func (req *InclusionProof) ToURL(url string) string {
+	return url + fmt.Sprintf("%d/%s", req.TreeSize, hex.Serialize(req.LeafHash[:]))
 }
 
-func (req *ConsistencyProof) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, req)
+// ToURL encodes request parameters at the end of a slash-terminated URL
+func (req *ConsistencyProof) ToURL(url string) string {
+	return url + fmt.Sprintf("%d/%d", req.OldSize, req.NewSize)
 }
 
 func (req *Cosignature) ToASCII(w io.Writer) error {
@@ -59,16 +66,59 @@ func (req *Leaf) FromASCII(r io.Reader) error {
 	return ascii.StdEncoding.Deserialize(r, req)
 }
 
-func (req *Leaves) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, req)
+// FromURL parses request parameters from a URL that is not slash-terminated
+func (req *Leaves) FromURL(url string) (err error) {
+	split := strings.Split(url, "/")
+	if len(split) < 2 {
+		return fmt.Errorf("not enough input")
+	}
+	startSize := split[len(split)-2]
+	if req.StartSize, err = strconv.ParseUint(startSize, 10, 64); err != nil {
+		return err
+	}
+	endSize := split[len(split)-1]
+	if req.EndSize, err = strconv.ParseUint(endSize, 10, 64); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (req *InclusionProof) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, req)
+// FromURL parses request parameters from a URL that is not slash-terminated
+func (req *InclusionProof) FromURL(url string) (err error) {
+	split := strings.Split(url, "/")
+	if len(split) < 2 {
+		return fmt.Errorf("not enough input")
+	}
+	treeSize := split[len(split)-2]
+	if req.TreeSize, err = strconv.ParseUint(treeSize, 10, 64); err != nil {
+		return err
+	}
+	b, err := hex.Deserialize(split[len(split)-1])
+	if err != nil {
+		return err
+	}
+	if n := len(b); n != types.HashSize {
+		return fmt.Errorf("invalid hash size %d", n)
+	}
+	copy(req.LeafHash[:], b)
+	return nil
 }
 
-func (req *ConsistencyProof) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, req)
+// FromURL parses request parameters from a URL that is not slash-terminated
+func (req *ConsistencyProof) FromURL(url string) (err error) {
+	split := strings.Split(url, "/")
+	if len(split) < 2 {
+		return fmt.Errorf("not enough input")
+	}
+	oldSize := split[len(split)-2]
+	if req.OldSize, err = strconv.ParseUint(oldSize, 10, 64); err != nil {
+		return err
+	}
+	newSize := split[len(split)-1]
+	if req.NewSize, err = strconv.ParseUint(newSize, 10, 64); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (req *Cosignature) FromASCII(r io.Reader) error {
