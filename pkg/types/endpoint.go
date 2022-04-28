@@ -10,9 +10,9 @@ const (
 	EndpointGetTreeHeadLatest   = Endpoint("get-tree-head-latest")
 	EndpointGetTreeHeadToSign   = Endpoint("get-tree-head-to-sign")
 	EndpointGetTreeHeadCosigned = Endpoint("get-tree-head-cosigned")
-	EndpointGetInclusionProof   = Endpoint("get-inclusion-proof")
-	EndpointGetConsistencyProof = Endpoint("get-consistency-proof")
-	EndpointGetLeaves           = Endpoint("get-leaves")
+	EndpointGetInclusionProof   = Endpoint("get-inclusion-proof/")
+	EndpointGetConsistencyProof = Endpoint("get-consistency-proof/")
+	EndpointGetLeaves           = Endpoint("get-leaves/")
 )
 
 // Path joins a number of components to form a full endpoint path.  For example,

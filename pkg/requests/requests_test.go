@@ -21,36 +21,30 @@ func TestLeafToASCII(t *testing.T) {
 	}
 }
 
-func TestLeavesToASCII(t *testing.T) {
-	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validLeaves(t).ToASCII(buf); err != nil {
-		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
-	}
-	if got, want := string(buf.Bytes()), validLeavesASCII(t); got != want {
-		t.Errorf("got leaves request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
+func TestLeavesToURL(t *testing.T) {
+	url := types.EndpointGetLeaves.Path("https://poc.sigsum.org/sigsum/v0")
+	req := Leaves{1, 2}
+	want := url + "1/2"
+	if got := req.ToURL(url); got != want {
+		t.Errorf("got url %s but wanted %s", got, want)
 	}
 }
 
-func TestInclusionProofToASCII(t *testing.T) {
-	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validInclusionProof(t).ToASCII(buf); err != nil {
-		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
-	}
-	if got, want := string(buf.Bytes()), validInclusionProofASCII(t); got != want {
-		t.Errorf("got inclusion proof request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
+func TestInclusionProofToURL(t *testing.T) {
+	url := types.EndpointGetInclusionProof.Path("https://poc.sigsum.org/sigsum/v0")
+	req := InclusionProof{1, types.Hash{}}
+	want := url + "1/0000000000000000000000000000000000000000000000000000000000000000"
+	if got := req.ToURL(url); got != want {
+		t.Errorf("got url %s but wanted %s", got, want)
 	}
 }
 
-func TestConsistencyProofToASCII(t *testing.T) {
-	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validConsistencyProof(t).ToASCII(buf); err != nil {
-		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
-	}
-	if got, want := string(buf.Bytes()), validConsistencyProofASCII(t); got != want {
-		t.Errorf("got consistency proof request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
+func TestConsistencyProofToURL(t *testing.T) {
+	url := types.EndpointGetConsistencyProof.Path("https://poc.sigsum.org/sigsum/v0")
+	req := ConsistencyProof{1, 2}
+	want := url + "1/2"
+	if got := req.ToURL(url); got != want {
+		t.Errorf("got url %s but wanted %s", got, want)
 	}
 }
 
@@ -100,107 +94,90 @@ func TestLeafFromASCII(t *testing.T) {
 	}
 }
 
-func TestLeavesFromASCII(t *testing.T) {
+func TestLeavesFromURL(t *testing.T) {
 	for _, table := range []struct {
-		desc       string
-		serialized io.Reader
-		wantErr    bool
-		want       *Leaves
+		desc    string
+		input   string
+		want    Leaves
+		wantErr bool
 	}{
-		{
-			desc: "invalid: not a leaves request (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(
-				append([]byte(validLeavesASCII(t)),
-					[]byte("key=4")...),
-			),
-			wantErr: true,
-		},
-		{
-			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validLeavesASCII(t))),
-			want:       validLeaves(t),
-		},
+		{"invalid: not enough parameters", "some-url", Leaves{}, true},
+		{"invalid: start size has a leading sign", "some-url/+1/2", Leaves{}, true},
+		{"invalid: start size is empty", "some-url//2", Leaves{}, true},
+		{"invalid: end size is empty", "some-url/1/", Leaves{}, true},
+		{"valid", "some-url/1/2", Leaves{1, 2}, false},
 	} {
 		var req Leaves
-		err := req.FromASCII(table.serialized)
+		err := req.FromURL(table.input)
 		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+			t.Errorf("%s: got error %v but wanted %v: %v", table.desc, got, want, err)
 		}
 		if err != nil {
 			continue
 		}
-		if got, want := &req, table.want; !reflect.DeepEqual(got, want) {
-			t.Errorf("got leaves request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
+
+		if got, want := req, table.want; !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: got leaves request\n%v\nbut wanted\n%v", table.desc, got, want)
 		}
 	}
 }
 
-func TestInclusionProofFromASCII(t *testing.T) {
+func TestInclusionProofFromURL(t *testing.T) {
+	badHex := "F000000000000000000000000000000000000000000000000000000000000000"
+	shortHex := "00ff"
+	zeroHash := "0000000000000000000000000000000000000000000000000000000000000000"
 	for _, table := range []struct {
-		desc       string
-		serialized io.Reader
-		wantErr    bool
-		want       *InclusionProof
+		desc    string
+		input   string
+		want    InclusionProof
+		wantErr bool
 	}{
-		{
-			desc: "invalid: not an inclusion proof request (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(append(
-				[]byte(validInclusionProofASCII(t)),
-				[]byte("key=4")...),
-			),
-			wantErr: true,
-		},
-		{
-			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validInclusionProofASCII(t))),
-			want:       validInclusionProof(t),
-		},
+		{"invalid: not enough parameters", "some-url", InclusionProof{}, true},
+		{"invalid: tree size has a leading sign", "some-url/+1/" + zeroHash, InclusionProof{}, true},
+		{"invalid: tree size is empty", "some-url//" + zeroHash, InclusionProof{}, true},
+		{"invalid: leaf hash is not lower-case hex", "some-url/1/" + badHex, InclusionProof{}, true},
+		{"invalid: leaf hash is hex but too short", "some-url/1/" + shortHex, InclusionProof{}, true},
+		{"valid", "some-url/1/" + zeroHash, InclusionProof{1, types.Hash{}}, false},
 	} {
 		var req InclusionProof
-		err := req.FromASCII(table.serialized)
+		err := req.FromURL(table.input)
 		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+			t.Errorf("%s: got error %v but wanted %v: %v", table.desc, got, want, err)
 		}
 		if err != nil {
 			continue
 		}
-		if got, want := &req, table.want; !reflect.DeepEqual(got, want) {
-			t.Errorf("got inclusion proof request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
+
+		if got, want := req, table.want; !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: got inclusion proof request\n%v\nbut wanted\n%v", table.desc, got, want)
 		}
 	}
 }
 
-func TestConsistencyProofFromASCII(t *testing.T) {
+func TestConsistencyProofFromURL(t *testing.T) {
 	for _, table := range []struct {
-		desc       string
-		serialized io.Reader
-		wantErr    bool
-		want       *ConsistencyProof
+		desc    string
+		input   string
+		want    ConsistencyProof
+		wantErr bool
 	}{
-		{
-			desc: "invalid: not a consistency proof request (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(
-				append([]byte(validConsistencyProofASCII(t)),
-					[]byte("tree_size=4")...),
-			),
-			wantErr: true,
-		},
-		{
-			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validConsistencyProofASCII(t))),
-			want:       validConsistencyProof(t),
-		},
+		{"invalid: not enough parameters", "some-url", ConsistencyProof{}, true},
+		{"invalid: old size has a leading sign", "some-url/+1/2", ConsistencyProof{}, true},
+		{"invalid: old size is empty", "some-url//2", ConsistencyProof{}, true},
+		{"invalid: new size is empty", "some-url/1/", ConsistencyProof{}, true},
+		{"valid", "some-url/1/2", ConsistencyProof{1, 2}, false},
 	} {
 		var req ConsistencyProof
-		err := req.FromASCII(table.serialized)
+		err := req.FromURL(table.input)
 		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+			t.Errorf("%s: got error %v but wanted %v: %v", table.desc, got, want, err)
 		}
 		if err != nil {
 			continue
 		}
-		if got, want := &req, table.want; !reflect.DeepEqual(got, want) {
-			t.Errorf("got consistency proof request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
+
+		if got, want := req, table.want; !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: got consistency proof request\n%v\nbut wanted\n%v", table.desc, got, want)
 		}
 	}
 }
