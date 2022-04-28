@@ -36,7 +36,7 @@ func AddString(fs *flag.FlagSet, opt *string, short, long, value string) {
 	fs.StringVar(opt, long, value, "")
 }
 
-// AdUint64 adds an uint64 option to a flag set
+// AddUint64 adds an uint64 option to a flag set
 func AddUint64(fs *flag.FlagSet, opt *uint64, short, long string, value uint64) {
 	fs.Uint64Var(opt, short, value, "")
 	fs.Uint64Var(opt, long, value, "")
@@ -53,7 +53,7 @@ func CheckString(optionName, value string, err error) error {
 	return nil
 }
 
-// CheckUint checks that an uint64 option has a non-default value
+// CheckUint64 checks that an uint64 option has a non-default value
 func CheckUint64(optionName string, value uint64, err error) error {
 	if err != nil {
 		return err
