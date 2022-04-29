@@ -223,7 +223,7 @@ func validLeaf(t *testing.T) *Leaf {
 		ShardHint:       1,
 		Message:         *newHashBufferInc(t),
 		Signature:       *newSigBufferInc(t),
-		VerificationKey: *newPubBufferInc(t),
+		PublicKey:       *newPubBufferInc(t),
 		DomainHint:      "example.com",
 	}
 }
@@ -234,7 +234,7 @@ func validLeafASCII(t *testing.T) string {
 		"shard_hint", 1,
 		"message", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
-		"verification_key", newPubBufferInc(t)[:],
+		"public_key", newPubBufferInc(t)[:],
 		"domain_hint", "example.com",
 	)
 }

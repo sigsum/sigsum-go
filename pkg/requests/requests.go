@@ -15,7 +15,7 @@ type Leaf struct {
 	ShardHint       uint64          `ascii:"shard_hint"`
 	Message         types.Hash      `ascii:"message"`
 	Signature       types.Signature `ascii:"signature"`
-	VerificationKey types.PublicKey `ascii:"verification_key"`
+	PublicKey       types.PublicKey `ascii:"public_key"`
 	DomainHint      string          `ascii:"domain_hint"`
 }
 
