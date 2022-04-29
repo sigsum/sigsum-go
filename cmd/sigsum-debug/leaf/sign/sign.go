@@ -22,10 +22,10 @@ func Main(args []string, optPrivateKey string, optShardHint uint64) error {
 		return fmt.Errorf("parse private key: %w", err)
 	}
 
-	preimage := types.HashFn(data)
+	message := types.HashFn(data)
 	stm := types.Statement{
 		ShardHint: optShardHint,
-		Checksum:  *types.HashFn(preimage[:]),
+		Checksum:  *types.HashFn(message[:]),
 	}
 	sig, err := stm.Sign(priv)
 	if err != nil {

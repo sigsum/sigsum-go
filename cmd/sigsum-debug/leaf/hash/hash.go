@@ -26,11 +26,11 @@ func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) e
 		return fmt.Errorf("parse signature: %w", err)
 	}
 
-	preimage := types.HashFn(data)
+	message := types.HashFn(data)
 	leaf := types.Leaf{
 		Statement: types.Statement{
 			ShardHint: optShardHint,
-			Checksum:  *types.HashFn(preimage[:]),
+			Checksum:  *types.HashFn(message[:]),
 		},
 		Signature: sig,
 		KeyHash:   keyHash,

@@ -13,7 +13,7 @@ import (
 
 type Leaf struct {
 	ShardHint       uint64          `ascii:"shard_hint"`
-	Preimage        types.Hash      `ascii:"preimage"`
+	Message         types.Hash      `ascii:"message"`
 	Signature       types.Signature `ascii:"signature"`
 	VerificationKey types.PublicKey `ascii:"verification_key"`
 	DomainHint      string          `ascii:"domain_hint"`
