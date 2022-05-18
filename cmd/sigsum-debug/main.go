@@ -41,7 +41,7 @@ func main() {
 	log.SetFlags(0)
 	opt := options.New(os.Args[1:], func() { log.Printf(usage[1:]) }, func(_ *flag.FlagSet) {})
 	switch opt.Name() {
-	case "help":
+	case "help", "":
 		opt.Usage()
 	case "key":
 		err = key.Main(opt.Args())

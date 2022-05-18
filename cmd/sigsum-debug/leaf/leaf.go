@@ -46,7 +46,7 @@ func Main(args []string) error {
 	err = checkOptions(opt.Name())
 	if err == nil {
 		switch opt.Name() {
-		case "help":
+		case "help", "":
 			opt.Usage()
 		case "sign":
 			err = sign.Main(opt.Args(), optPrivateKey, optShardHint)
