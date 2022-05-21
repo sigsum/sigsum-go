@@ -4,18 +4,19 @@ import (
 	"io"
 
 	"git.sigsum.org/sigsum-go/pkg/ascii"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 )
 
 type InclusionProof struct {
 	TreeSize  uint64
 	LeafIndex uint64 `ascii:"leaf_index"`
-	Path      []Hash `ascii:"inclusion_path"`
+	Path      []merkle.Hash `ascii:"inclusion_path"`
 }
 
 type ConsistencyProof struct {
 	NewSize uint64
 	OldSize uint64
-	Path    []Hash `ascii:"consistency_path"`
+	Path    []merkle.Hash `ascii:"consistency_path"`
 }
 
 func (p *InclusionProof) ToASCII(w io.Writer) error {
@@ -27,8 +28,8 @@ func (p *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
 	return ascii.StdEncoding.Deserialize(r, p)
 }
 
-func (p *InclusionProof) Verify(treeSize uint64) bool {
-	return false // TODO: verify inclusion proof
+func (p *InclusionProof) Verify(leaf *merkle.Hash, root *merkle.Hash) error {
+	return merkle.VerifyInclusion(*leaf, p.LeafIndex, p.TreeSize, *root, p.Path)
 }
 
 func (p *ConsistencyProof) ToASCII(w io.Writer) error {
@@ -41,6 +42,6 @@ func (p *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error
 	return ascii.StdEncoding.Deserialize(r, p)
 }
 
-func (p *ConsistencyProof) Verify(newRoot, oldRoot *Hash) bool {
-	return false // TODO: verify consistency proof
+func (p *ConsistencyProof) Verify(oldRoot, newRoot *merkle.Hash) error {
+	return merkle.VerifyConsistency(p.OldSize, p.NewSize, *oldRoot, *newRoot, p.Path)
 }

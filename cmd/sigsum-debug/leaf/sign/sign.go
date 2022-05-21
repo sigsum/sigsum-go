@@ -6,6 +6,7 @@ import (
 
 	"git.sigsum.org/sigsum-go/internal/fmtio"
 	"git.sigsum.org/sigsum-go/pkg/hex"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 	"git.sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -22,10 +23,10 @@ func Main(args []string, optPrivateKey string, optShardHint uint64) error {
 		return fmt.Errorf("parse private key: %w", err)
 	}
 
-	message := types.HashFn(data)
+	message := merkle.HashFn(data)
 	stm := types.Statement{
 		ShardHint: optShardHint,
-		Checksum:  *types.HashFn(message[:]),
+		Checksum:  *merkle.HashFn(message[:]),
 	}
 	sig, err := stm.Sign(priv)
 	if err != nil {

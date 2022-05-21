@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"git.sigsum.org/sigsum-go/internal/mocks/signer"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func TestStatementToBinary(t *testing.T) {
@@ -225,7 +226,7 @@ func TestLeavesFromASCII(t *testing.T) {
 func validStatement(t *testing.T) *Statement {
 	return &Statement{
 		ShardHint: 72623859790382856,
-		Checksum:  *HashFn(newHashBufferInc(t)[:]),
+		Checksum:  *merkle.HashFn(newHashBufferInc(t)[:]),
 	}
 }
 
@@ -235,7 +236,7 @@ func validStatementBytes(t *testing.T) []byte {
 		[]byte{0, 0, 0, 41}, []byte("tree_leaf:v0:72623859790382856@sigsum.org"),
 		[]byte{0, 0, 0, 0},
 		[]byte{0, 0, 0, 6}, []byte("sha256"),
-		[]byte{0, 0, 0, 32}, HashFn(newHashBufferInc(t)[:])[:],
+		[]byte{0, 0, 0, 32}, merkle.HashFn(newHashBufferInc(t)[:])[:],
 	}, nil)
 }
 
@@ -243,7 +244,7 @@ func validLeaf(t *testing.T) *Leaf {
 	return &Leaf{
 		Statement: Statement{
 			ShardHint: 72623859790382856,
-			Checksum:  *HashFn(newHashBufferInc(t)[:]),
+			Checksum:  *merkle.HashFn(newHashBufferInc(t)[:]),
 		},
 		Signature: *newSigBufferInc(t),
 		KeyHash:   *newHashBufferInc(t),
@@ -253,7 +254,7 @@ func validLeaf(t *testing.T) *Leaf {
 func validLeafBytes(t *testing.T) []byte {
 	return bytes.Join([][]byte{
 		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
-		HashFn(newHashBufferInc(t)[:])[:],
+		merkle.HashFn(newHashBufferInc(t)[:])[:],
 		newSigBufferInc(t)[:],
 		newHashBufferInc(t)[:],
 	}, nil)
@@ -262,7 +263,7 @@ func validLeafBytes(t *testing.T) []byte {
 func validLeafASCII(t *testing.T) string {
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x\n",
 		"shard_hint", 72623859790382856,
-		"checksum", HashFn(newHashBufferInc(t)[:])[:],
+		"checksum", merkle.HashFn(newHashBufferInc(t)[:])[:],
 		"signature", newSigBufferInc(t)[:],
 		"key_hash", newHashBufferInc(t)[:],
 	)
@@ -277,9 +278,9 @@ func validLeavesASCII(t *testing.T) string {
 	t.Helper()
 	return validLeafASCII(t) + fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x\n",
 		"shard_hint", 0,
-		"checksum", Hash{},
+		"checksum", merkle.Hash{},
 		"signature", Signature{},
-		"key_hash", Hash{},
+		"key_hash", merkle.Hash{},
 	)
 }
 

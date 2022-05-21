@@ -5,6 +5,8 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"testing"
+
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func newKeyPair(t *testing.T) (crypto.Signer, PublicKey) {
@@ -18,10 +20,10 @@ func newKeyPair(t *testing.T) (crypto.Signer, PublicKey) {
 	return sk, pub
 }
 
-func newHashBufferInc(t *testing.T) *Hash {
+func newHashBufferInc(t *testing.T) *merkle.Hash {
 	t.Helper()
 
-	var buf Hash
+	var buf merkle.Hash
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}

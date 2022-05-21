@@ -6,6 +6,8 @@ import (
 	"io"
 	"reflect"
 	"testing"
+
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func TestInclusionProofToASCII(t *testing.T) {
@@ -101,8 +103,8 @@ func validInclusionProof(t *testing.T) *InclusionProof {
 	return &InclusionProof{
 		LeafIndex: 1,
 		TreeSize:  4,
-		Path: []Hash{
-			Hash{},
+		Path: []merkle.Hash{
+			merkle.Hash{},
 			*newHashBufferInc(t),
 		},
 	}
@@ -112,7 +114,7 @@ func validInclusionProofASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n",
 		"leaf_index", 1,
-		"inclusion_path", Hash{},
+		"inclusion_path", merkle.Hash{},
 		"inclusion_path", newHashBufferInc(t)[:],
 	)
 }
@@ -122,8 +124,8 @@ func validConsistencyProof(t *testing.T) *ConsistencyProof {
 	return &ConsistencyProof{
 		NewSize: 1,
 		OldSize: 4,
-		Path: []Hash{
-			Hash{},
+		Path: []merkle.Hash{
+			merkle.Hash{},
 			*newHashBufferInc(t),
 		},
 	}
@@ -132,7 +134,7 @@ func validConsistencyProof(t *testing.T) *ConsistencyProof {
 func validConsistencyProofASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%x\n%s=%x\n",
-		"consistency_path", Hash{},
+		"consistency_path", merkle.Hash{},
 		"consistency_path", newHashBufferInc(t)[:],
 	)
 }

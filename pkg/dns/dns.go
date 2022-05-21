@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"git.sigsum.org/sigsum-go/pkg/hex"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 	"git.sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -45,7 +46,7 @@ func (dr *DefaultResolver) Verify(ctx context.Context, name string, pub *types.P
 }
 
 func validResponse(pub *types.PublicKey, rsps []string) error {
-	keyHash := hex.Serialize(types.HashFn(pub[:])[:])
+	keyHash := hex.Serialize(merkle.HashFn(pub[:])[:])
 	for _, rsp := range rsps {
 		if rsp == keyHash {
 			return nil

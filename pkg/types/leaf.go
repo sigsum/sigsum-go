@@ -8,24 +8,25 @@ import (
 	"io"
 
 	"git.sigsum.org/sigsum-go/pkg/ascii"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 )
 
 type Statement struct {
 	ShardHint uint64 `ascii:"shard_hint"`
-	Checksum  Hash   `ascii:"checksum"`
+	Checksum  merkle.Hash   `ascii:"checksum"`
 }
 
 type Leaf struct {
 	Statement
 	Signature Signature `ascii:"signature"`
-	KeyHash   Hash      `ascii:"key_hash"`
+	KeyHash   merkle.Hash      `ascii:"key_hash"`
 }
 
 type Leaves []Leaf
 
 func (s *Statement) ToBinary() []byte {
 	namespace := fmt.Sprintf("tree_leaf:v0:%d@sigsum.org", s.ShardHint)
-	b := make([]byte, 6+4+len(namespace)+4+0+4+6+4+HashSize)
+	b := make([]byte, 6+4+len(namespace)+4+0+4+6+4+merkle.HashSize)
 
 	copy(b[0:6], "SSHSIG")
 	i := 6
@@ -84,9 +85,9 @@ func (l *Leaf) FromASCII(r io.Reader) error {
 func (l *Leaves) FromASCII(r io.Reader) error {
 	leaves := &struct {
 		ShardHint []uint64    `ascii:"shard_hint"`
-		Checksum  []Hash      `ascii:"checksum"`
+		Checksum  []merkle.Hash      `ascii:"checksum"`
 		Signature []Signature `ascii:"signature"`
-		KeyHash   []Hash      `ascii:"key_hash"`
+		KeyHash   []merkle.Hash      `ascii:"key_hash"`
 	}{}
 
 	if err := ascii.StdEncoding.Deserialize(r, leaves); err != nil {

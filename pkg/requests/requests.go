@@ -8,12 +8,13 @@ import (
 
 	"git.sigsum.org/sigsum-go/pkg/ascii"
 	"git.sigsum.org/sigsum-go/pkg/hex"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 	"git.sigsum.org/sigsum-go/pkg/types"
 )
 
 type Leaf struct {
 	ShardHint       uint64          `ascii:"shard_hint"`
-	Message         types.Hash      `ascii:"message"`
+	Message         merkle.Hash      `ascii:"message"`
 	Signature       types.Signature `ascii:"signature"`
 	PublicKey       types.PublicKey `ascii:"public_key"`
 	DomainHint      string          `ascii:"domain_hint"`
@@ -26,7 +27,7 @@ type Leaves struct {
 
 type InclusionProof struct {
 	TreeSize uint64
-	LeafHash types.Hash
+	LeafHash merkle.Hash
 }
 
 type ConsistencyProof struct {
@@ -36,7 +37,7 @@ type ConsistencyProof struct {
 
 type Cosignature struct {
 	Cosignature types.Signature `ascii:"cosignature"`
-	KeyHash     types.Hash      `ascii:"key_hash"`
+	KeyHash     merkle.Hash      `ascii:"key_hash"`
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
@@ -97,7 +98,7 @@ func (req *InclusionProof) FromURL(url string) (err error) {
 	if err != nil {
 		return err
 	}
-	if n := len(b); n != types.HashSize {
+	if n := len(b); n != merkle.HashSize {
 		return fmt.Errorf("invalid hash size %d", n)
 	}
 	copy(req.LeafHash[:], b)

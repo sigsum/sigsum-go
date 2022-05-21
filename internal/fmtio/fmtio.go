@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"git.sigsum.org/sigsum-go/pkg/hex"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 	"git.sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -54,12 +55,12 @@ func PublicKeyFromHex(s string) (pub types.PublicKey, err error) {
 	return
 }
 
-func KeyHashFromHex(s string) (h types.Hash, err error) {
+func KeyHashFromHex(s string) (h merkle.Hash, err error) {
 	b, err := hex.Deserialize(s)
 	if err != nil {
 		return h, err
 	}
-	if n := len(b); n != types.HashSize {
+	if n := len(b); n != merkle.HashSize {
 		return h, fmt.Errorf("invalid size %d", n)
 	}
 	copy(h[:], b)

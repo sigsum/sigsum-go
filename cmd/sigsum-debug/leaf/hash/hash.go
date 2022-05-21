@@ -6,6 +6,7 @@ import (
 
 	"git.sigsum.org/sigsum-go/internal/fmtio"
 	"git.sigsum.org/sigsum-go/pkg/hex"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 	"git.sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -26,16 +27,16 @@ func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) e
 		return fmt.Errorf("parse signature: %w", err)
 	}
 
-	message := types.HashFn(data)
+	message := merkle.HashFn(data)
 	leaf := types.Leaf{
 		Statement: types.Statement{
 			ShardHint: optShardHint,
-			Checksum:  *types.HashFn(message[:]),
+			Checksum:  *merkle.HashFn(message[:]),
 		},
 		Signature: sig,
 		KeyHash:   keyHash,
 	}
-	leafHash := types.LeafHash(leaf.ToBinary())
+	leafHash := merkle.HashLeafNode(leaf.ToBinary())
 
 	fmt.Printf("%s\n", hex.Serialize(leafHash[:]))
 	return nil

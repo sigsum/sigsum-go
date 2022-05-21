@@ -6,7 +6,7 @@ import (
 
 	"git.sigsum.org/sigsum-go/internal/fmtio"
 	"git.sigsum.org/sigsum-go/pkg/hex"
-	"git.sigsum.org/sigsum-go/pkg/types"
+	"git.sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func Main(args []string) error {
@@ -22,7 +22,7 @@ func Main(args []string) error {
 		return fmt.Errorf("parse key: %w", err)
 	}
 
-	keyHash := types.HashFn(pub[:])
+	keyHash := merkle.HashFn(pub[:])
 
 	fmt.Printf("%s\n", hex.Serialize(keyHash[:]))
 	return nil
