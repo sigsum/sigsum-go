@@ -18,7 +18,7 @@ func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) e
 	if err != nil {
 		return fmt.Errorf("read stdin: %w", err)
 	}
-	keyHash, err := fmtio.KeyHashFromHex(optKeyHash)
+	keyHash, err := fmtio.HashFromHex(optKeyHash)
 	if err != nil {
 		return fmt.Errorf("parse key hash: %w", err)
 	}

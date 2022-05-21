@@ -22,7 +22,7 @@ func Main(args []string, optPrivateKey, optKeyHash string) error {
 	if err != nil {
 		return fmt.Errorf("parse private key: %v", err)
 	}
-	keyHash, err := fmtio.KeyHashFromHex(optKeyHash)
+	keyHash, err := fmtio.HashFromHex(optKeyHash)
 	if err != nil {
 		return fmt.Errorf("parse key hash: %v", err)
 	}

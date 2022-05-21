@@ -55,7 +55,7 @@ func PublicKeyFromHex(s string) (pub types.PublicKey, err error) {
 	return
 }
 
-func KeyHashFromHex(s string) (h merkle.Hash, err error) {
+func HashFromHex(s string) (h merkle.Hash, err error) {
 	b, err := hex.Deserialize(s)
 	if err != nil {
 		return h, err
