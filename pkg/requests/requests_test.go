@@ -221,11 +221,11 @@ func TestCosignatureFromASCII(t *testing.T) {
 func validLeaf(t *testing.T) *Leaf {
 	t.Helper()
 	return &Leaf{
-		ShardHint:       1,
-		Message:         *newHashBufferInc(t),
-		Signature:       *newSigBufferInc(t),
-		PublicKey:       *newPubBufferInc(t),
-		DomainHint:      "example.com",
+		ShardHint:  1,
+		Message:    *newHashBufferInc(t),
+		Signature:  *newSigBufferInc(t),
+		PublicKey:  *newPubBufferInc(t),
+		DomainHint: "example.com",
 	}
 }
 

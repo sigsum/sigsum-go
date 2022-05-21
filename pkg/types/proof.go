@@ -9,7 +9,7 @@ import (
 
 type InclusionProof struct {
 	TreeSize  uint64
-	LeafIndex uint64 `ascii:"leaf_index"`
+	LeafIndex uint64        `ascii:"leaf_index"`
 	Path      []merkle.Hash `ascii:"inclusion_path"`
 }
 

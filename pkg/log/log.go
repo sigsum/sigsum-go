@@ -45,11 +45,11 @@ const (
 )
 
 type logger struct {
-	log.Logger		// Default writer: os.Stderr.
+	log.Logger // Default writer: os.Stderr.
 
-	lv    level		// Logging level. Default: InfoLevel.
-	date  bool		// Logging dates or not: Default: true.
-	color bool		// Using colors or not: Default: false.
+	lv    level // Logging level. Default: InfoLevel.
+	date  bool  // Logging dates or not: Default: true.
+	color bool  // Using colors or not: Default: false.
 }
 
 var l logger

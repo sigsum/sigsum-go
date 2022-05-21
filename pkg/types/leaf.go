@@ -12,14 +12,14 @@ import (
 )
 
 type Statement struct {
-	ShardHint uint64 `ascii:"shard_hint"`
-	Checksum  merkle.Hash   `ascii:"checksum"`
+	ShardHint uint64      `ascii:"shard_hint"`
+	Checksum  merkle.Hash `ascii:"checksum"`
 }
 
 type Leaf struct {
 	Statement
-	Signature Signature `ascii:"signature"`
-	KeyHash   merkle.Hash      `ascii:"key_hash"`
+	Signature Signature   `ascii:"signature"`
+	KeyHash   merkle.Hash `ascii:"key_hash"`
 }
 
 type Leaves []Leaf
@@ -84,10 +84,10 @@ func (l *Leaf) FromASCII(r io.Reader) error {
 
 func (l *Leaves) FromASCII(r io.Reader) error {
 	leaves := &struct {
-		ShardHint []uint64    `ascii:"shard_hint"`
-		Checksum  []merkle.Hash      `ascii:"checksum"`
-		Signature []Signature `ascii:"signature"`
-		KeyHash   []merkle.Hash      `ascii:"key_hash"`
+		ShardHint []uint64      `ascii:"shard_hint"`
+		Checksum  []merkle.Hash `ascii:"checksum"`
+		Signature []Signature   `ascii:"signature"`
+		KeyHash   []merkle.Hash `ascii:"key_hash"`
 	}{}
 
 	if err := ascii.StdEncoding.Deserialize(r, leaves); err != nil {

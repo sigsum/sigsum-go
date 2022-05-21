@@ -13,9 +13,9 @@ import (
 )
 
 type TreeHead struct {
-	Timestamp uint64 `ascii:"timestamp"`
-	TreeSize  uint64 `ascii:"tree_size"`
-	RootHash  merkle.Hash   `ascii:"root_hash"`
+	Timestamp uint64      `ascii:"timestamp"`
+	TreeSize  uint64      `ascii:"tree_size"`
+	RootHash  merkle.Hash `ascii:"root_hash"`
 }
 
 type SignedTreeHead struct {
@@ -25,8 +25,8 @@ type SignedTreeHead struct {
 
 type CosignedTreeHead struct {
 	SignedTreeHead
-	Cosignature []Signature `ascii:"cosignature"`
-	KeyHash     []merkle.Hash      `ascii:"key_hash"`
+	Cosignature []Signature   `ascii:"cosignature"`
+	KeyHash     []merkle.Hash `ascii:"key_hash"`
 }
 
 func (th *TreeHead) toBinary() []byte {

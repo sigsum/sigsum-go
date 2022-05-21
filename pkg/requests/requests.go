@@ -13,11 +13,11 @@ import (
 )
 
 type Leaf struct {
-	ShardHint       uint64          `ascii:"shard_hint"`
-	Message         merkle.Hash      `ascii:"message"`
-	Signature       types.Signature `ascii:"signature"`
-	PublicKey       types.PublicKey `ascii:"public_key"`
-	DomainHint      string          `ascii:"domain_hint"`
+	ShardHint  uint64          `ascii:"shard_hint"`
+	Message    merkle.Hash     `ascii:"message"`
+	Signature  types.Signature `ascii:"signature"`
+	PublicKey  types.PublicKey `ascii:"public_key"`
+	DomainHint string          `ascii:"domain_hint"`
 }
 
 type Leaves struct {
@@ -37,7 +37,7 @@ type ConsistencyProof struct {
 
 type Cosignature struct {
 	Cosignature types.Signature `ascii:"cosignature"`
-	KeyHash     merkle.Hash      `ascii:"key_hash"`
+	KeyHash     merkle.Hash     `ascii:"key_hash"`
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
