@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"git.sigsum.org/sigsum-go/internal/mocks/signer"
 	"git.sigsum.org/sigsum-go/pkg/hex"
 )
 
@@ -30,13 +31,13 @@ func TestTreeHeadSign(t *testing.T) {
 		{
 			desc:    "invalid: signer error",
 			th:      validTreeHead(t),
-			signer:  &testSigner{*newPubBufferInc(t), *newSigBufferInc(t), fmt.Errorf("signing error")},
+			signer:  &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], fmt.Errorf("signing error")},
 			wantErr: true,
 		},
 		{
 			desc:    "valid",
 			th:      validTreeHead(t),
-			signer:  &testSigner{*newPubBufferInc(t), *newSigBufferInc(t), nil},
+			signer:  &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], nil},
 			wantSig: newSigBufferInc(t),
 		},
 	} {

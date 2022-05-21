@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"git.sigsum.org/sigsum-go/internal/mocks/signer"
 )
 
 func TestStatementToBinary(t *testing.T) {
@@ -28,13 +30,13 @@ func TestStatementSign(t *testing.T) {
 		{
 			desc:    "invalid: signer error",
 			stm:     validStatement(t),
-			signer:  &testSigner{*newPubBufferInc(t), *newSigBufferInc(t), fmt.Errorf("signing error")},
+			signer:  &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], fmt.Errorf("signing error")},
 			wantErr: true,
 		},
 		{
 			desc:    "valid",
 			stm:     validStatement(t),
-			signer:  &testSigner{*newPubBufferInc(t), *newSigBufferInc(t), nil},
+			signer:  &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], nil},
 			wantSig: newSigBufferInc(t),
 		},
 	} {

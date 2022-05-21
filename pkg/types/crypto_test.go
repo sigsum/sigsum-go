@@ -4,23 +4,8 @@ import (
 	"crypto"
 	"crypto/ed25519"
 	"crypto/rand"
-	"io"
 	"testing"
 )
-
-type testSigner struct {
-	PublicKey PublicKey
-	Signature Signature
-	Error     error
-}
-
-func (ts *testSigner) Public() crypto.PublicKey {
-	return ed25519.PublicKey(ts.PublicKey[:])
-}
-
-func (ts *testSigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
-	return ts.Signature[:], ts.Error
-}
 
 func newKeyPair(t *testing.T) (crypto.Signer, PublicKey) {
 	vk, sk, err := ed25519.GenerateKey(rand.Reader)
