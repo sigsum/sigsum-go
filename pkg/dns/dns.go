@@ -31,6 +31,13 @@ func NewDefaultResolver() Verifier {
 	return &DefaultResolver{}
 }
 
+type DummyResolver struct {
+}
+
+func NewDummyResolver() Verifier {
+	return &DummyResolver{}
+}
+
 func (dr *DefaultResolver) Verify(ctx context.Context, name string, pub *types.PublicKey) error {
 	if err := validPrefix(name); err != nil {
 		return fmt.Errorf("dns: %s", err)
@@ -59,5 +66,9 @@ func validPrefix(name string) error {
 	if !strings.HasPrefix(name, prefix) {
 		return fmt.Errorf("domain name prefix must be %s", prefix)
 	}
+	return nil
+}
+
+func (_ *DummyResolver) Verify(_ context.Context, _ string, _ *types.PublicKey) error {
 	return nil
 }
