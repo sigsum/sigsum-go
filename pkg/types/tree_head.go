@@ -64,6 +64,14 @@ func (th *TreeHead) Sign(s crypto.Signer, kh *merkle.Hash) (*SignedTreeHead, err
 	return sth, nil
 }
 
+func (th *TreeHead) ToASCII(w io.Writer) error {
+	return ascii.StdEncoding.Serialize(w, th)
+}
+
+func (th *TreeHead) FromASCII(r io.Reader) error {
+	return ascii.StdEncoding.Deserialize(r, th)
+}
+
 func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
 	return ascii.StdEncoding.Serialize(w, sth)
 }

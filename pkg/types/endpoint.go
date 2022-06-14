@@ -12,6 +12,8 @@ const (
 	EndpointGetInclusionProof   = Endpoint("get-inclusion-proof/")
 	EndpointGetConsistencyProof = Endpoint("get-consistency-proof/")
 	EndpointGetLeaves           = Endpoint("get-leaves/")
+
+	EndpointGetTreeHeadUnsigned = Endpoint("get-tree-head-unsigned")
 )
 
 // Path joins a number of components to form a full endpoint path.  For example,
