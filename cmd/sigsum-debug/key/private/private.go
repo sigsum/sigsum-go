@@ -24,6 +24,6 @@ func Main(args []string) error {
 		return fmt.Errorf("invalid key size %d", len(priv))
 	}
 
-	fmt.Printf("%s\n", hex.Serialize(priv[:]))
+	fmt.Printf("%s\n", hex.Serialize(priv.Seed()))
 	return nil
 }

@@ -36,10 +36,10 @@ func SignerFromHex(s string) (crypto.Signer, error) {
 	if err != nil {
 		return nil, err
 	}
-	if n := len(b); n != ed25519.PrivateKeySize {
+	if n := len(b); n != ed25519.SeedSize {
 		return nil, fmt.Errorf("invalid size %d", n)
 	}
-	return ed25519.PrivateKey(b), nil
+	return ed25519.NewKeyFromSeed(b), nil
 }
 
 func PublicKeyFromHex(s string) (pub types.PublicKey, err error) {
