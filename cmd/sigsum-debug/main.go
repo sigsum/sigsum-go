@@ -19,12 +19,12 @@ import (
 	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/head"
 	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/key"
 	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/leaf"
+	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/spam"
 	"git.sigsum.org/sigsum-go/internal/options"
 )
 
 const usage = `
-sigsum-debug is a tool that helps debug sigsum logs on the command-line.
-It is meant to be used in conjuction with other utilities such as curl.
+sigsum-debug is a tool that helps debug sigsum logs on the command-line
 
 Usage:
 
@@ -32,6 +32,7 @@ Usage:
   sigsum-debug key   Private and public key utilities
   sigsum-debug leaf  Hash, sign, and verify tree leaves
   sigsum-debug head  Sign and verify tree heads
+  sigsum-debug spam  Send many requests to a sigsum log
 
 `
 
@@ -49,6 +50,8 @@ func main() {
 		err = leaf.Main(opt.Args())
 	case "head":
 		err = head.Main(opt.Args())
+	case "spam":
+		err = spam.Main(opt.Args())
 	default:
 		err = fmt.Errorf(": invalid command %q, try \"help\"", opt.Name())
 	}

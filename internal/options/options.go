@@ -3,6 +3,7 @@ package options
 import (
 	"flag"
 	"fmt"
+	"time"
 )
 
 const (
@@ -40,6 +41,12 @@ func AddString(fs *flag.FlagSet, opt *string, short, long, value string) {
 func AddUint64(fs *flag.FlagSet, opt *uint64, short, long string, value uint64) {
 	fs.Uint64Var(opt, short, value, "")
 	fs.Uint64Var(opt, long, value, "")
+}
+
+// AddDuration adds a duration option to a flag set
+func AddDuration(fs *flag.FlagSet, opt *time.Duration, short, long string, value time.Duration) {
+	fs.DurationVar(opt, short, value, "")
+	fs.DurationVar(opt, long, value, "")
 }
 
 // CheckString checks that a string option has a non-default value
