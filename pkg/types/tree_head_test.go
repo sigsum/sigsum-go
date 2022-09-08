@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"testing"
 
-	"git.sigsum.org/sigsum-go/internal/mocks/signer"
-	"git.sigsum.org/sigsum-go/pkg/hex"
-	"git.sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/internal/mocks/signer"
+	"sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func TestTreeHeadToBinary(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.sigsum.org/sigsum-go/internal/mocks/signer"
-	"git.sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/internal/mocks/signer"
+	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func TestStatementToBinary(t *testing.T) {

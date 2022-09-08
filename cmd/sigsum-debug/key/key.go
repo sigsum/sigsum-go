@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/key/hash"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/key/private"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/key/public"
-	"git.sigsum.org/sigsum-go/internal/options"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/key/hash"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/key/private"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/key/public"
+	"sigsum.org/sigsum-go/internal/options"
 )
 
 const usage = `

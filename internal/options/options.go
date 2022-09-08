@@ -15,7 +15,6 @@ const (
 //   - args should start with the (sub)command's name
 //   - usage is a function that prints a usage message
 //   - set is a function that sets the command's flag arguments
-//
 func New(args []string, usage func(), set func(*flag.FlagSet)) *flag.FlagSet {
 	if len(args) == 0 {
 		args = append(args, "")

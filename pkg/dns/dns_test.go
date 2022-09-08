@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"git.sigsum.org/sigsum-go/pkg/hex"
-	"git.sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 func Example() {

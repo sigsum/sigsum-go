@@ -4,9 +4,9 @@ package client
 //	"context"
 //	"time"
 //
-//	"git.sigsum.org/sigsum-go/internal/fmtio"
-//	"git.sigsum.org/sigsum-go/pkg/log"
-//	"git.sigsum.org/sigsum-go/pkg/requests"
+//	"sigsum.org/sigsum-go/internal/fmtio"
+//	"sigsum.org/sigsum-go/pkg/log"
+//	"sigsum.org/sigsum-go/pkg/requests"
 //)
 //
 //const (

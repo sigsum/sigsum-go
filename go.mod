@@ -1,3 +1,3 @@
-module git.sigsum.org/sigsum-go
+module sigsum.org/sigsum-go
 
 go 1.15

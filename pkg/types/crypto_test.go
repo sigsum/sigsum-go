@@ -6,7 +6,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"git.sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func newKeyPair(t *testing.T) (crypto.Signer, PublicKey) {

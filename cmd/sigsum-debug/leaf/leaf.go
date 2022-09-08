@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/hash"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/inclusion"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/sign"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/verify"
-	"git.sigsum.org/sigsum-go/internal/options"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/hash"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/inclusion"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/sign"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/verify"
+	"sigsum.org/sigsum-go/internal/options"
 )
 
 const usage = `

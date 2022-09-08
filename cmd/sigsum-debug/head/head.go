@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/head/consistency"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/head/sign"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/head/verify"
-	"git.sigsum.org/sigsum-go/internal/options"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/consistency"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/sign"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/verify"
+	"sigsum.org/sigsum-go/internal/options"
 )
 
 const usage = `

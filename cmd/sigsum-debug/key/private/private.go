@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/pkg/hex"
 )
 
 const privateKeySize = 64

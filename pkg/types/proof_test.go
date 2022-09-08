@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"git.sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func TestInclusionProofToASCII(t *testing.T) {

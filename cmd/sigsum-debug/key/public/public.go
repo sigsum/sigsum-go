@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"git.sigsum.org/sigsum-go/internal/fmtio"
-	"git.sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/internal/fmtio"
+	"sigsum.org/sigsum-go/pkg/hex"
 )
 
 func Main(args []string) error {

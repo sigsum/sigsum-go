@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"git.sigsum.org/sigsum-go/pkg/ascii"
-	"git.sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/ascii"
+	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 type Statement struct {

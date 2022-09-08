@@ -2,12 +2,11 @@
 //
 // Install:
 //
-//     $ go install git.sigsum.org/sigsum-go/cmd/sigsum-debug@latest
+//	$ go install sigsum.org/sigsum-go/cmd/sigsum-debug@latest
 //
 // Usage:
 //
-//     $ sigsum-debug help
-//
+//	$ sigsum-debug help
 package main
 
 import (
@@ -16,10 +15,10 @@ import (
 	"log"
 	"os"
 
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/head"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/key"
-	"git.sigsum.org/sigsum-go/cmd/sigsum-debug/leaf"
-	"git.sigsum.org/sigsum-go/internal/options"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/head"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/key"
+	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf"
+	"sigsum.org/sigsum-go/internal/options"
 )
 
 const usage = `

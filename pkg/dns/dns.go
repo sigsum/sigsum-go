@@ -8,9 +8,9 @@ import (
 	"net"
 	"strings"
 
-	"git.sigsum.org/sigsum-go/pkg/hex"
-	"git.sigsum.org/sigsum-go/pkg/merkle"
-	"git.sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 const (

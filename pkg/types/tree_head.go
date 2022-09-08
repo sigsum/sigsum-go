@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	"git.sigsum.org/sigsum-go/pkg/ascii"
-	"git.sigsum.org/sigsum-go/pkg/hex"
-	"git.sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/ascii"
+	"sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 type TreeHead struct {

@@ -16,7 +16,6 @@
 // A value must not contain an encoding's end-of-value value.
 //
 // For additional details, please refer to the Sigsum v0 API documentation.
-//
 package ascii
 
 import (
@@ -28,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git.sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/pkg/hex"
 )
 
 var StdEncoding = NewEncoding("ascii", "=", "\n")

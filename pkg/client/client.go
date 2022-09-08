@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"git.sigsum.org/sigsum-go/pkg/requests"
-	"git.sigsum.org/sigsum-go/pkg/types"
-	"git.sigsum.org/sigsum-go/pkg/log"
-	"git.sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/log"
+	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/requests"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 type Client interface {
@@ -150,7 +150,7 @@ func (cli *client) do(ctx context.Context, req *http.Request) ([]byte, int, erro
 
 	var rsp *http.Response
 	var err error
-	for wait := 1; wait < 10 ; wait *= 2 {
+	for wait := 1; wait < 10; wait *= 2 {
 		log.Debug("trying %v", req.URL)
 		if rsp, err = cli.Client.Do(req); err == nil {
 			break

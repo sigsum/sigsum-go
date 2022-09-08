@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"git.sigsum.org/sigsum-go/internal/fmtio"
-	"git.sigsum.org/sigsum-go/pkg/hex"
-	"git.sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/internal/fmtio"
+	"sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 func Main(args []string, optPrivateKey, optKeyHash string) error {

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"git.sigsum.org/sigsum-go/internal/fmtio"
-	"git.sigsum.org/sigsum-go/pkg/hex"
-	"git.sigsum.org/sigsum-go/pkg/merkle"
-	"git.sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/internal/fmtio"
+	"sigsum.org/sigsum-go/pkg/hex"
+	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) error {

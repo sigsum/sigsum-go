@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"git.sigsum.org/sigsum-go/internal/fmtio"
-	"git.sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/internal/fmtio"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 func Main(args []string, optOldSize, optNewSize uint64, optOldRoot, optNewRoot string) error {
