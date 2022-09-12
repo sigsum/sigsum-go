@@ -4,11 +4,11 @@ import (
 	"crypto"
 	"crypto/ed25519"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
@@ -38,7 +38,7 @@ func (th *TreeHead) toBinary() []byte {
 }
 
 func (th *TreeHead) ToBinary(keyHash *merkle.Hash) []byte {
-	namespace := fmt.Sprintf("tree_head:v0:%s@sigsum.org", hex.Serialize(keyHash[:])) // length 88
+	namespace := fmt.Sprintf("tree_head:v0:%s@sigsum.org", hex.EncodeToString(keyHash[:])) // length 88
 	b := make([]byte, 6+4+88+4+0+4+6+4+merkle.HashSize)
 
 	copy(b[0:6], "SSHSIG")

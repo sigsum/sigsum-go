@@ -124,7 +124,7 @@ func TestLeavesFromURL(t *testing.T) {
 }
 
 func TestInclusionProofFromURL(t *testing.T) {
-	badHex := "F000000000000000000000000000000000000000000000000000000000000000"
+	badHex := "F0000000x0000000000000000000000000000000000000000000000000000000"
 	shortHex := "00ff"
 	zeroHash := "0000000000000000000000000000000000000000000000000000000000000000"
 	for _, table := range []struct {
@@ -136,7 +136,7 @@ func TestInclusionProofFromURL(t *testing.T) {
 		{"invalid: not enough parameters", "some-url", InclusionProof{}, true},
 		{"invalid: tree size has a leading sign", "some-url/+1/" + zeroHash, InclusionProof{}, true},
 		{"invalid: tree size is empty", "some-url//" + zeroHash, InclusionProof{}, true},
-		{"invalid: leaf hash is not lower-case hex", "some-url/1/" + badHex, InclusionProof{}, true},
+		{"invalid: leaf hash is invalid hex", "some-url/1/" + badHex, InclusionProof{}, true},
 		{"invalid: leaf hash is hex but too short", "some-url/1/" + shortHex, InclusionProof{}, true},
 		{"valid", "some-url/1/" + zeroHash, InclusionProof{1, merkle.Hash{}}, false},
 	} {

@@ -3,10 +3,9 @@ package private
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"strings"
-
-	"sigsum.org/sigsum-go/pkg/hex"
 )
 
 const privateKeySize = 64
@@ -24,6 +23,6 @@ func Main(args []string) error {
 		return fmt.Errorf("invalid key size %d", len(priv))
 	}
 
-	fmt.Printf("%s\n", hex.Serialize(priv.Seed()))
+	fmt.Printf("%s\n", hex.EncodeToString(priv.Seed()))
 	return nil
 }

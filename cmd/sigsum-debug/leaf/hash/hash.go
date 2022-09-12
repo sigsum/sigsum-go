@@ -1,11 +1,11 @@
 package hash
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -38,6 +38,6 @@ func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) e
 	}
 	leafHash := merkle.HashLeafNode(leaf.ToBinary())
 
-	fmt.Printf("%s\n", hex.Serialize(leafHash[:]))
+	fmt.Printf("%s\n", hex.EncodeToString(leafHash[:]))
 	return nil
 }

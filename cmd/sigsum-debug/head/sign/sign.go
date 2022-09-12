@@ -2,11 +2,11 @@ package sign
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -36,6 +36,6 @@ func Main(args []string, optPrivateKey, optKeyHash string) error {
 		return fmt.Errorf("sign tree head: %v", err)
 	}
 
-	fmt.Printf("%s\n", hex.Serialize(output.Signature[:]))
+	fmt.Printf("%s\n", hex.EncodeToString(output.Signature[:]))
 	return nil
 }

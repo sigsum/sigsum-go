@@ -4,11 +4,11 @@ package dns
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -53,7 +53,7 @@ func (dr *DefaultResolver) Verify(ctx context.Context, name string, pub *types.P
 }
 
 func validResponse(pub *types.PublicKey, rsps []string) error {
-	keyHash := hex.Serialize(merkle.HashFn(pub[:])[:])
+	keyHash := hex.EncodeToString(merkle.HashFn(pub[:])[:])
 	for _, rsp := range rsps {
 		if rsp == keyHash {
 			return nil
