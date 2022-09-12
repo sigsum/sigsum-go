@@ -20,14 +20,13 @@ package ascii
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"sigsum.org/sigsum-go/pkg/hex"
 )
 
 var StdEncoding = NewEncoding("ascii", "=", "\n")
@@ -106,7 +105,7 @@ func (e *Encoding) write(w io.Writer, key string, v reflect.Value) error {
 			array[i] = uint8(v.Index(i).Uint())
 		}
 
-		val := hex.Serialize(array)
+		val := hex.EncodeToString(array)
 		return e.writeOne(w, key, val)
 
 	case reflect.Slice:
@@ -234,7 +233,7 @@ func setKey(ref *someValue, key, value string) error {
 	switch k {
 	case reflect.Array:
 		arrayLen := v.Len()
-		b, err := hex.Deserialize(value)
+		b, err := hex.DecodeString(value)
 		if err != nil {
 			return err
 		}

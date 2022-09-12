@@ -361,7 +361,7 @@ func TestSetKey(t *testing.T) {
 		{
 			desc:  "invalid: array: bad hex",
 			key:   "array",
-			value: "00fE",
+			value: "00xE",
 			want:  [2]byte{},
 			err:   true,
 		},
@@ -378,6 +378,12 @@ func TestSetKey(t *testing.T) {
 			value: "01fe",
 			want:  [2]byte{1, 254},
 		},
+		{
+			desc:  "valid: array, mixed case hex",
+			key:   "num",
+			value: "01Fe",
+			want:  [2]byte{1, 254},
+		},
 		// slice
 		{
 			desc:  "invalid: slice: bad type",
@@ -391,7 +397,7 @@ func TestSetKey(t *testing.T) {
 		{
 			desc:  "invalid: bad hex",
 			key:   "slice",
-			value: "01FE",
+			value: "01xE",
 			want: [][2]byte{
 				[2]byte{1, 254},
 			},

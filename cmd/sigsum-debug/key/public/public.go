@@ -2,11 +2,11 @@ package public
 
 import (
 	"crypto/ed25519"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
-	"sigsum.org/sigsum-go/pkg/hex"
 )
 
 func Main(args []string) error {
@@ -27,6 +27,6 @@ func Main(args []string) error {
 		return fmt.Errorf("not an ed25519 key")
 	}
 
-	fmt.Printf("%s\n", hex.Serialize(pub[:]))
+	fmt.Printf("%s\n", hex.EncodeToString(pub[:]))
 	return nil
 }

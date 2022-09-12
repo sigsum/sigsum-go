@@ -1,11 +1,11 @@
 package hash
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
@@ -24,6 +24,6 @@ func Main(args []string) error {
 
 	keyHash := merkle.HashFn(pub[:])
 
-	fmt.Printf("%s\n", hex.Serialize(keyHash[:]))
+	fmt.Printf("%s\n", hex.EncodeToString(keyHash[:]))
 	return nil
 }

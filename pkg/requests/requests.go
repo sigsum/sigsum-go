@@ -1,13 +1,13 @@
 package requests
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -51,7 +51,7 @@ func (req *Leaves) ToURL(url string) string {
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
 func (req *InclusionProof) ToURL(url string) string {
-	return url + fmt.Sprintf("%d/%s", req.TreeSize, hex.Serialize(req.LeafHash[:]))
+	return url + fmt.Sprintf("%d/%s", req.TreeSize, hex.EncodeToString(req.LeafHash[:]))
 }
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
@@ -94,7 +94,7 @@ func (req *InclusionProof) FromURL(url string) (err error) {
 	if req.TreeSize, err = strconv.ParseUint(treeSize, 10, 64); err != nil {
 		return err
 	}
-	b, err := hex.Deserialize(split[len(split)-1])
+	b, err := hex.DecodeString(split[len(split)-1])
 	if err != nil {
 		return err
 	}

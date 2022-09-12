@@ -2,11 +2,11 @@ package dns
 
 import (
 	"context"
+	"encoding/hex"
 	"log"
 	"testing"
 	"time"
 
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -88,7 +88,7 @@ func TestValidPrefix(t *testing.T) {
 }
 
 func mustDecodePublicKey(str string) *types.PublicKey {
-	b, err := hex.Deserialize(str)
+	b, err := hex.DecodeString(str)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

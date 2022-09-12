@@ -1,11 +1,11 @@
 package sign
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -33,6 +33,6 @@ func Main(args []string, optPrivateKey string, optShardHint uint64) error {
 		fmt.Errorf("sign leaf: %w", err)
 	}
 
-	fmt.Printf("%s\n", hex.Serialize(sig[:]))
+	fmt.Printf("%s\n", hex.EncodeToString(sig[:]))
 	return nil
 }

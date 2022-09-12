@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ed25519"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
 
-	"sigsum.org/sigsum-go/pkg/hex"
 	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -33,7 +33,7 @@ func StringFromStdin() (string, error) {
 }
 
 func SignerFromHex(s string) (crypto.Signer, error) {
-	b, err := hex.Deserialize(s)
+	b, err := hex.DecodeString(s)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func SignerFromHex(s string) (crypto.Signer, error) {
 }
 
 func PublicKeyFromHex(s string) (pub types.PublicKey, err error) {
-	b, err := hex.Deserialize(s)
+	b, err := hex.DecodeString(s)
 	if err != nil {
 		return pub, err
 	}
@@ -56,7 +56,7 @@ func PublicKeyFromHex(s string) (pub types.PublicKey, err error) {
 }
 
 func HashFromHex(s string) (h merkle.Hash, err error) {
-	b, err := hex.Deserialize(s)
+	b, err := hex.DecodeString(s)
 	if err != nil {
 		return h, err
 	}
@@ -68,7 +68,7 @@ func HashFromHex(s string) (h merkle.Hash, err error) {
 }
 
 func SignatureFromHex(s string) (sig types.Signature, err error) {
-	b, err := hex.Deserialize(s)
+	b, err := hex.DecodeString(s)
 	if err != nil {
 		return sig, err
 	}
