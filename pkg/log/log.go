@@ -15,6 +15,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -47,6 +48,10 @@ const (
 type logger struct {
 	log.Logger // Default writer: os.Stderr.
 
+	// The log.Logger above is threadsafe, but the fields below
+	// need synchronization, and are protected by this mutex.
+	m sync.Mutex
+
 	lv    level // Logging level. Default: InfoLevel.
 	date  bool  // Logging dates or not: Default: true.
 	color bool  // Using colors or not: Default: false.
@@ -61,54 +66,58 @@ func init() {
 // SetLevel sets the logging level.  Available options: DebugLevel, InfoLevel,
 // WarningLevel, ErrorLevel, FatalLevel.
 func SetLevel(lv level) {
+	l.m.Lock()
+	defer l.m.Unlock()
 	l.lv = lv
 }
 
 // SetOutput sets the logging output to a particular writer.
 func SetOutput(writer io.Writer) {
-	l = newLogger(l.lv, writer, l.date, l.color)
+	l.Logger.SetOutput(writer)
 }
 
 // SetDate (un)sets date output.
 func SetDate(ok bool) {
+	l.m.Lock()
+	defer l.m.Unlock()
 	l.date = ok
 }
 
 // SetColor (un)sets terminal colors.
 func SetColor(ok bool) {
+	l.m.Lock()
+	defer l.m.Unlock()
 	l.color = ok
 }
 
-func Debug(format string, v ...interface{}) {
-	if l.lv > DebugLevel {
-		return
-	}
+func isEnabled(lv level) bool {
+	l.m.Lock()
+	defer l.m.Unlock()
+	return l.lv <= lv
+}
 
-	l.Printf(l.fmt(tagDebug, colorDebug)+format, v...)
+func Debug(format string, v ...interface{}) {
+	if isEnabled(DebugLevel) {
+		l.Printf(l.fmt(tagDebug, colorDebug)+format, v...)
+	}
 }
 
 func Info(format string, v ...interface{}) {
-	if l.lv > InfoLevel {
-		return
+	if isEnabled(InfoLevel) {
+		l.Printf(l.fmt(tagInfo, colorInfo)+format, v...)
 	}
-
-	l.Printf(l.fmt(tagInfo, colorInfo)+format, v...)
 }
 
 func Warning(format string, v ...interface{}) {
-	if l.lv > WarningLevel {
-		return
+	if isEnabled(WarningLevel) {
+		l.Printf(l.fmt(tagWarning, colorWarning)+format, v...)
 	}
-
-	l.Printf(l.fmt(tagWarning, colorWarning)+format, v...)
 }
 
 func Error(format string, v ...interface{}) {
-	if l.lv > ErrorLevel {
-		return
+	if isEnabled(ErrorLevel) {
+		l.Printf(l.fmt(tagError, colorError)+format, v...)
 	}
-
-	l.Printf(l.fmt(tagError, colorError)+format, v...)
 }
 
 func Fatal(format string, v ...interface{}) {
@@ -126,6 +135,8 @@ func newLogger(lv level, writer io.Writer, date, color bool) logger {
 }
 
 func (l *logger) fmt(tag, colorTag string) string {
+	l.m.Lock()
+	defer l.m.Unlock()
 	date := ""
 	if l.date {
 		date = time.Now().Format(time.RFC1123) + " "
