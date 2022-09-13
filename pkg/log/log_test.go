@@ -1,14 +1,14 @@
 package log
 
 import (
+	"log"
 	"os"
 )
 
 func Example() {
-	SetOutput(os.Stdout)
+	log.SetOutput(os.Stdout)
+	log.SetFlags(0)
 	SetLevel(WarningLevel)
-	SetDate(false)
-	SetColor(false)
 
 	Debug("some debug number: %d\n", 10)
 	Info("some info number: %d\n", 20)
