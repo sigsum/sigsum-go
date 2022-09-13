@@ -50,7 +50,7 @@ type logger struct {
 
 	// The log.Logger above is threadsafe, but the fields below
 	// need synchronization, and are protected by this mutex.
-	m sync.Mutex
+	m sync.RWMutex
 
 	lv    level // Logging level. Default: InfoLevel.
 	date  bool  // Logging dates or not: Default: true.
@@ -91,8 +91,8 @@ func SetColor(ok bool) {
 }
 
 func isEnabled(lv level) bool {
-	l.m.Lock()
-	defer l.m.Unlock()
+	l.m.RLock()
+	defer l.m.RUnlock()
 	return l.lv <= lv
 }
 
@@ -135,8 +135,8 @@ func newLogger(lv level, writer io.Writer, date, color bool) logger {
 }
 
 func (l *logger) fmt(tag, colorTag string) string {
-	l.m.Lock()
-	defer l.m.Unlock()
+	l.m.RLock()
+	defer l.m.RUnlock()
 	date := ""
 	if l.date {
 		date = time.Now().Format(time.RFC1123) + " "
