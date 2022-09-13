@@ -6,19 +6,15 @@
 //   - ErrorLevel
 //   - FatalLevel (lowest verbosity)
 //
-// Output is by default written to STDERR.
-// A different output can be specified.
-// Dates and terminal colors can be turned on.
+// Output is written to the default logger.
 package log
 
 import (
-	"io"
 	"log"
-	"os"
-	"time"
+	"sync/atomic"
 )
 
-type level int
+type level int32
 
 const (
 	DebugLevel   level = iota // DebugLevel logs all messages
@@ -29,14 +25,6 @@ const (
 )
 
 const (
-	colorDate    = "\033[37m"
-	colorDebug   = "\033[95m"
-	colorInfo    = "\033[94m"
-	colorWarning = "\033[93m"
-	colorError   = "\033[91m"
-	colorFatal   = "\033[31m"
-	colorReset   = "\033[0m"
-
 	tagDebug   = "DEBU"
 	tagInfo    = "INFO"
 	tagWarning = "WARN"
@@ -44,96 +32,46 @@ const (
 	tagFatal   = "FATA"
 )
 
-type logger struct {
-	log.Logger // Default writer: os.Stderr.
-
-	lv    level // Logging level. Default: InfoLevel.
-	date  bool  // Logging dates or not: Default: true.
-	color bool  // Using colors or not: Default: false.
-}
-
-var l logger
+var currentLevel int32
 
 func init() {
-	l = newLogger(InfoLevel, os.Stderr, true, false)
+	currentLevel = int32(InfoLevel)
 }
 
 // SetLevel sets the logging level.  Available options: DebugLevel, InfoLevel,
 // WarningLevel, ErrorLevel, FatalLevel.
 func SetLevel(lv level) {
-	l.lv = lv
+	atomic.StoreInt32(&currentLevel, int32(lv))
 }
 
-// SetOutput sets the logging output to a particular writer.
-func SetOutput(writer io.Writer) {
-	l = newLogger(l.lv, writer, l.date, l.color)
-}
-
-// SetDate (un)sets date output.
-func SetDate(ok bool) {
-	l.date = ok
-}
-
-// SetColor (un)sets terminal colors.
-func SetColor(ok bool) {
-	l.color = ok
+func isEnabled(lv level) bool {
+	return level(atomic.LoadInt32(&currentLevel)) <= lv
 }
 
 func Debug(format string, v ...interface{}) {
-	if l.lv > DebugLevel {
-		return
+	if isEnabled(DebugLevel) {
+		log.Printf("["+tagDebug+"] "+format, v...)
 	}
-
-	l.Printf(l.fmt(tagDebug, colorDebug)+format, v...)
 }
 
 func Info(format string, v ...interface{}) {
-	if l.lv > InfoLevel {
-		return
+	if isEnabled(InfoLevel) {
+		log.Printf("["+tagInfo+"] "+format, v...)
 	}
-
-	l.Printf(l.fmt(tagInfo, colorInfo)+format, v...)
 }
 
 func Warning(format string, v ...interface{}) {
-	if l.lv > WarningLevel {
-		return
+	if isEnabled(WarningLevel) {
+		log.Printf("["+tagWarning+"] "+format, v...)
 	}
-
-	l.Printf(l.fmt(tagWarning, colorWarning)+format, v...)
 }
 
 func Error(format string, v ...interface{}) {
-	if l.lv > ErrorLevel {
-		return
+	if isEnabled(ErrorLevel) {
+		log.Printf("["+tagError+"] "+format, v...)
 	}
-
-	l.Printf(l.fmt(tagError, colorError)+format, v...)
 }
 
 func Fatal(format string, v ...interface{}) {
-	l.Printf(l.fmt(tagFatal, colorFatal)+format, v...)
-	os.Exit(1)
-}
-
-func newLogger(lv level, writer io.Writer, date, color bool) logger {
-	return logger{
-		Logger: *log.New(writer, "", 0),
-		lv:     lv,
-		date:   date,
-		color:  color,
-	}
-}
-
-func (l *logger) fmt(tag, colorTag string) string {
-	date := ""
-	if l.date {
-		date = time.Now().Format(time.RFC1123) + " "
-	}
-	if l.color {
-		date = colorDate + date + colorReset
-		tag = colorTag + tag + colorReset
-	}
-	tag = "[" + tag + "] "
-	return date + tag
+	log.Fatalf("["+tagFatal+"] "+format, v...)
 }
