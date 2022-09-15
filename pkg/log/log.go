@@ -10,6 +10,7 @@
 package log
 
 import (
+	"fmt"
 	"log"
 	"sync/atomic"
 )
@@ -42,6 +43,22 @@ func init() {
 // WarningLevel, ErrorLevel, FatalLevel.
 func SetLevel(lv level) {
 	atomic.StoreInt32(&currentLevel, int32(lv))
+}
+
+func SetLevelFromString(levelName string) error {
+	switch levelName {
+	case "debug":
+		SetLevel(DebugLevel)
+	case "info":
+		SetLevel(InfoLevel)
+	case "warning":
+		SetLevel(WarningLevel)
+	case "error":
+		SetLevel(ErrorLevel)
+	default:
+		return fmt.Errorf("invalid logging level %s", levelName)
+	}
+	return nil
 }
 
 func isEnabled(lv level) bool {
