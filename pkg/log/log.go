@@ -55,6 +55,8 @@ func SetLevelFromString(levelName string) error {
 		SetLevel(WarningLevel)
 	case "error":
 		SetLevel(ErrorLevel)
+	case "fatal":
+		SetLevel(FatalLevel)
 	default:
 		return fmt.Errorf("invalid logging level %s", levelName)
 	}
