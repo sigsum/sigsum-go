@@ -1,0 +1,16 @@
+This file documents authors and copyright holders of Sigsum.
+
+The copyright on the Sigsum implementation is held by respective
+authors, or the author's employer or client.
+
+Where file-specific copyright headers don't say otherwise, Sigsum is
+Copyright (c) 2021, Glasklar Teknik AB, and permissively licensed
+according to the BSD 2-Clause License (see the LICENSE file).
+
+Authors, in chronological order of initial contribution:
+
+Rasmus Dahlberg
+Linus Nordberg
+Grégoire Détrez
+Niels Möller
+
