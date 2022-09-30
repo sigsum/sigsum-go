@@ -17,7 +17,7 @@ const (
 )
 
 // Path joins a number of components to form a full endpoint path.  For example,
-// EndpointAddLeaf.Path("example.com", "sigsum/v0") -> example.com/sigsum/v0/add-leaf.
+// EndpointAddLeaf.Path("example.com", "sigsum") -> example.com/sigsum/add-leaf.
 func (e Endpoint) Path(components ...string) string {
 	return strings.Join(append(components, string(e)), "/")
 }

@@ -23,7 +23,7 @@ func TestLeafToASCII(t *testing.T) {
 }
 
 func TestLeavesToURL(t *testing.T) {
-	url := types.EndpointGetLeaves.Path("https://poc.sigsum.org/sigsum/v0")
+	url := types.EndpointGetLeaves.Path("https://poc.sigsum.org")
 	req := Leaves{1, 2}
 	want := url + "1/2"
 	if got := req.ToURL(url); got != want {
@@ -32,7 +32,7 @@ func TestLeavesToURL(t *testing.T) {
 }
 
 func TestInclusionProofToURL(t *testing.T) {
-	url := types.EndpointGetInclusionProof.Path("https://poc.sigsum.org/sigsum/v0")
+	url := types.EndpointGetInclusionProof.Path("https://poc.sigsum.org")
 	req := InclusionProof{1, merkle.Hash{}}
 	want := url + "1/0000000000000000000000000000000000000000000000000000000000000000"
 	if got := req.ToURL(url); got != want {
@@ -41,7 +41,7 @@ func TestInclusionProofToURL(t *testing.T) {
 }
 
 func TestConsistencyProofToURL(t *testing.T) {
-	url := types.EndpointGetConsistencyProof.Path("https://poc.sigsum.org/sigsum/v0")
+	url := types.EndpointGetConsistencyProof.Path("https://poc.sigsum.org")
 	req := ConsistencyProof{1, 2}
 	want := url + "1/2"
 	if got := req.ToURL(url); got != want {
