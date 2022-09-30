@@ -10,13 +10,15 @@ import (
 	"testing"
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
+	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 func TestTreeHeadToBinary(t *testing.T) {
 	desc := "valid"
 	kh := merkle.Hash{}
-	if got, want := validTreeHead(t).ToBinary(&kh), validTreeHeadBytes(t, &kh); !bytes.Equal(got, want) {
+	if got, want := ssh.SignedData(TreeHeadNamespace(&kh), validTreeHead(t).ToBinary()),
+		validTreeHeadBytes(t, &kh); !bytes.Equal(got, want) {
 		t.Errorf("got tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
