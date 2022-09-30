@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
@@ -26,16 +27,7 @@ type Leaves []Leaf
 
 func (s *Statement) ToBinary() []byte {
 	namespace := fmt.Sprintf("tree_leaf:v0:%d@sigsum.org", s.ShardHint)
-	b := make([]byte, 6+4+len(namespace)+4+0+4+6+4+merkle.HashSize)
-
-	copy(b[0:6], "SSHSIG")
-	i := 6
-	i += putSSHString(b[i:], namespace)
-	i += putSSHString(b[i:], "")
-	i += putSSHString(b[i:], "sha256")
-	i += putSSHString(b[i:], string(s.Checksum[:]))
-
-	return b
+	return ssh.SignedDataFromHash(namespace, s.Checksum[:])
 }
 
 func (s *Statement) Sign(signer crypto.Signer) (*Signature, error) {
