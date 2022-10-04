@@ -32,10 +32,9 @@ func SignedDataFromHash(namespace string, hash []byte) []byte {
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
 		String(namespace),
-		Uint32(0), // Empty reserved string
+		String(""), // Empty reserved string
 		String("sha256"),
-		Uint32(32), // Length of hash
-		hash[:]}, nil)
+		String(string(hash))}, nil)
 }
 
 func SignedData(namespace string, msg []byte) []byte {
