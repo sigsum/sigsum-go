@@ -27,7 +27,7 @@ type Leaves []Leaf
 
 func (s *Statement) ToBinary() []byte {
 	namespace := fmt.Sprintf("tree_leaf:v0:%d@sigsum.org", s.ShardHint)
-	return ssh.SignedDataFromHash(namespace, s.Checksum[:])
+	return ssh.SignedDataFromHash(namespace, s.Checksum)
 }
 
 func (s *Statement) Sign(signer crypto.Signer) (*Signature, error) {
