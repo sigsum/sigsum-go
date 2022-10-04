@@ -64,6 +64,11 @@ func (th *TreeHead) Sign(s crypto.Signer, kh *merkle.Hash) (*SignedTreeHead, err
 	return sth, nil
 }
 
+func (th *TreeHead) Verify(key *PublicKey, signature *Signature, kh *merkle.Hash) bool {
+	return ed25519.Verify(ed25519.PublicKey(key[:]),
+		th.ToBinary(kh), signature[:])
+}
+
 func (th *TreeHead) ToASCII(w io.Writer) error {
 	return ascii.StdEncoding.Serialize(w, th)
 }
@@ -81,7 +86,7 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 }
 
 func (sth *SignedTreeHead) Verify(key *PublicKey, kh *merkle.Hash) bool {
-	return ed25519.Verify(ed25519.PublicKey(key[:]), sth.TreeHead.ToBinary(kh), sth.Signature[:])
+	return sth.TreeHead.Verify(key, &sth.Signature, kh)
 }
 
 func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
