@@ -59,8 +59,8 @@ func (th *TreeHead) Sign(s crypto.Signer, kh *merkle.Hash) (*SignedTreeHead, err
 
 func (th *TreeHead) Verify(key *PublicKey, signature *Signature, kh *merkle.Hash) bool {
 	return ed25519.Verify(ed25519.PublicKey(key[:]),
-		ssh.SignedData(TreeHeadNamespace(kh),
-			sth.TreeHead.ToBinary()), signature[:])
+		ssh.SignedData(TreeHeadNamespace(kh), th.ToBinary()),
+		signature[:])
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
