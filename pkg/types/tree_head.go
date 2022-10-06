@@ -4,13 +4,16 @@ import (
 	"crypto"
 	"crypto/ed25519"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io"
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/merkle"
+)
+
+const (
+	TreeHeadNamespace = "tree_head:v0@sigsum.org"
 )
 
 type TreeHead struct {
@@ -30,7 +33,7 @@ type CosignedTreeHead struct {
 	KeyHash     []merkle.Hash `ascii:"key_hash"`
 }
 
-func (th *TreeHead) ToBinary() []byte {
+func (th *TreeHead) toBinary() []byte {
 	b := make([]byte, 48)
 	binary.BigEndian.PutUint64(b[0:8], th.Timestamp)
 	binary.BigEndian.PutUint64(b[8:16], th.TreeSize)
@@ -38,14 +41,12 @@ func (th *TreeHead) ToBinary() []byte {
 	return b
 }
 
-func TreeHeadNamespace(keyHash *merkle.Hash) string {
-	return fmt.Sprintf("tree_head:v0:%s@sigsum.org", hex.EncodeToString(keyHash[:]))
+func (th *TreeHead) toSignedData(keyHash *merkle.Hash) []byte {
+	return ssh.SignedData(TreeHeadNamespace, append(th.toBinary(), keyHash[:]...))
 }
 
 func (th *TreeHead) Sign(s crypto.Signer, kh *merkle.Hash) (*SignedTreeHead, error) {
-	sig, err := s.Sign(nil,
-		ssh.SignedData(TreeHeadNamespace(kh), th.ToBinary()),
-		crypto.Hash(0))
+	sig, err := s.Sign(nil, th.toSignedData(kh), crypto.Hash(0))
 	if err != nil {
 		return nil, fmt.Errorf("types: failed signing tree head")
 	}
@@ -59,8 +60,7 @@ func (th *TreeHead) Sign(s crypto.Signer, kh *merkle.Hash) (*SignedTreeHead, err
 
 func (th *TreeHead) Verify(key *PublicKey, signature *Signature, kh *merkle.Hash) bool {
 	return ed25519.Verify(ed25519.PublicKey(key[:]),
-		ssh.SignedData(TreeHeadNamespace(kh), th.ToBinary()),
-		signature[:])
+		th.toSignedData(kh), signature[:])
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {

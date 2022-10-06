@@ -3,29 +3,19 @@ package types
 import (
 	"bytes"
 	"crypto"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"reflect"
 	"testing"
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
-	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
-
-func TestTreeHeadToBinary(t *testing.T) {
-	desc := "valid"
-	if got, want := validTreeHead(t).ToBinary(),
-		validTreeHeadBytes(t); !bytes.Equal(got, want) {
-		t.Errorf("got tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
-	}
-}
 
 func TestTreeHeadToSignedData(t *testing.T) {
 	desc := "valid"
 	kh := merkle.Hash{}
-	if got, want := ssh.SignedData(TreeHeadNamespace(&kh), validTreeHead(t).ToBinary()),
+	if got, want := validTreeHead(t).toSignedData(&kh),
 		validTreeHeadSignedData(t, &kh); !bytes.Equal(got, want) {
 		t.Errorf("got tree head signed data\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
@@ -199,22 +189,22 @@ func validTreeHead(t *testing.T) *TreeHead {
 	}
 }
 
-func validTreeHeadBytes(t *testing.T) []byte {
+func validTreeHeadBytes(t *testing.T, keyHash *merkle.Hash) []byte {
 	return bytes.Join([][]byte{
 		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
 		[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01},
 		newHashBufferInc(t)[:],
+		keyHash[:],
 	}, nil)
 }
 
 func validTreeHeadSignedData(t *testing.T, keyHash *merkle.Hash) []byte {
-	ns := fmt.Sprintf("tree_head:v0:%s@sigsum.org", hex.EncodeToString(keyHash[:]))
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
-		[]byte{0, 0, 0, 88}, []byte(ns),
+		[]byte{0, 0, 0, 23}, []byte("tree_head:v0@sigsum.org"),
 		[]byte{0, 0, 0, 0},
 		[]byte{0, 0, 0, 6}, []byte("sha256"),
-		[]byte{0, 0, 0, 32}, (*merkle.HashFn(validTreeHeadBytes(t)))[:],
+		[]byte{0, 0, 0, 32}, (*merkle.HashFn(validTreeHeadBytes(t, keyHash)))[:],
 	}, nil)
 }
 
