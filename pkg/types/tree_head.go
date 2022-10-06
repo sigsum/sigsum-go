@@ -79,8 +79,8 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 	return ascii.StdEncoding.Deserialize(r, sth)
 }
 
-func (sth *SignedTreeHead) Verify(key *PublicKey, kh *merkle.Hash) bool {
-	return sth.TreeHead.Verify(key, &sth.Signature, kh)
+func (sth *SignedTreeHead) Verify(key *PublicKey) bool {
+	return sth.TreeHead.Verify(key, &sth.Signature, merkle.HashFn(key[:]))
 }
 
 func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {

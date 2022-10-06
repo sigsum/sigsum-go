@@ -127,12 +127,12 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !sth.Verify(&pub, kh) {
+	if !sth.Verify(&pub) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
 
 	sth.TreeSize += 1
-	if sth.Verify(&pub, kh) {
+	if sth.Verify(&pub) {
 		t.Errorf("succeeded verifying an invalid signed tree head")
 	}
 }
