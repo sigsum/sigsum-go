@@ -199,12 +199,18 @@ func validTreeHeadBytes(t *testing.T, keyHash *merkle.Hash) []byte {
 }
 
 func validTreeHeadSignedData(t *testing.T, keyHash *merkle.Hash) []byte {
+	msg := bytes.Join([][]byte{
+		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
+		[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01},
+		newHashBufferInc(t)[:],
+		keyHash[:],
+	}, nil)
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
 		[]byte{0, 0, 0, 23}, []byte("tree_head:v0@sigsum.org"),
 		[]byte{0, 0, 0, 0},
 		[]byte{0, 0, 0, 6}, []byte("sha256"),
-		[]byte{0, 0, 0, 32}, (*merkle.HashFn(validTreeHeadBytes(t, keyHash)))[:],
+		[]byte{0, 0, 0, 32}, (*merkle.HashFn(msg))[:],
 	}, nil)
 }
 

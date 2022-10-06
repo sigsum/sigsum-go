@@ -33,16 +33,13 @@ type CosignedTreeHead struct {
 	KeyHash     []merkle.Hash `ascii:"key_hash"`
 }
 
-func (th *TreeHead) toBinary() []byte {
-	b := make([]byte, 48)
+func (th *TreeHead) toSignedData(keyHash *merkle.Hash) []byte {
+	b := make([]byte, 80)
 	binary.BigEndian.PutUint64(b[0:8], th.Timestamp)
 	binary.BigEndian.PutUint64(b[8:16], th.TreeSize)
 	copy(b[16:48], th.RootHash[:])
-	return b
-}
-
-func (th *TreeHead) toSignedData(keyHash *merkle.Hash) []byte {
-	return ssh.SignedData(TreeHeadNamespace, append(th.toBinary(), keyHash[:]...))
+	copy(b[48:80], keyHash[:])
+	return ssh.SignedData(TreeHeadNamespace, b)
 }
 
 func (th *TreeHead) Sign(s crypto.Signer, kh *merkle.Hash) (*SignedTreeHead, error) {
