@@ -13,11 +13,9 @@ import (
 )
 
 type Leaf struct {
-	ShardHint  uint64          `ascii:"shard_hint"`
-	Message    merkle.Hash     `ascii:"message"`
-	Signature  types.Signature `ascii:"signature"`
-	PublicKey  types.PublicKey `ascii:"public_key"`
-	DomainHint string          `ascii:"domain_hint"`
+	Message   merkle.Hash     `ascii:"message"`
+	Signature types.Signature `ascii:"signature"`
+	PublicKey types.PublicKey `ascii:"public_key"`
 }
 
 type Leaves struct {

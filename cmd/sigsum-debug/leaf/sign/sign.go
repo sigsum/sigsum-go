@@ -24,11 +24,9 @@ func Main(args []string, optPrivateKey string, optShardHint uint64) error {
 	}
 
 	message := merkle.HashFn(data)
-	stm := types.Statement{
-		ShardHint: optShardHint,
-		Checksum:  *merkle.HashFn(message[:]),
-	}
-	sig, err := stm.Sign(priv)
+	checksum := merkle.HashFn(message[:])
+
+	sig, err := types.SignLeafChecksum(priv, checksum)
 	if err != nil {
 		fmt.Errorf("sign leaf: %w", err)
 	}
