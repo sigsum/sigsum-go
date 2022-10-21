@@ -38,12 +38,24 @@ func SignLeafChecksum(signer crypto.Signer, checksum *merkle.Hash) (*Signature, 
 	return &signature, nil
 }
 
+func VerifyLeafChecksum(key *PublicKey, checksum *merkle.Hash, sig *Signature) bool {
+	return ed25519.Verify(ed25519.PublicKey(key[:]),
+		leafSignedData(checksum), sig[:])
+}
+
+func SignLeafMessage(signer crypto.Signer, msg []byte) (*Signature, error) {
+	return SignLeafChecksum(signer, merkle.HashFn(msg))
+}
+
+func VerifyLeafMessage(key *PublicKey, msg []byte, sig *Signature) bool {
+	return VerifyLeafChecksum(key, merkle.HashFn(msg), sig)
+}
+
 func (l *Leaf) Verify(key *PublicKey) bool {
 	if l.KeyHash != *merkle.HashFn(key[:]) {
 		return false
 	}
-	return ed25519.Verify(ed25519.PublicKey(key[:]),
-		leafSignedData(&l.Checksum), l.Signature[:])
+	return VerifyLeafChecksum(key, &l.Checksum, &l.Signature)
 }
 
 func (l *Leaf) ToBinary() []byte {
