@@ -16,13 +16,16 @@ import (
 	"strings"
 )
 
-func verifierWithResponses(domain string, responses []string) Verifier {
-	return &DnsVerifier{lookupTXT: func(_ context.Context, name string) ([]string, error) {
+func verifierWithResponses(logKey *types.PublicKey, domain string, responses []string) Verifier {
+	return &DnsVerifier{
+		lookupTXT: func(_ context.Context, name string) ([]string, error) {
 		if name != "_sigsum_v0."+domain {
 			return []string{}, fmt.Errorf("NXDOMAIN: %q", name)
 		}
 		return responses, nil
-	}}
+		},
+		logKey: *logKey,
+	}
 }
 
 func newKeyPair(t *testing.T) (crypto.Signer, types.PublicKey) {
@@ -55,8 +58,8 @@ func TestVerify(t *testing.T) {
 	testOne := func(desc, tokenDomain, signature, registeredDomain string, records []string,
 		check func(err error) error) {
 		t.Helper()
-		if err := check(verifierWithResponses(registeredDomain, records).Verify(
-			context.Background(), &logKey, tokenDomain, signature)); err != nil {
+		if err := check(verifierWithResponses(&logKey, registeredDomain, records).Verify(
+			context.Background(), tokenDomain, signature)); err != nil {
 			t.Errorf("%s: %v", desc, err)
 		}
 	}
