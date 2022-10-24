@@ -22,21 +22,25 @@ const (
 // Name and signature corresponds to the value of the submit-token:
 // header, so signature is still hex-encoded.
 type Verifier interface {
-	Verify(ctx context.Context, logKey *types.PublicKey, name, signature string) error
+	Verify(ctx context.Context, name, signature string) error
 }
 
 // DnsResolver implements the Verifier interface by querying DNS.
 type DnsVerifier struct {
 	// Usually, net.Resolver.LookupTXT, but set differently for testing.
 	lookupTXT func(ctx context.Context, name string) ([]string, error)
+	logKey types.PublicKey
 }
 
-func NewDnsVerifier() Verifier {
+func NewDnsVerifier(logKey *types.PublicKey) Verifier {
 	var resolver net.Resolver
-	return &DnsVerifier{lookupTXT: resolver.LookupTXT}
+	return &DnsVerifier{
+		lookupTXT: resolver.LookupTXT,
+		logKey: *logKey,
+	}
 }
 
-func (dv *DnsVerifier) Verify(ctx context.Context, logKey *types.PublicKey, name, signatureHex string) error {
+func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) error {
 	signature, err := fmtio.SignatureFromHex(signatureHex)
 	if err != nil {
 		return fmt.Errorf("failed decoding hex signature: %v", err)
@@ -51,7 +55,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, logKey *types.PublicKey, name
 		ignoredKeys = len(rsps) - maxNumberOfKeys
 		rsps = rsps[:maxNumberOfKeys]
 	}
-	signedData := ssh.SignedData(namespace, (*logKey)[:])
+	signedData := ssh.SignedData(namespace, dv.logKey[:])
 	for _, keyHex := range rsps {
 		key, err := fmtio.PublicKeyFromHex(keyHex)
 		if err != nil {
