@@ -3,7 +3,6 @@ package types
 import (
 	"crypto"
 	"crypto/ed25519"
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -12,26 +11,24 @@ import (
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
-type Statement struct {
-	ShardHint uint64      `ascii:"shard_hint"`
-	Checksum  merkle.Hash `ascii:"checksum"`
-}
+const (
+	TreeLeafNamespace = "tree_leaf:v0@sigsum.org"
+)
 
 type Leaf struct {
-	Statement
+	Checksum  merkle.Hash `ascii:"checksum"`
 	Signature Signature   `ascii:"signature"`
 	KeyHash   merkle.Hash `ascii:"key_hash"`
 }
 
 type Leaves []Leaf
 
-func (s *Statement) ToBinary() []byte {
-	namespace := fmt.Sprintf("tree_leaf:v0:%d@sigsum.org", s.ShardHint)
-	return ssh.SignedDataFromHash(namespace, s.Checksum)
+func leafSignedData(checksum *merkle.Hash) []byte {
+	return ssh.SignedDataFromHash(TreeLeafNamespace, *checksum)
 }
 
-func (s *Statement) Sign(signer crypto.Signer) (*Signature, error) {
-	sig, err := signer.Sign(nil, s.ToBinary(), crypto.Hash(0))
+func SignLeafChecksum(signer crypto.Signer, checksum *merkle.Hash) (*Signature, error) {
+	sig, err := signer.Sign(nil, leafSignedData(checksum), crypto.Hash(0))
 	if err != nil {
 		return nil, fmt.Errorf("types: failed signing statement")
 	}
@@ -41,28 +38,42 @@ func (s *Statement) Sign(signer crypto.Signer) (*Signature, error) {
 	return &signature, nil
 }
 
-func (s *Statement) Verify(key *PublicKey, sig *Signature) bool {
-	return ed25519.Verify(ed25519.PublicKey(key[:]), s.ToBinary(), sig[:])
+func VerifyLeafChecksum(key *PublicKey, checksum *merkle.Hash, sig *Signature) bool {
+	return ed25519.Verify(ed25519.PublicKey(key[:]),
+		leafSignedData(checksum), sig[:])
+}
+
+func SignLeafMessage(signer crypto.Signer, msg []byte) (*Signature, error) {
+	return SignLeafChecksum(signer, merkle.HashFn(msg))
+}
+
+func VerifyLeafMessage(key *PublicKey, msg []byte, sig *Signature) bool {
+	return VerifyLeafChecksum(key, merkle.HashFn(msg), sig)
+}
+
+func (l *Leaf) Verify(key *PublicKey) bool {
+	if l.KeyHash != *merkle.HashFn(key[:]) {
+		return false
+	}
+	return VerifyLeafChecksum(key, &l.Checksum, &l.Signature)
 }
 
 func (l *Leaf) ToBinary() []byte {
-	b := make([]byte, 136)
-	binary.BigEndian.PutUint64(b[0:8], l.ShardHint)
-	copy(b[8:40], l.Checksum[:])
-	copy(b[40:104], l.Signature[:])
-	copy(b[104:136], l.KeyHash[:])
+	b := make([]byte, 128)
+	copy(b[:32], l.Checksum[:])
+	copy(b[32:96], l.Signature[:])
+	copy(b[96:], l.KeyHash[:])
 	return b
 }
 
 func (l *Leaf) FromBinary(b []byte) error {
-	if len(b) != 136 {
+	if len(b) != 128 {
 		return fmt.Errorf("types: invalid leaf size: %d", len(b))
 	}
 
-	l.ShardHint = binary.BigEndian.Uint64(b[0:8])
-	copy(l.Checksum[:], b[8:40])
-	copy(l.Signature[:], b[40:104])
-	copy(l.KeyHash[:], b[104:136])
+	copy(l.Checksum[:], b[:32])
+	copy(l.Signature[:], b[32:96])
+	copy(l.KeyHash[:], b[96:])
 	return nil
 }
 
@@ -76,7 +87,6 @@ func (l *Leaf) FromASCII(r io.Reader) error {
 
 func (l *Leaves) FromASCII(r io.Reader) error {
 	leaves := &struct {
-		ShardHint []uint64      `ascii:"shard_hint"`
 		Checksum  []merkle.Hash `ascii:"checksum"`
 		Signature []Signature   `ascii:"signature"`
 		KeyHash   []merkle.Hash `ascii:"key_hash"`
@@ -85,10 +95,7 @@ func (l *Leaves) FromASCII(r io.Reader) error {
 	if err := ascii.StdEncoding.Deserialize(r, leaves); err != nil {
 		return err
 	}
-	n := len(leaves.ShardHint)
-	if n != len(leaves.Checksum) {
-		return fmt.Errorf("types: mismatched leaf field counts")
-	}
+	n := len(leaves.Checksum)
 	if n != len(leaves.Signature) {
 		return fmt.Errorf("types: mismatched leaf field counts")
 	}
@@ -99,10 +106,7 @@ func (l *Leaves) FromASCII(r io.Reader) error {
 	*l = make([]Leaf, 0, n)
 	for i := 0; i < n; i++ {
 		*l = append(*l, Leaf{
-			Statement: Statement{
-				ShardHint: leaves.ShardHint[i],
-				Checksum:  leaves.Checksum[i],
-			},
+			Checksum:  leaves.Checksum[i],
 			Signature: leaves.Signature[i],
 			KeyHash:   leaves.KeyHash[i],
 		})

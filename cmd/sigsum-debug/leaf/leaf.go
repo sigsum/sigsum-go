@@ -76,15 +76,12 @@ func setOptions(fs *flag.FlagSet) {
 	case "help":
 	case "sign":
 		options.AddString(fs, &optPrivateKey, "k", "private-key", options.DefaultString)
-		options.AddUint64(fs, &optShardHint, "h", "shard-hint", options.DefaultUint64)
 	case "verify":
 		options.AddString(fs, &optPublicKey, "k", "public-key", options.DefaultString)
 		options.AddString(fs, &optSignature, "s", "signature", options.DefaultString)
-		options.AddUint64(fs, &optShardHint, "h", "shard-hint", options.DefaultUint64)
 	case "hash":
 		options.AddString(fs, &optKeyHash, "k", "key-hash", options.DefaultString)
 		options.AddString(fs, &optSignature, "s", "signature", options.DefaultString)
-		options.AddUint64(fs, &optShardHint, "h", "shard-hint", options.DefaultUint64)
 	case "inclusion":
 		options.AddString(fs, &optLeafHash, "l", "leaf-hash", options.DefaultString)
 		options.AddUint64(fs, &optTreeSize, "n", "tree-size", options.DefaultUint64)
@@ -100,15 +97,12 @@ func checkOptions(cmd string) error {
 	case "help":
 	case "sign":
 		err = options.CheckString("private key", optPrivateKey, err)
-		err = options.CheckUint64("shard hint", optShardHint, err)
 	case "verify":
 		err = options.CheckString("public key", optPublicKey, err)
 		err = options.CheckString("signature", optSignature, err)
-		err = options.CheckUint64("shard hint", optShardHint, err)
 	case "hash":
 		err = options.CheckString("key hash", optKeyHash, err)
 		err = options.CheckString("signature", optSignature, err)
-		err = options.CheckUint64("shard hint", optShardHint, err)
 	case "inclusion":
 		err = options.CheckString("leaf hash", optLeafHash, err)
 		err = options.CheckUint64("tree size", optTreeSize, err)

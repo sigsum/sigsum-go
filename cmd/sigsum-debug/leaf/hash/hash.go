@@ -29,10 +29,7 @@ func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) e
 
 	message := merkle.HashFn(data)
 	leaf := types.Leaf{
-		Statement: types.Statement{
-			ShardHint: optShardHint,
-			Checksum:  *merkle.HashFn(message[:]),
-		},
+		Checksum:  *merkle.HashFn(message[:]),
 		Signature: sig,
 		KeyHash:   keyHash,
 	}
