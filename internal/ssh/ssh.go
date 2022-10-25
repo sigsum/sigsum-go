@@ -4,9 +4,11 @@ package ssh
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"log"
+	"strings"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
@@ -50,7 +52,7 @@ func serializePublicEd25519(pub []byte) []byte {
 		log.Panicf("invalid ed25519 public key, got size %d", len(pub))
 	}
 	return bytes.Join([][]byte{
-		serializeString([]byte("ssh-ed25519")), 
+		serializeString([]byte("ssh-ed25519")),
 		serializeString(pub)},
 		nil)
 }
@@ -76,4 +78,34 @@ func parseSignature(blob []byte) ([]byte, error) {
 	}
 	// Short and exclusively owned, no need to copy.
 	return signature, nil
+}
+
+func ParsePublicEd25519(asciiKey string) ([]byte, error) {
+	// Split into fields, recognizing exclusively ascii space and TAB
+	fields := strings.FieldsFunc(asciiKey, func(c rune) bool {
+		return c == ' ' || c == '\t'
+	})
+	if len(fields) < 2 {
+		return nil, fmt.Errorf("invalid public key, splitting line failed")
+	}
+	if fields[0] != "ssh-ed25519" {
+		return nil, fmt.Errorf("unsupported public key type: %v", fields[0])
+	}
+	blob, err := base64.StdEncoding.DecodeString(fields[1])
+	if err != nil {
+		return nil, err
+	}
+	pub := skipPrefix(blob, bytes.Join([][]byte{
+		serializeString([]byte("ssh-ed25519")),
+		serializeUint32(32),
+	}, nil))
+
+	if pub == nil {
+		return nil, fmt.Errorf("invalid public key blob prefix")
+	}
+	if len(pub) != 32 {
+		return nil, fmt.Errorf("invalid public key length: %v", len(blob))
+	}
+	// Short and exclusively owned, no need to copy.
+	return pub, nil
 }

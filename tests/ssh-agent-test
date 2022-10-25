@@ -1,0 +1,15 @@
+#! /bin/sh
+
+set -e
+
+rm -f test.key test.key.pub
+
+ssh-keygen -q -N '' -t ed25519 -f test.key
+ssh-agent sh <<EOF
+set -e
+# Add private key to agent, then delete.
+ssh-add test.key 2>/dev/null
+rm test.key
+
+go run use-agent.go < test.key.pub
+<<EOF
