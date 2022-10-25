@@ -13,35 +13,35 @@ import (
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
-func TestStatementToBinary(t *testing.T) {
-	desc := "valid: shard hint 72623859790382856, checksum 0x00,0x01,..."
-	if got, want := validStatement(t).ToBinary(), validStatementBytes(t); !bytes.Equal(got, want) {
+func TestLeafSignedData(t *testing.T) {
+	desc := "valid: checksum 0x00,0x01,..."
+	if got, want := leafSignedData(validChecksum(t)), validLeafSignedDataBytes(t); !bytes.Equal(got, want) {
 		t.Errorf("got statement\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
 
-func TestStatementSign(t *testing.T) {
+func TestSignLeaf(t *testing.T) {
 	for _, table := range []struct {
-		desc    string
-		stm     *Statement
-		signer  crypto.Signer
-		wantSig *Signature
-		wantErr bool
+		desc     string
+		checksum *merkle.Hash
+		signer   crypto.Signer
+		wantSig  *Signature
+		wantErr  bool
 	}{
 		{
-			desc:    "invalid: signer error",
-			stm:     validStatement(t),
-			signer:  &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], fmt.Errorf("signing error")},
-			wantErr: true,
+			desc:     "invalid: signer error",
+			checksum: validChecksum(t),
+			signer:   &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], fmt.Errorf("signing error")},
+			wantErr:  true,
 		},
 		{
-			desc:    "valid",
-			stm:     validStatement(t),
-			signer:  &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], nil},
-			wantSig: newSigBufferInc(t),
+			desc:     "valid",
+			checksum: validChecksum(t),
+			signer:   &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], nil},
+			wantSig:  newSigBufferInc(t),
 		},
 	} {
-		sig, err := table.stm.Sign(table.signer)
+		sig, err := SignLeafChecksum(table.signer, table.checksum)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -55,21 +55,26 @@ func TestStatementSign(t *testing.T) {
 	}
 }
 
-func TestStatementVerify(t *testing.T) {
-	stm := validStatement(t)
+func TestLeafVerify(t *testing.T) {
+	checksum := validChecksum(t)
 	signer, pub := newKeyPair(t)
 
-	sig, err := stm.Sign(signer)
+	sig, err := SignLeafChecksum(signer, checksum)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !stm.Verify(&pub, sig) {
+	leaf := Leaf{
+		Checksum:  *checksum,
+		Signature: *sig,
+		KeyHash:   *merkle.HashFn(pub[:]),
+	}
+	if !leaf.Verify(&pub) {
 		t.Errorf("failed verifying a valid statement")
 	}
 
-	stm.ShardHint += 1
-	if stm.Verify(&pub, sig) {
+	leaf.Checksum[0] += 1
+	if leaf.Verify(&pub) {
 		t.Errorf("succeeded verifying an invalid statement")
 	}
 }
@@ -147,7 +152,7 @@ func TestLeafFromASCII(t *testing.T) {
 			wantErr:    true,
 		},
 		{
-			desc:       "valid: shard hint 72623859790382856, buffers 0x00,0x01,...",
+			desc:       "valid: buffers 0x00,0x01,...",
 			serialized: bytes.NewBuffer([]byte(validLeafASCII(t))),
 			want:       validLeaf(t),
 		},
@@ -175,17 +180,12 @@ func TestLeavesFromASCII(t *testing.T) {
 	}{
 		{
 			desc:       "invalid: not a list of tree leaves (too few key-value pairs)",
-			serialized: bytes.NewBuffer([]byte("shard_hint=0\n")),
+			serialized: bytes.NewBuffer([]byte("checksum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")),
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too many key-value pairs)",
 			serialized: bytes.NewBuffer(append([]byte(validLeafASCII(t)), []byte("key=value\n")...)),
-			wantErr:    true,
-		},
-		{
-			desc:       "invalid: not a list of tree leaves (too few shard hints))",
-			serialized: bytes.NewBuffer([]byte(invalidLeavesASCII(t, "shard_hint"))),
 			wantErr:    true,
 		},
 		{
@@ -223,17 +223,14 @@ func TestLeavesFromASCII(t *testing.T) {
 	}
 }
 
-func validStatement(t *testing.T) *Statement {
-	return &Statement{
-		ShardHint: 72623859790382856,
-		Checksum:  *merkle.HashFn(newHashBufferInc(t)[:]),
-	}
+func validChecksum(t *testing.T) *merkle.Hash {
+	return merkle.HashFn(newHashBufferInc(t)[:])
 }
 
-func validStatementBytes(t *testing.T) []byte {
+func validLeafSignedDataBytes(t *testing.T) []byte {
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
-		[]byte{0, 0, 0, 41}, []byte("tree_leaf:v0:72623859790382856@sigsum.org"),
+		[]byte{0, 0, 0, 23}, []byte("tree_leaf:v0@sigsum.org"),
 		[]byte{0, 0, 0, 0},
 		[]byte{0, 0, 0, 6}, []byte("sha256"),
 		[]byte{0, 0, 0, 32}, merkle.HashFn(newHashBufferInc(t)[:])[:],
@@ -242,10 +239,7 @@ func validStatementBytes(t *testing.T) []byte {
 
 func validLeaf(t *testing.T) *Leaf {
 	return &Leaf{
-		Statement: Statement{
-			ShardHint: 72623859790382856,
-			Checksum:  *merkle.HashFn(newHashBufferInc(t)[:]),
-		},
+		Checksum:  *merkle.HashFn(newHashBufferInc(t)[:]),
 		Signature: *newSigBufferInc(t),
 		KeyHash:   *newHashBufferInc(t),
 	}
@@ -253,7 +247,6 @@ func validLeaf(t *testing.T) *Leaf {
 
 func validLeafBytes(t *testing.T) []byte {
 	return bytes.Join([][]byte{
-		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
 		merkle.HashFn(newHashBufferInc(t)[:])[:],
 		newSigBufferInc(t)[:],
 		newHashBufferInc(t)[:],
@@ -261,8 +254,7 @@ func validLeafBytes(t *testing.T) []byte {
 }
 
 func validLeafASCII(t *testing.T) string {
-	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x\n",
-		"shard_hint", 72623859790382856,
+	return fmt.Sprintf("%s=%x\n%s=%x\n%s=%x\n",
 		"checksum", merkle.HashFn(newHashBufferInc(t)[:])[:],
 		"signature", newSigBufferInc(t)[:],
 		"key_hash", newHashBufferInc(t)[:],
@@ -276,8 +268,7 @@ func validLeaves(t *testing.T) *Leaves {
 
 func validLeavesASCII(t *testing.T) string {
 	t.Helper()
-	return validLeafASCII(t) + fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x\n",
-		"shard_hint", 0,
+	return validLeafASCII(t) + fmt.Sprintf("%s=%x\n%s=%x\n%s=%x\n",
 		"checksum", merkle.Hash{},
 		"signature", Signature{},
 		"key_hash", merkle.Hash{},
@@ -290,14 +281,12 @@ func invalidLeavesASCII(t *testing.T, key string) string {
 
 	var ret string
 	switch key {
-	case "shard_hint":
-		ret = strings.Join(lines[1:], "\n")
 	case "checksum":
-		ret = strings.Join(append(lines[:1], lines[2:]...), "\n")
+		ret = strings.Join(lines[:1], "\n")
 	case "signature":
-		ret = strings.Join(append(lines[0:2], lines[3:]...), "\n")
+		ret = strings.Join(append(lines[0:1], lines[2:]...), "\n")
 	case "key_hash":
-		ret = strings.Join(append(lines[0:3], lines[4:]...), "\n")
+		ret = strings.Join(append(lines[0:2], lines[3:]...), "\n")
 	default:
 		t.Fatalf("must have a valid key to remove")
 	}
