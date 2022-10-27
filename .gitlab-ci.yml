@@ -1,0 +1,13 @@
+image: docker.io/library/golang:1.18
+
+stages:
+- build
+- test
+
+make-all:
+  stage: build
+  script: make all
+
+make-check:
+  stage: test
+  script: make check
