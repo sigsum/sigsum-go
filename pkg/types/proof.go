@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"io"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
@@ -10,23 +11,23 @@ import (
 
 type InclusionProof struct {
 	TreeSize  uint64
-	LeafIndex uint64        `ascii:"leaf_index"`
-	Path      []crypto.Hash `ascii:"inclusion_path"`
+	LeafIndex uint64
+	Path      []crypto.Hash
 }
 
 type ConsistencyProof struct {
 	NewSize uint64
 	OldSize uint64
-	Path    []crypto.Hash `ascii:"consistency_path"`
+	Path    []crypto.Hash
 }
 
 func (p *InclusionProof) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, p)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, p)
 }
 
 func (p *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
 	p.TreeSize = treeSize
-	return ascii.StdEncoding.Deserialize(r, p)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, p)
 }
 
 func (p *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
@@ -34,13 +35,13 @@ func (p *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
 }
 
 func (p *ConsistencyProof) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, p)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, p)
 }
 
 func (p *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {
 	p.OldSize = oldSize
 	p.NewSize = newSize
-	return ascii.StdEncoding.Deserialize(r, p)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, p)
 }
 
 func (p *ConsistencyProof) Verify(oldRoot, newRoot *crypto.Hash) error {

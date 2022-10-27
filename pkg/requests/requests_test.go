@@ -287,7 +287,7 @@ func validConsistencyProofASCII(t *testing.T) string {
 func validCosignature(t *testing.T) *Cosignature {
 	t.Helper()
 	return &Cosignature{
-		Cosignature: *newSigBufferInc(t),
+		Signature: *newSigBufferInc(t),
 		KeyHash:     *newHashBufferInc(t),
 	}
 }

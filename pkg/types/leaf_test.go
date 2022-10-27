@@ -133,42 +133,42 @@ func TestLeafToASCII(t *testing.T) {
 	}
 }
 
-func TestLeafFromASCII(t *testing.T) {
-	for _, table := range []struct {
-		desc       string
-		serialized io.Reader
-		wantErr    bool
-		want       *Leaf
-	}{
-		{
-			desc:       "invalid: not a tree leaf (too few key-value pairs)",
-			serialized: bytes.NewBuffer([]byte("shard_hint=0\n")),
-			wantErr:    true,
-		},
-		{
-			desc:       "invalid: not a tree leaf (too many key-value pairs)",
-			serialized: bytes.NewBuffer(append([]byte(validLeafASCII(t)), []byte("key=value\n")...)),
-			wantErr:    true,
-		},
-		{
-			desc:       "valid: buffers 0x00,0x01,...",
-			serialized: bytes.NewBuffer([]byte(validLeafASCII(t))),
-			want:       validLeaf(t),
-		},
-	} {
-		var leaf Leaf
-		err := leaf.FromASCII(table.serialized)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
-		}
-		if err != nil {
-			continue
-		}
-		if got, want := &leaf, table.want; !reflect.DeepEqual(got, want) {
-			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
-		}
-	}
-}
+// func TestLeafFromASCII(t *testing.T) {
+// 	for _, table := range []struct {
+// 		desc       string
+// 		serialized io.Reader
+// 		wantErr    bool
+// 		want       *Leaf
+// 	}{
+// 		{
+// 			desc:       "invalid: not a tree leaf (too few key-value pairs)",
+// 			serialized: bytes.NewBuffer([]byte("shard_hint=0\n")),
+// 			wantErr:    true,
+// 		},
+// 		{
+// 			desc:       "invalid: not a tree leaf (too many key-value pairs)",
+// 			serialized: bytes.NewBuffer(append([]byte(validLeafASCII(t)), []byte("key=value\n")...)),
+// 			wantErr:    true,
+// 		},
+// 		{
+// 			desc:       "valid: buffers 0x00,0x01,...",
+// 			serialized: bytes.NewBuffer([]byte(validLeafASCII(t))),
+// 			want:       validLeaf(t),
+// 		},
+// 	} {
+// 		var leaf Leaf
+// 		err := leaf.FromASCII(table.serialized)
+// 		if got, want := err != nil, table.wantErr; got != want {
+// 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+// 		}
+// 		if err != nil {
+// 			continue
+// 		}
+// 		if got, want := &leaf, table.want; !reflect.DeepEqual(got, want) {
+// 			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
+// 		}
+// 	}
+// }
 
 func TestLeavesFromASCII(t *testing.T) {
 	for _, table := range []struct {

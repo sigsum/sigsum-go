@@ -15,20 +15,24 @@ const (
 )
 
 type TreeHead struct {
-	Timestamp uint64      `ascii:"timestamp"`
-	TreeSize  uint64      `ascii:"tree_size"`
-	RootHash  crypto.Hash `ascii:"root_hash"`
+	Timestamp uint64
+	TreeSize  uint64
+	RootHash  crypto.Hash
 }
 
 type SignedTreeHead struct {
 	TreeHead
-	Signature crypto.Signature `ascii:"signature"`
+	Signature crypto.Signature
 }
 
+type Cosignature struct {
+	KeyHash     merkle.Hash
+	Signature   Signature
+}
+	
 type CosignedTreeHead struct {
 	SignedTreeHead
-	Cosignature []crypto.Signature `ascii:"cosignature"`
-	KeyHash     []crypto.Hash      `ascii:"key_hash"`
+	Cosignatures []Cosignature
 }
 
 func (th *TreeHead) toSignedData(keyHash *crypto.Hash) []byte {
@@ -57,19 +61,19 @@ func (th *TreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature, k
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, th)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, th)
 }
 
 func (th *TreeHead) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, th)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, th)
 }
 
 func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, sth)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, sth)
 }
 
 func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, sth)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, sth)
 }
 
 func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
@@ -78,15 +82,16 @@ func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
 }
 
 func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, cth)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, cth)
 }
 
 func (cth *CosignedTreeHead) FromASCII(r io.Reader) error {
-	if err := ascii.StdEncoding.Deserialize(r, cth); err != nil {
-		return err
-	}
-	if len(cth.Cosignature) != len(cth.KeyHash) {
-		return fmt.Errorf("types: mismatched cosignature count")
-	}
-	return nil
+	return fmt.Errorf("not implemented") // XXX
+// 	if err := ascii.StdEncoding.Deserialize(r, cth); err != nil {
+//		return err
+//	}
+//	if len(cth.Cosignature) != len(cth.KeyHash) {
+//		return fmt.Errorf("types: mismatched cosignature count")
+//	}
+//	return nil
 }

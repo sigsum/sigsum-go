@@ -248,13 +248,12 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 			},
 			Signature: *newSigBufferInc(t),
 		},
-		Cosignature: []crypto.Signature{
-			crypto.Signature{},
-			*newSigBufferInc(t),
-		},
-		KeyHash: []crypto.Hash{
-			crypto.Hash{},
-			*newHashBufferInc(t),
+		Cosignatures: []Cosignature{
+			Cosignature{},
+			Cosignature{
+				KeyHash: *newHashBufferInc(t),
+				Signature: *newSigBufferInc(t),
+			},
 		},
 	}
 }

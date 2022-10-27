@@ -33,12 +33,12 @@ type ConsistencyProof struct {
 }
 
 type Cosignature struct {
-	Cosignature crypto.Signature `ascii:"cosignature"`
-	KeyHash     crypto.Hash      `ascii:"key_hash"`
+	Cosignature crypto.Signature
+	KeyHash     crypto.Hash
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, req)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, req)
 }
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
@@ -57,11 +57,11 @@ func (req *ConsistencyProof) ToURL(url string) string {
 }
 
 func (req *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, req)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, req)
 }
 
 func (req *Leaf) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, req)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, req)
 }
 
 // FromURL parses request parameters from a URL that is not slash-terminated
@@ -113,5 +113,5 @@ func (req *ConsistencyProof) FromURL(url string) (err error) {
 }
 
 func (req *Cosignature) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, req)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, req)
 }

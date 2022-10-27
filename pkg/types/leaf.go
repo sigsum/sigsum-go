@@ -14,9 +14,9 @@ const (
 )
 
 type Leaf struct {
-	Checksum  crypto.Hash      `ascii:"checksum"`
-	Signature crypto.Signature `ascii:"signature"`
-	KeyHash   crypto.Hash      `ascii:"key_hash"`
+	Checksum  crypto.Hash
+	Signature crypto.Signature
+	KeyHash   crypto.Hash
 }
 
 type Leaves []Leaf
@@ -70,11 +70,7 @@ func (l *Leaf) FromBinary(b []byte) error {
 }
 
 func (l *Leaf) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, l)
-}
-
-func (l *Leaf) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, l)
+	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, l)
 }
 
 func (l *Leaves) FromASCII(r io.Reader) error {
