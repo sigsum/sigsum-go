@@ -26,10 +26,10 @@ type SignedTreeHead struct {
 }
 
 type Cosignature struct {
-	KeyHash     merkle.Hash
-	Signature   Signature
+	KeyHash   merkle.Hash
+	Signature Signature
 }
-	
+
 type CosignedTreeHead struct {
 	SignedTreeHead
 	Cosignatures []Cosignature
@@ -87,11 +87,11 @@ func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
 
 func (cth *CosignedTreeHead) FromASCII(r io.Reader) error {
 	return fmt.Errorf("not implemented") // XXX
-// 	if err := ascii.StdEncoding.Deserialize(r, cth); err != nil {
-//		return err
-//	}
-//	if len(cth.Cosignature) != len(cth.KeyHash) {
-//		return fmt.Errorf("types: mismatched cosignature count")
-//	}
-//	return nil
+	// 	if err := ascii.StdEncoding.Deserialize(r, cth); err != nil {
+	//		return err
+	//	}
+	//	if len(cth.Cosignature) != len(cth.KeyHash) {
+	//		return fmt.Errorf("types: mismatched cosignature count")
+	//	}
+	//	return nil
 }

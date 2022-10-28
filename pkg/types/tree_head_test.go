@@ -251,7 +251,7 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 		Cosignatures: []Cosignature{
 			Cosignature{},
 			Cosignature{
-				KeyHash: *newHashBufferInc(t),
+				KeyHash:   *newHashBufferInc(t),
 				Signature: *newSigBufferInc(t),
 			},
 		},

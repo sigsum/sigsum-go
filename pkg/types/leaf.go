@@ -69,10 +69,6 @@ func (l *Leaf) FromBinary(b []byte) error {
 	return nil
 }
 
-func (l *Leaf) ToASCII(w io.Writer) error {
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, l)
-}
-
 func (l *Leaves) FromASCII(r io.Reader) error {
 	leaves := &struct {
 		Checksum  []crypto.Hash      `ascii:"checksum"`

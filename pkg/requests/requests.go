@@ -32,16 +32,17 @@ type ConsistencyProof struct {
 	NewSize uint64
 }
 
+// TODO: Replace with type alias (golang 1.9 feature)
 type Cosignature struct {
 	Cosignature crypto.Signature
 	KeyHash     crypto.Hash
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
-	if err := ascii.WriteLineHex(w, "message", req.Message[:]); err != nil{
+	if err := ascii.WriteLineHex(w, "message", req.Message[:]); err != nil {
 		return err
 	}
-	if err := ascii.WriteLineHex(w, "signature", Signature[:]); err != nil {
+	if err := ascii.WriteLineHex(w, "signature", req.Signature[:]); err != nil {
 		return err
 	}
 	return ascii.WriteLineHex(w, "public_key", req.PublicKey[:])
@@ -63,7 +64,8 @@ func (req *ConsistencyProof) ToURL(url string) string {
 }
 
 func (req *Cosignature) ToASCII(w io.Writer) error {
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, req)
+	return ascii.WriteCosignature(w,
+		&types.Cosignature{req.KeyHash, req.Signature})
 }
 
 func (req *Leaf) FromASCII(r io.Reader) error {
@@ -81,7 +83,7 @@ func (req *Leaf) FromASCII(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	return nil;
+	return p.GetEOF()
 }
 
 // FromURL parses request parameters from a URL that is not slash-terminated
@@ -133,5 +135,12 @@ func (req *ConsistencyProof) FromURL(url string) (err error) {
 }
 
 func (req *Cosignature) FromASCII(r io.Reader) error {
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, req)
+	p := ascii.NewParser(r)
+	cosig, err := p.GetCosignature()
+	if err != nil {
+		return err
+	}
+	req.Signature = cosig.Signature
+	req.KeyHash = cosig.KeyHash
+	return p.GetEOF()
 }

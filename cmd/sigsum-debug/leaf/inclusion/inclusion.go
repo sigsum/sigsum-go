@@ -17,8 +17,9 @@ func Main(args []string, optLeafHash, optRootHash string, optTreeSize uint64) er
 	if err != nil {
 		return fmt.Errorf("read: %w", err)
 	}
-	var proof types.InclusionProof
-	if err := proof.FromASCII(bytes.NewBuffer(b), optTreeSize); err != nil {
+	parser := ascii.NewParser(bytes.NewBuffer(b))
+	proof, err := parser.GetInclusionProof(optTreeSize)
+	if err != nil {
 		return fmt.Errorf("parse proof: %w", err)
 	}
 	leafHash, err := crypto.HashFromHex(optLeafHash)

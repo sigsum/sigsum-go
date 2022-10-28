@@ -3,9 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"reflect"
-	"strings"
 	"testing"
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
