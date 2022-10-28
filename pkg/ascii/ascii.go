@@ -205,6 +205,24 @@ func (p *Parser) GetCosignature() (types.Cosignature, error) {
 	return parseCosignature(v)
 }
 
+func (p *Parser) getCosignatures() ([]types.Cosignature, error) {
+	var cosignatures []types.Cosignature
+	for {
+		v, err := p.Next("cosignature")
+		if err == io.EOF {
+			return cosignatures, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		cosignature, err := parseCosignature(v)
+		if err != nil {
+			return nil, err
+		}
+		cosignatures = append(cosignatures, cosignature)
+	}
+}
+
 // TODO: Add EOF check here? Or do we even need this function?
 func (p *Parser) GetLeaf() (types.Leaf, error) {
 	v, err := p.Next("leaf")
@@ -230,6 +248,73 @@ func (p *Parser) GetLeaves() ([]types.Leaf, error) {
 		}
 		leaves = append(leaves, leaf)
 	}
+}
+
+// Doesn't require EOF, so it can be used also with (co)signatures.
+func (p *Parser) getTreeHead() (types.TreeHead, error) {
+	timestamp, err := p.GetInt("timestamp")
+	if err != nil {
+		return types.TreeHead{}, err
+	}
+	treeSize, err := p.GetInt("tree_size")
+	if err != nil {
+		return types.TreeHead{}, err
+	}
+	rootHash, err := p.GetHash("root_hash")
+	if err != nil {
+		return types.TreeHead{}, err
+	}
+	return types.TreeHead{
+		Timestamp: timestamp,
+		TreeSize:  treeSize,
+		RootHash:  rootHash,
+	}, nil
+}
+
+func (p *Parser) GetTreeHead() (types.TreeHead, error) {
+	th, err := p.getTreeHead()
+	if err != nil {
+		return th, err
+	}
+	return th, p.GetEOF()
+}
+
+// Doesn't require EOF, so it can be used also with cosignatures.
+func (p *Parser) getSignedTreeHead() (types.SignedTreeHead, error) {
+	th, err := p.getTreeHead()
+	if err != nil {
+		return types.SignedTreeHead{}, err
+	}
+	signature, err := p.GetSignature("signature")
+	if err != nil {
+		return types.SignedTreeHead{}, err
+	}
+	return types.SignedTreeHead{
+		TreeHead:  th,
+		Signature: signature}, nil
+}
+
+func (p *Parser) GetSignedTreeHead() (types.SignedTreeHead, error) {
+	sth, err := p.getSignedTreeHead()
+	if err != nil {
+		return sth, err
+	}
+	return sth, p.GetEOF()
+}
+
+func (p *Parser) GetCosignedTreeHead() (types.CosignedTreeHead, error) {
+	sth, err := p.getSignedTreeHead()
+	if err != nil {
+		return types.CosignedTreeHead{}, err
+	}
+	cosignatures, err := p.getCosignatures()
+	if err != nil {
+		return types.CosignedTreeHead{}, err
+	}
+	return types.CosignedTreeHead{
+		SignedTreeHead: sth,
+		Cosignatures:   cosignatures,
+	}, nil
 }
 
 // Treats empty list as an error.
@@ -329,6 +414,35 @@ func WriteCosignature(w io.Writer, c *types.Cosignature) error {
 
 func WriteLeaf(w io.Writer, l *types.Leaf) error {
 	return WriteLineHex(w, "leaf", l.Checksum[:], l.Signature[:], l.KeyHash[:])
+}
+
+func WriteTreeHead(w io.Writer, h *types.TreeHead) error {
+	if err := WriteInt(w, "timestamp", h.Timestamp); err != nil {
+		return err
+	}
+	if err := WriteInt(w, "tree_size", h.TreeSize); err != nil {
+		return err
+	}
+	return WriteHash(w, "root_hash", &h.RootHash)
+}
+
+func WriteSignedTreeHead(w io.Writer, h *types.SignedTreeHead) error {
+	if err := WriteTreeHead(w, &h.TreeHead); err != nil {
+		return err
+	}
+	return WriteSignature(w, "signature", &h.Signature)
+}
+
+func WriteCosignedTreeHead(w io.Writer, h *types.CosignedTreeHead) error {
+	if err := WriteSignedTreeHead(w, &h.SignedTreeHead); err != nil {
+		return err
+	}
+	for _, cosignature := range h.Cosignatures {
+		if err := WriteCosignature(w, &cosignature); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func writeHashes(w io.Writer, name string, hashes []merkle.Hash) error {

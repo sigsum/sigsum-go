@@ -28,8 +28,9 @@ func Main(args []string, optPrivateKey, optKeyHash string) error {
 		return fmt.Errorf("parse key hash: %v", err)
 	}
 
-	var input types.SignedTreeHead
-	if err := input.FromASCII(bytes.NewBuffer(b)); err != nil {
+	parser := ascii.NewParser(bytes.NewBuffer(b))
+	input, err := parser.GetSignedTreeHead()
+	if err != nil {
 		return fmt.Errorf("parse signed tree head: %v", err)
 	}
 	output, err := input.TreeHead.Sign(priv, &keyHash)

@@ -267,6 +267,94 @@ func TestGetLeavesASCII(t *testing.T) {
 	}
 }
 
+func TestWriteSignedTreeHead(t *testing.T) {
+	desc := "valid"
+	buf := bytes.NewBuffer(nil)
+	th := validSignedTreeHead()
+	if err := WriteSignedTreeHead(buf, &th); err != nil {
+		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
+	}
+	if got, want := string(buf.Bytes()), validSignedTreeHeadASCII(); got != want {
+		t.Errorf("got signed tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
+	}
+}
+
+func TestGetSignedTreeHead(t *testing.T) {
+	for _, table := range []struct {
+		desc       string
+		serialized string
+		wantErr    bool
+		want       types.SignedTreeHead
+	}{
+		{
+			desc:       "invalid: not a signed tree head (unexpected key-value pair)",
+			serialized: validSignedTreeHeadASCII() + "key=4\n",
+			wantErr:    true,
+		},
+		{
+			desc:       "valid",
+			serialized: validSignedTreeHeadASCII(),
+			want:       validSignedTreeHead(),
+		},
+	} {
+		p := NewParser(bytes.NewBuffer([]byte(table.serialized)))
+		sth, err := p.GetSignedTreeHead()
+		if got, want := err != nil, table.wantErr; got != want {
+			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+		}
+		if err != nil {
+			continue
+		}
+		if got, want := sth, table.want; got != want {
+			t.Errorf("got signed tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
+		}
+	}
+}
+
+func TestWriteCosignedTreeHead(t *testing.T) {
+	desc := "valid"
+	buf := bytes.NewBuffer(nil)
+	cth := validCosignedTreeHead()
+	if err := WriteCosignedTreeHead(buf, &cth); err != nil {
+		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
+	}
+	if got, want := string(buf.Bytes()), validCosignedTreeHeadASCII(); got != want {
+		t.Errorf("got cosigned tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
+	}
+}
+
+func TestGetCosignedTreeHead(t *testing.T) {
+	for _, table := range []struct {
+		desc       string
+		serialized string
+		wantErr    bool
+		want       types.CosignedTreeHead
+	}{
+		{
+			desc:       "invalid: not a cosigned tree head (unexpected key-value pair)",
+			serialized: validCosignedTreeHeadASCII() + "key=4\n",
+			wantErr:    true,
+		},
+		{
+			desc:       "valid",
+			serialized: validCosignedTreeHeadASCII(),
+			want:       validCosignedTreeHead(),
+		},
+	} {
+		p := NewParser(bytes.NewBuffer([]byte(table.serialized)))
+		cth, err := p.GetCosignedTreeHead()
+		if got, want := err != nil, table.wantErr; got != want {
+			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+		}
+		if err != nil {
+			continue
+		}
+		if got, want := &cth, table.want; !(got.SignedTreeHead == want.SignedTreeHead && cosignaturesEqual(got.Cosignatures, want.Cosignatures)) {
+			t.Errorf("got cosigned tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
+		}
+	}
+}
+
 func TestGetInclusionProof(t *testing.T) {
 	for _, table := range []struct {
 		desc       string
@@ -383,29 +471,55 @@ func invalidLeavesASCII(t *testing.T, key string) string {
 	}
 }
 
-// These equality functions require both inputs to be non-nil.
-func leavesEqual(a []types.Leaf, b []types.Leaf) bool {
-	if len(a) != len(b) {
-		return false
+func validSignedTreeHead() types.SignedTreeHead {
+	return types.SignedTreeHead{
+		TreeHead: types.TreeHead{
+			Timestamp: 1,
+			TreeSize:  2,
+			RootHash:  incHash(),
+		},
+		Signature: incSignature(),
 	}
-	for i, l := range a {
-		if l != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
-func hashesEqual(a []merkle.Hash, b []merkle.Hash) bool {
-	if len(a) != len(b) {
-		return false
+func validSignedTreeHeadASCII() string {
+	return fmt.Sprintf("%s=%d\n%s=%d\n%s=%x\n%s=%x\n",
+		"timestamp", 1,
+		"tree_size", 2,
+		"root_hash", incHash(),
+		"signature", incSignature(),
+	)
+}
+
+func validCosignedTreeHead() types.CosignedTreeHead {
+	return types.CosignedTreeHead{
+		SignedTreeHead: types.SignedTreeHead{
+			TreeHead: types.TreeHead{
+				Timestamp: 1,
+				TreeSize:  2,
+				RootHash:  incHash(),
+			},
+			Signature: incSignature(),
+		},
+		Cosignatures: []types.Cosignature{
+			types.Cosignature{},
+			types.Cosignature{
+				KeyHash:   incHash(),
+				Signature: incSignature(),
+			},
+		},
 	}
-	for i, l := range a {
-		if l != b[i] {
-			return false
-		}
-	}
-	return true
+}
+
+func validCosignedTreeHeadASCII() string {
+	return fmt.Sprintf("%s=%d\n%s=%d\n%s=%x\n%s=%x\n%s=%x %x\n%s=%x %x\n",
+		"timestamp", 1,
+		"tree_size", 2,
+		"root_hash", incHash(),
+		"signature", incSignature(),
+		"cosignature", merkle.Hash{}, types.Signature{},
+		"cosignature", incHash(), incSignature(),
+	)
 }
 
 func validInclusionProof() types.InclusionProof {
@@ -443,4 +557,41 @@ func validConsistencyProofASCII() string {
 		"consistency_path", merkle.Hash{},
 		"consistency_path", incHash(),
 	)
+}
+
+// These equality functions require both inputs to be non-nil.
+func leavesEqual(a []types.Leaf, b []types.Leaf) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, l := range a {
+		if l != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func hashesEqual(a []merkle.Hash, b []merkle.Hash) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, l := range a {
+		if l != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func cosignaturesEqual(a []types.Cosignature, b []types.Cosignature) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, l := range a {
+		if l != b[i] {
+			return false
+		}
+	}
+	return true
 }

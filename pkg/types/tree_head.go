@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/binary"
 	"fmt"
-	"io"
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
@@ -79,19 +78,4 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
 	keyHash := crypto.HashBytes(key[:])
 	return sth.TreeHead.Verify(key, &sth.Signature, &keyHash)
-}
-
-func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, cth)
-}
-
-func (cth *CosignedTreeHead) FromASCII(r io.Reader) error {
-	return fmt.Errorf("not implemented") // XXX
-	// 	if err := ascii.StdEncoding.Deserialize(r, cth); err != nil {
-	//		return err
-	//	}
-	//	if len(cth.Cosignature) != len(cth.KeyHash) {
-	//		return fmt.Errorf("types: mismatched cosignature count")
-	//	}
-	//	return nil
 }

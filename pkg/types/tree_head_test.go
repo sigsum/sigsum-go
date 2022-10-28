@@ -3,7 +3,6 @@ package types
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"reflect"
 	"testing"
 
@@ -57,52 +56,6 @@ func TestTreeHeadSign(t *testing.T) {
 		}
 		if got, want := sth, wantSTH; !reflect.DeepEqual(got, want) {
 			t.Errorf("got sth\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
-		}
-	}
-}
-
-func TestSignedTreeHeadToASCII(t *testing.T) {
-	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validSignedTreeHead(t).ToASCII(buf); err != nil {
-		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
-	}
-	if got, want := string(buf.Bytes()), validSignedTreeHeadASCII(t); got != want {
-		t.Errorf("got signed tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
-	}
-}
-
-func TestSignedTreeHeadFromASCII(t *testing.T) {
-	for _, table := range []struct {
-		desc       string
-		serialized io.Reader
-		wantErr    bool
-		want       *SignedTreeHead
-	}{
-		{
-			desc: "invalid: not a signed tree head (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(append(
-				[]byte(validSignedTreeHeadASCII(t)),
-				[]byte("key=4")...),
-			),
-			wantErr: true,
-		},
-		{
-			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validSignedTreeHeadASCII(t))),
-			want:       validSignedTreeHead(t),
-		},
-	} {
-		var sth SignedTreeHead
-		err := sth.FromASCII(table.serialized)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
-		}
-		if err != nil {
-			continue
-		}
-		if got, want := &sth, table.want; !reflect.DeepEqual(got, want) {
-			t.Errorf("got signed tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
 }

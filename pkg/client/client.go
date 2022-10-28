@@ -51,43 +51,49 @@ func (cli *client) Initiated() bool {
 	return cli.LogURL != ""
 }
 
-func (cli *client) GetUnsignedTreeHead(ctx context.Context) (th types.TreeHead, err error) {
+func (cli *client) GetUnsignedTreeHead(ctx context.Context) (types.TreeHead, error) {
 	body, _, err := cli.get(ctx, types.EndpointGetTreeHeadUnsigned.Path(cli.LogURL))
 	if err != nil {
-		return th, fmt.Errorf("get: %w", err)
+		return types.TreeHead{}, fmt.Errorf("get: %w", err)
 	}
-	if err := th.FromASCII(bytes.NewBuffer(body)); err != nil {
-		return th, fmt.Errorf("parse: %w", err)
+	parser := ascii.NewParser(bytes.NewBuffer(body))
+	th, err := parser.GetTreeHead()
+	if err != nil {
+		return types.TreeHead{}, fmt.Errorf("parse: %w", err)
 	}
 
 	return th, nil
 }
 
-func (cli *client) GetToCosignTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
+func (cli *client) GetToCosignTreeHead(ctx context.Context) (types.SignedTreeHead, error) {
 	body, _, err := cli.get(ctx, types.EndpointGetTreeHeadToCosign.Path(cli.LogURL))
 	if err != nil {
-		return sth, fmt.Errorf("get: %w", err)
+		return types.SignedTreeHead{}, fmt.Errorf("get: %w", err)
 	}
-	if err := sth.FromASCII(bytes.NewBuffer(body)); err != nil {
-		return sth, fmt.Errorf("parse: %w", err)
+	parser := ascii.NewParser(bytes.NewBuffer(body))
+	sth, err := parser.GetSignedTreeHead()
+	if err != nil {
+		return types.SignedTreeHead{}, fmt.Errorf("parse: %w", err)
 	}
-	if ok := sth.Verify(&cli.LogPub); !ok {
-		return sth, fmt.Errorf("invalid log signature")
+	if !sth.Verify(&cli.LogPub) {
+		return types.SignedTreeHead{}, fmt.Errorf("invalid log signature")
 	}
 
 	return sth, nil
 }
 
-func (cli *client) GetCosignedTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
+func (cli *client) GetCosignedTreeHead(ctx context.Context) (types.CosignedTreeHead, error) {
 	body, _, err := cli.get(ctx, types.EndpointGetTreeHeadCosigned.Path(cli.LogURL))
 	if err != nil {
-		return cth, fmt.Errorf("get: %w", err)
+		return types.CosignedTreeHead{}, fmt.Errorf("get: %w", err)
 	}
-	if err := cth.FromASCII(bytes.NewBuffer(body)); err != nil {
-		return cth, fmt.Errorf("parse: %w", err)
+	parser := ascii.NewParser(bytes.NewBuffer(body))
+	cth, err := parser.GetCosignedTreeHead()
+	if err != nil {
+		return types.CosignedTreeHead{}, fmt.Errorf("parse: %w", err)
 	}
-	if ok := cth.SignedTreeHead.Verify(&cli.LogPub); !ok {
-		return cth, fmt.Errorf("invalid log signature")
+	if !cth.SignedTreeHead.Verify(&cli.LogPub) {
+		return types.CosignedTreeHead{}, fmt.Errorf("invalid log signature")
 	}
 	// TODO: verify cosignatures based on policy
 	return cth, nil
