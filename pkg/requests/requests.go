@@ -38,7 +38,13 @@ type Cosignature struct {
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, req)
+	if err := ascii.WriteLineHex(w, "message", req.Message[:]); err != nil{
+		return err
+	}
+	if err := ascii.WriteLineHex(w, "signature", Signature[:]); err != nil {
+		return err
+	}
+	return ascii.WriteLineHex(w, "public_key", req.PublicKey[:])
 }
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
@@ -61,7 +67,21 @@ func (req *Cosignature) ToASCII(w io.Writer) error {
 }
 
 func (req *Leaf) FromASCII(r io.Reader) error {
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, req)
+	p := ascii.NewParser(r)
+	var err error
+	req.Message, err = p.GetHash("message")
+	if err != nil {
+		return err
+	}
+	req.Signature, err = p.GetSignature("signature")
+	if err != nil {
+		return err
+	}
+	req.PublicKey, err = p.GetPublicKey("public_key")
+	if err != nil {
+		return err
+	}
+	return nil;
 }
 
 // FromURL parses request parameters from a URL that is not slash-terminated

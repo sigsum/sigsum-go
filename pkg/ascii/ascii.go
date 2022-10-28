@@ -30,29 +30,8 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-type Parser struct {
-	scanner *bufio.Scanner
-}
-
 type Value struct {
 	s string
-}
-
-func (p *Parser) Next(name string) (Value, error) {
-	if !p.scanner.Scan() {
-		return Value{}, io.EOF
-	}
-	line := p.scanner.Text()
-	equals := strings.Index(line, "=")
-	if equals < 0 {
-		return Value{}, fmt.Errorf("invalid input line: %q", line)
-	}
-	key, value := line[:equals], line[equals+1:]
-	if key != name {
-		return Value{}, fmt.Errorf("invalid input line, expected %v, got key: %q", name, key)
-	}
-
-	return Value{value}, nil
 }
 
 // Basic value types
@@ -161,3 +140,124 @@ func (v Value) ToCosignature() (types.Cosignature, error) {
 		Signature : signature,
 	}, nil
 }
+
+type Parser struct {
+	scanner *bufio.Scanner
+}
+
+func NewParser(input io.Reader) Parser {
+	// By default, scans by lines
+	return Parser{bufio.NewScanner(input)}
+}
+
+func (p *Parser) Next(name string) (Value, error) {
+	if !p.scanner.Scan() {
+		return Value{}, io.EOF
+	}
+	line := p.scanner.Text()
+	equals := strings.Index(line, "=")
+	if equals < 0 {
+		return Value{}, fmt.Errorf("invalid input line: %q", line)
+	}
+	key, value := line[:equals], line[equals+1:]
+	if key != name {
+		return Value{}, fmt.Errorf("invalid input line, expected %v, got key: %q", name, key)
+	}
+
+	return Value{value}, nil
+}
+
+func (p *Parser) GetInt(name string) (int64, error) {
+	v, err := p.Next(name)
+	if err != nil {
+		return 0, err
+	}
+	return v.ToInt()
+}
+
+func (p *Parser) GetHash(name string) (merkle.Hash, error) {
+	v, err := p.Next(name)
+	if err != nil {
+		return merkle.Hash{}, err
+	}
+	return v.ToHash()
+}
+
+func (p *Parser) GetPublicKey(name string) (types.PublicKey, error) {
+	v, err := p.Next(name)
+	if err != nil {
+		return types.PublicKey{}, err
+	}
+	return v.ToPublicKey()
+}
+
+func (p *Parser) GetSignature(name string) (types.Signature, error) {
+	v, err := p.Next(name)
+	if err != nil {
+		return types.Signature{}, err
+	}
+	return v.ToSignature()
+}
+
+func (p *Parser) GetCosignature(name string) (types.Cosignature, error) {
+	v, err := p.Next(name)
+	if err != nil {
+		return types.Cosignature{}, err
+	}
+	return v.ToCosignature()
+}
+
+func (p *Parser) GetLeaf(name string) (types.Leaf, error) {
+	v, err := p.Next(name)
+	if err != nil {
+		return types.Leaf{}, err
+	}
+	return v.ToLeaf()
+}
+
+func WriteLine(w io.Writer, key, value string) error {
+	_, err := fmt.Fprintf(w, "%s=%s\n", key, value)
+	return err
+}
+
+func WriteLineHex(w io.Writer, key string, first []byte, rest... []byte) error {
+	_, err := fmt.Fprintf(w, "%s=%s", key, hex.EncodeToString(first))
+	if err != nil {
+		return err
+	}
+	for _, b := range rest {
+		_, err :=fmt.Fprintf(w, " %s", hex.EncodeToString(b))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = fmt.Fprintf(w, "\n")
+	return err
+}
+
+func WriteInt(w io.Writer, name string, i int64) error {
+	if i < 0 {
+		return fmt.Errorf("invalid negative number: %d", i)
+	}
+	return WriteLine(w, name, strconv.FormatUint(uint64(i), 10))
+}
+
+func WriteHash(w io.Writer, name string, h *merkle.Hash) error {
+	return WriteLineHex(w, name, (*h)[:])
+}
+
+func WritePublicKey(w io.Writer, name string, k *types.PublicKey) error {
+	return WriteLineHex(w, name, (*k)[:])
+}
+
+func WriteSignature(w io.Writer, name string, s *types.Signature) error {
+	return WriteLineHex(w, name, (*s)[:])
+}
+
+func WriteCosignature(w io.Writer, name string, c *types.Cosignature) error {
+	return WriteLineHex(w, name, c.KeyHash[:], c.Signature[:])
+}
+
+func WriteLeaf(w io.Writer, name string, l *types.Leaf) error {
+	return WriteLineHex(w, name, l.Checksum[:], l.KeyHash[:], l.Signature[:])
+}	
