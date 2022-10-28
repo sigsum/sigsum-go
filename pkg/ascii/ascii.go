@@ -202,7 +202,11 @@ func (p *Parser) GetCosignature() (types.Cosignature, error) {
 	if err != nil {
 		return types.Cosignature{}, err
 	}
-	return parseCosignature(v)
+	cosignature, err := parseCosignature(v)
+	if err == nil {
+		err = p.GetEOF()
+	}
+	return cosignature, err
 }
 
 func (p *Parser) getCosignatures() ([]types.Cosignature, error) {
@@ -221,15 +225,6 @@ func (p *Parser) getCosignatures() ([]types.Cosignature, error) {
 		}
 		cosignatures = append(cosignatures, cosignature)
 	}
-}
-
-// TODO: Add EOF check here? Or do we even need this function?
-func (p *Parser) GetLeaf() (types.Leaf, error) {
-	v, err := p.Next("leaf")
-	if err != nil {
-		return types.Leaf{}, err
-	}
-	return parseLeaf(v)
 }
 
 func (p *Parser) GetLeaves() ([]types.Leaf, error) {
@@ -273,10 +268,10 @@ func (p *Parser) getTreeHead() (types.TreeHead, error) {
 
 func (p *Parser) GetTreeHead() (types.TreeHead, error) {
 	th, err := p.getTreeHead()
-	if err != nil {
-		return th, err
+	if err == nil {
+		err = p.GetEOF()
 	}
-	return th, p.GetEOF()
+	return th, err
 }
 
 // Doesn't require EOF, so it can be used also with cosignatures.
@@ -296,10 +291,10 @@ func (p *Parser) getSignedTreeHead() (types.SignedTreeHead, error) {
 
 func (p *Parser) GetSignedTreeHead() (types.SignedTreeHead, error) {
 	sth, err := p.getSignedTreeHead()
-	if err != nil {
-		return sth, err
+	if err == nil {
+		err = p.GetEOF()
 	}
-	return sth, p.GetEOF()
+	return sth, err
 }
 
 func (p *Parser) GetCosignedTreeHead() (types.CosignedTreeHead, error) {

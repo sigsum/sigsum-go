@@ -173,48 +173,8 @@ func TestWriteLeaf(t *testing.T) {
 	}
 }
 
-func TestGetLeaf(t *testing.T) {
-	for _, table := range []struct {
-		desc       string
-		serialized string
-		wantErr    bool
-		want       types.Leaf
-	}{
-		{
-			desc:       "invalid: not a tree leaf (wrong key)",
-			serialized: "shard_hint=0\n",
-			wantErr:    true,
-		},
-		{
-			desc:       "invalid: not a tree leaf (too many key-value pairs)",
-			serialized: validLeafASCII() + "key=value\n",
-			wantErr:    true,
-		},
-		{
-			desc:       "valid: buffers 0x00,0x01,...",
-			serialized: validLeafASCII(),
-			want:       validLeaf(),
-		},
-	} {
-		p := NewParser(bytes.NewBuffer([]byte(table.serialized)))
-		leaf, err := p.GetLeaf()
-		if err == nil {
-			err = p.GetEOF()
-		}
 
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
-		}
-		if err != nil {
-			continue
-		}
-		if got, want := leaf, table.want; got != want {
-			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
-		}
-	}
-}
-
-func TestGetLeavesASCII(t *testing.T) {
+func TestGetLeaves(t *testing.T) {
 	for _, table := range []struct {
 		desc       string
 		serialized string

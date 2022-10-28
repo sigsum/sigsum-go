@@ -142,5 +142,5 @@ func (req *Cosignature) FromASCII(r io.Reader) error {
 	}
 	req.Signature = cosig.Signature
 	req.KeyHash = cosig.KeyHash
-	return p.GetEOF()
+	return nil
 }
