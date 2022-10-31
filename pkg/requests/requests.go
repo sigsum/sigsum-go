@@ -8,14 +8,13 @@ import (
 	"strings"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/merkle"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 type Leaf struct {
-	Message   merkle.Hash     `ascii:"message"`
-	Signature types.Signature `ascii:"signature"`
-	PublicKey types.PublicKey `ascii:"public_key"`
+	Message   crypto.Hash      `ascii:"message"`
+	Signature crypto.Signature `ascii:"signature"`
+	PublicKey crypto.PublicKey `ascii:"public_key"`
 }
 
 type Leaves struct {
@@ -25,7 +24,7 @@ type Leaves struct {
 
 type InclusionProof struct {
 	TreeSize uint64
-	LeafHash merkle.Hash
+	LeafHash crypto.Hash
 }
 
 type ConsistencyProof struct {
@@ -34,8 +33,8 @@ type ConsistencyProof struct {
 }
 
 type Cosignature struct {
-	Cosignature types.Signature `ascii:"cosignature"`
-	KeyHash     merkle.Hash     `ascii:"key_hash"`
+	Cosignature crypto.Signature `ascii:"cosignature"`
+	KeyHash     crypto.Hash      `ascii:"key_hash"`
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
@@ -92,15 +91,8 @@ func (req *InclusionProof) FromURL(url string) (err error) {
 	if req.TreeSize, err = strconv.ParseUint(treeSize, 10, 64); err != nil {
 		return err
 	}
-	b, err := hex.DecodeString(split[len(split)-1])
-	if err != nil {
-		return err
-	}
-	if n := len(b); n != merkle.HashSize {
-		return fmt.Errorf("invalid hash size %d", n)
-	}
-	copy(req.LeafHash[:], b)
-	return nil
+	req.LeafHash, err = crypto.HashFromHex(split[len(split)-1])
+	return err
 }
 
 // FromURL parses request parameters from a URL that is not slash-terminated

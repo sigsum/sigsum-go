@@ -9,9 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-
-	"sigsum.org/sigsum-go/pkg/merkle"
-	"sigsum.org/sigsum-go/pkg/types"
 )
 
 func BytesFromStdin() ([]byte, error) {
@@ -41,40 +38,4 @@ func SignerFromHex(s string) (crypto.Signer, error) {
 		return nil, fmt.Errorf("invalid size %d", n)
 	}
 	return ed25519.NewKeyFromSeed(b), nil
-}
-
-func PublicKeyFromHex(s string) (pub types.PublicKey, err error) {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return pub, err
-	}
-	if n := len(b); n != types.PublicKeySize {
-		return pub, fmt.Errorf("invalid size %d", n)
-	}
-	copy(pub[:], b)
-	return
-}
-
-func HashFromHex(s string) (h merkle.Hash, err error) {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return h, err
-	}
-	if n := len(b); n != merkle.HashSize {
-		return h, fmt.Errorf("invalid size %d", n)
-	}
-	copy(h[:], b)
-	return
-}
-
-func SignatureFromHex(s string) (sig types.Signature, err error) {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return sig, err
-	}
-	if n := len(b); n != types.SignatureSize {
-		return sig, fmt.Errorf("invalid size %d", n)
-	}
-	copy(sig[:], b)
-	return
 }

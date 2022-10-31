@@ -1,14 +1,13 @@
 package types
 
 import (
-	"crypto"
-	"crypto/ed25519"
+	stdcrypto "crypto"
 	"fmt"
 	"io"
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 const (
@@ -16,43 +15,37 @@ const (
 )
 
 type Leaf struct {
-	Checksum  merkle.Hash `ascii:"checksum"`
-	Signature Signature   `ascii:"signature"`
-	KeyHash   merkle.Hash `ascii:"key_hash"`
+	Checksum  crypto.Hash      `ascii:"checksum"`
+	Signature crypto.Signature `ascii:"signature"`
+	KeyHash   crypto.Hash      `ascii:"key_hash"`
 }
 
 type Leaves []Leaf
 
-func leafSignedData(checksum *merkle.Hash) []byte {
+func leafSignedData(checksum *crypto.Hash) []byte {
 	return ssh.SignedDataFromHash(TreeLeafNamespace, *checksum)
 }
 
-func SignLeafChecksum(signer crypto.Signer, checksum *merkle.Hash) (*Signature, error) {
-	sig, err := signer.Sign(nil, leafSignedData(checksum), crypto.Hash(0))
-	if err != nil {
-		return nil, fmt.Errorf("types: failed signing statement")
-	}
-
-	var signature Signature
-	copy(signature[:], sig)
-	return &signature, nil
+func SignLeafChecksum(signer stdcrypto.Signer, checksum *crypto.Hash) (crypto.Signature, error) {
+	return crypto.Sign(signer, leafSignedData(checksum))
 }
 
-func VerifyLeafChecksum(key *PublicKey, checksum *merkle.Hash, sig *Signature) bool {
-	return ed25519.Verify(ed25519.PublicKey(key[:]),
-		leafSignedData(checksum), sig[:])
+func VerifyLeafChecksum(key *crypto.PublicKey, checksum *crypto.Hash, sig *crypto.Signature) bool {
+	return crypto.Verify(key, leafSignedData(checksum), sig)
 }
 
-func SignLeafMessage(signer crypto.Signer, msg []byte) (*Signature, error) {
-	return SignLeafChecksum(signer, merkle.HashFn(msg))
+func SignLeafMessage(signer stdcrypto.Signer, msg []byte) (crypto.Signature, error) {
+	checksum := crypto.HashBytes(msg)
+	return SignLeafChecksum(signer, &checksum)
 }
 
-func VerifyLeafMessage(key *PublicKey, msg []byte, sig *Signature) bool {
-	return VerifyLeafChecksum(key, merkle.HashFn(msg), sig)
+func VerifyLeafMessage(key *crypto.PublicKey, msg []byte, sig *crypto.Signature) bool {
+	checksum := crypto.HashBytes(msg)
+	return VerifyLeafChecksum(key, &checksum, sig)
 }
 
-func (l *Leaf) Verify(key *PublicKey) bool {
-	if l.KeyHash != *merkle.HashFn(key[:]) {
+func (l *Leaf) Verify(key *crypto.PublicKey) bool {
+	if l.KeyHash != crypto.HashBytes(key[:]) {
 		return false
 	}
 	return VerifyLeafChecksum(key, &l.Checksum, &l.Signature)
@@ -87,9 +80,9 @@ func (l *Leaf) FromASCII(r io.Reader) error {
 
 func (l *Leaves) FromASCII(r io.Reader) error {
 	leaves := &struct {
-		Checksum  []merkle.Hash `ascii:"checksum"`
-		Signature []Signature   `ascii:"signature"`
-		KeyHash   []merkle.Hash `ascii:"key_hash"`
+		Checksum  []crypto.Hash      `ascii:"checksum"`
+		Signature []crypto.Signature `ascii:"signature"`
+		KeyHash   []crypto.Hash      `ascii:"key_hash"`
 	}{}
 
 	if err := ascii.StdEncoding.Deserialize(r, leaves); err != nil {

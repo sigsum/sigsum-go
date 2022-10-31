@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
-	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 func Main(args []string) error {
@@ -17,12 +17,12 @@ func Main(args []string) error {
 	if err != nil {
 		return fmt.Errorf("read stdin: %w", err)
 	}
-	pub, err := fmtio.PublicKeyFromHex(s)
+	pub, err := crypto.PublicKeyFromHex(s)
 	if err != nil {
 		return fmt.Errorf("parse key: %w", err)
 	}
 
-	keyHash := merkle.HashFn(pub[:])
+	keyHash := crypto.HashBytes(pub[:])
 
 	fmt.Printf("%s\n", hex.EncodeToString(keyHash[:]))
 	return nil

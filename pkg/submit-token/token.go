@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"net"
 
-	"crypto/ed25519"
-	"sigsum.org/sigsum-go/internal/fmtio"
 	"sigsum.org/sigsum-go/internal/ssh"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 const (
@@ -29,19 +27,19 @@ type Verifier interface {
 type DnsVerifier struct {
 	// Usually, net.Resolver.LookupTXT, but set differently for testing.
 	lookupTXT func(ctx context.Context, name string) ([]string, error)
-	logKey types.PublicKey
+	logKey    crypto.PublicKey
 }
 
-func NewDnsVerifier(logKey *types.PublicKey) Verifier {
+func NewDnsVerifier(logKey *crypto.PublicKey) Verifier {
 	var resolver net.Resolver
 	return &DnsVerifier{
 		lookupTXT: resolver.LookupTXT,
-		logKey: *logKey,
+		logKey:    *logKey,
 	}
 }
 
 func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) error {
-	signature, err := fmtio.SignatureFromHex(signatureHex)
+	signature, err := crypto.SignatureFromHex(signatureHex)
 	if err != nil {
 		return fmt.Errorf("failed decoding hex signature: %v", err)
 	}
@@ -57,12 +55,12 @@ func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) er
 	}
 	signedData := ssh.SignedData(namespace, dv.logKey[:])
 	for _, keyHex := range rsps {
-		key, err := fmtio.PublicKeyFromHex(keyHex)
+		key, err := crypto.PublicKeyFromHex(keyHex)
 		if err != nil {
 			badKeys++
 			continue
 		}
-		if ed25519.Verify(key[:], signedData, signature[:]) {
+		if crypto.Verify(&key, signedData, &signature) {
 			return nil
 		}
 	}

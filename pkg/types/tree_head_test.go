@@ -2,19 +2,19 @@ package types
 
 import (
 	"bytes"
-	"crypto"
+	stdcrypto "crypto"
 	"fmt"
 	"io"
 	"reflect"
 	"testing"
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
-	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 func TestTreeHeadToSignedData(t *testing.T) {
 	desc := "valid"
-	kh := merkle.Hash{}
+	kh := crypto.Hash{}
 	if got, want := validTreeHead(t).toSignedData(&kh),
 		validTreeHeadSignedData(t, &kh); !bytes.Equal(got, want) {
 		t.Errorf("got tree head signed data\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
@@ -25,8 +25,8 @@ func TestTreeHeadSign(t *testing.T) {
 	for _, table := range []struct {
 		desc    string
 		th      *TreeHead
-		signer  crypto.Signer
-		wantSig *Signature
+		signer  stdcrypto.Signer
+		wantSig *crypto.Signature
 		wantErr bool
 	}{
 		{
@@ -42,8 +42,9 @@ func TestTreeHeadSign(t *testing.T) {
 			wantSig: newSigBufferInc(t),
 		},
 	} {
-		logKey := PublicKey{}
-		sth, err := table.th.Sign(table.signer, merkle.HashFn(logKey[:]))
+		logKey := crypto.PublicKey{}
+		keyHash := crypto.HashBytes(logKey[:])
+		sth, err := table.th.Sign(table.signer, &keyHash)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -110,9 +111,9 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 func TestSignedTreeHeadVerify(t *testing.T) {
 	th := validTreeHead(t)
 	signer, pub := newKeyPair(t)
-	kh := merkle.HashFn(pub[:])
+	kh := crypto.HashBytes(pub[:])
 
-	sth, err := th.Sign(signer, kh)
+	sth, err := th.Sign(signer, &kh)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +158,7 @@ func TestCosignedTreeHeadFromASCII(t *testing.T) {
 			desc: "invalid: not a cosigned tree head (not enough cosignatures)",
 			serialized: bytes.NewBuffer(append(
 				[]byte(validCosignedTreeHeadASCII(t)),
-				[]byte(fmt.Sprintf("key_hash=%x\n", merkle.Hash{}))...,
+				[]byte(fmt.Sprintf("key_hash=%x\n", crypto.Hash{}))...,
 			)),
 			wantErr: true,
 		},
@@ -189,7 +190,7 @@ func validTreeHead(t *testing.T) *TreeHead {
 	}
 }
 
-func validTreeHeadBytes(t *testing.T, keyHash *merkle.Hash) []byte {
+func validTreeHeadBytes(t *testing.T, keyHash *crypto.Hash) []byte {
 	return bytes.Join([][]byte{
 		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
 		[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01},
@@ -198,19 +199,20 @@ func validTreeHeadBytes(t *testing.T, keyHash *merkle.Hash) []byte {
 	}, nil)
 }
 
-func validTreeHeadSignedData(t *testing.T, keyHash *merkle.Hash) []byte {
+func validTreeHeadSignedData(t *testing.T, keyHash *crypto.Hash) []byte {
 	msg := bytes.Join([][]byte{
 		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
 		[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01},
 		newHashBufferInc(t)[:],
 		keyHash[:],
 	}, nil)
+	checksum := crypto.HashBytes(msg)
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
 		[]byte{0, 0, 0, 23}, []byte("tree_head:v0@sigsum.org"),
 		[]byte{0, 0, 0, 0},
 		[]byte{0, 0, 0, 6}, []byte("sha256"),
-		[]byte{0, 0, 0, 32}, (*merkle.HashFn(msg))[:],
+		[]byte{0, 0, 0, 32}, checksum[:],
 	}, nil)
 }
 
@@ -247,12 +249,12 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 			},
 			Signature: *newSigBufferInc(t),
 		},
-		Cosignature: []Signature{
-			Signature{},
+		Cosignature: []crypto.Signature{
+			crypto.Signature{},
 			*newSigBufferInc(t),
 		},
-		KeyHash: []merkle.Hash{
-			merkle.Hash{},
+		KeyHash: []crypto.Hash{
+			crypto.Hash{},
 			*newHashBufferInc(t),
 		},
 	}
@@ -265,9 +267,9 @@ func validCosignedTreeHeadASCII(t *testing.T) string {
 		"tree_size", 2,
 		"root_hash", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
-		"cosignature", Signature{},
+		"cosignature", crypto.Signature{},
 		"cosignature", newSigBufferInc(t)[:],
-		"key_hash", merkle.Hash{},
+		"key_hash", crypto.Hash{},
 		"key_hash", newHashBufferInc(t)[:],
 	)
 }

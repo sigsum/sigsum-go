@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -33,7 +33,7 @@ func TestLeavesToURL(t *testing.T) {
 
 func TestInclusionProofToURL(t *testing.T) {
 	url := types.EndpointGetInclusionProof.Path("https://poc.sigsum.org")
-	req := InclusionProof{1, merkle.Hash{}}
+	req := InclusionProof{1, crypto.Hash{}}
 	want := url + "1/0000000000000000000000000000000000000000000000000000000000000000"
 	if got := req.ToURL(url); got != want {
 		t.Errorf("got url %s but wanted %s", got, want)
@@ -138,7 +138,7 @@ func TestInclusionProofFromURL(t *testing.T) {
 		{"invalid: tree size is empty", "some-url//" + zeroHash, InclusionProof{}, true},
 		{"invalid: leaf hash is invalid hex", "some-url/1/" + badHex, InclusionProof{}, true},
 		{"invalid: leaf hash is hex but too short", "some-url/1/" + shortHex, InclusionProof{}, true},
-		{"valid", "some-url/1/" + zeroHash, InclusionProof{1, merkle.Hash{}}, false},
+		{"valid", "some-url/1/" + zeroHash, InclusionProof{1, crypto.Hash{}}, false},
 	} {
 		var req InclusionProof
 		err := req.FromURL(table.input)
@@ -300,30 +300,30 @@ func validCosignatureASCII(t *testing.T) string {
 	)
 }
 
-func newHashBufferInc(t *testing.T) *merkle.Hash {
+func newHashBufferInc(t *testing.T) *crypto.Hash {
 	t.Helper()
 
-	var buf merkle.Hash
+	var buf crypto.Hash
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
 	return &buf
 }
 
-func newSigBufferInc(t *testing.T) *types.Signature {
+func newSigBufferInc(t *testing.T) *crypto.Signature {
 	t.Helper()
 
-	var buf types.Signature
+	var buf crypto.Signature
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
 	return &buf
 }
 
-func newPubBufferInc(t *testing.T) *types.PublicKey {
+func newPubBufferInc(t *testing.T) *crypto.PublicKey {
 	t.Helper()
 
-	var buf types.PublicKey
+	var buf crypto.PublicKey
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}

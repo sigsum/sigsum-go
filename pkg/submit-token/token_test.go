@@ -6,42 +6,41 @@ import (
 	"log"
 	"testing"
 
-	"crypto"
+	stdcrypto "crypto"
 	"crypto/ed25519"
 	"crypto/rand"
 	"fmt"
-	"sigsum.org/sigsum-go/internal/fmtio"
 	"sigsum.org/sigsum-go/internal/ssh"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"strings"
 )
 
-func verifierWithResponses(logKey *types.PublicKey, domain string, responses []string) Verifier {
+func verifierWithResponses(logKey *crypto.PublicKey, domain string, responses []string) Verifier {
 	return &DnsVerifier{
 		lookupTXT: func(_ context.Context, name string) ([]string, error) {
-		if name != "_sigsum_v0."+domain {
-			return []string{}, fmt.Errorf("NXDOMAIN: %q", name)
-		}
-		return responses, nil
+			if name != "_sigsum_v0."+domain {
+				return []string{}, fmt.Errorf("NXDOMAIN: %q", name)
+			}
+			return responses, nil
 		},
 		logKey: *logKey,
 	}
 }
 
-func newKeyPair(t *testing.T) (crypto.Signer, types.PublicKey) {
+func newKeyPair(t *testing.T) (stdcrypto.Signer, crypto.PublicKey) {
 	vk, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var pub types.PublicKey
+	var pub crypto.PublicKey
 	copy(pub[:], vk[:])
 	return sk, pub
 }
 
 func TestVerify(t *testing.T) {
 	logKeyHex := "cda2517e17dcba133eb0e71bf77473f94a77d7e61b1de4e1e64adfd0938d6182"
-	logKey, err := fmtio.PublicKeyFromHex(logKeyHex)
+	logKey, err := crypto.PublicKeyFromHex(logKeyHex)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -49,12 +48,12 @@ func TestVerify(t *testing.T) {
 	signer, pub := newKeyPair(t)
 	hexKey := hex.EncodeToString(pub[:])
 
-	signature, err := signer.Sign(nil, ssh.SignedData("submit-token:v0@sigsum.org", logKey[:]), crypto.Hash(0))
+	signature, err := crypto.Sign(signer, ssh.SignedData("submit-token:v0@sigsum.org", logKey[:]))
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	token := hex.EncodeToString(signature)
+	token := hex.EncodeToString(signature[:])
 	testOne := func(desc, tokenDomain, signature, registeredDomain string, records []string,
 		check func(err error) error) {
 		t.Helper()

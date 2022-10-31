@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -20,11 +21,11 @@ func Main(args []string, optOldSize, optNewSize uint64, optOldRoot, optNewRoot s
 	if err := proof.FromASCII(bytes.NewBuffer(b), optOldSize, optNewSize); err != nil {
 		return fmt.Errorf("parse proof: %w", err)
 	}
-	oldRoot, err := fmtio.HashFromHex(optOldRoot)
+	oldRoot, err := crypto.HashFromHex(optOldRoot)
 	if err != nil {
 		return fmt.Errorf("parse old root: %w", err)
 	}
-	newRoot, err := fmtio.HashFromHex(optNewRoot)
+	newRoot, err := crypto.HashFromHex(optNewRoot)
 	if err != nil {
 		return fmt.Errorf("parse new root: %w", err)
 	}

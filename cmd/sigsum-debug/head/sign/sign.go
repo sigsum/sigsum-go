@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -22,7 +23,7 @@ func Main(args []string, optPrivateKey, optKeyHash string) error {
 	if err != nil {
 		return fmt.Errorf("parse private key: %v", err)
 	}
-	keyHash, err := fmtio.HashFromHex(optKeyHash)
+	keyHash, err := crypto.HashFromHex(optKeyHash)
 	if err != nil {
 		return fmt.Errorf("parse key hash: %v", err)
 	}
