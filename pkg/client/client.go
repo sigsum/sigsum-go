@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/log"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -30,7 +31,7 @@ type Client interface {
 type Config struct {
 	UserAgent string
 	LogURL    string
-	LogPub    types.PublicKey
+	LogPub    crypto.PublicKey
 	// TODO: witness public keys + policy
 }
 

@@ -2,7 +2,9 @@ package types
 
 import (
 	"bytes"
-	"crypto"
+	stdcrypto "crypto"
+	"crypto/ed25519"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"reflect"
@@ -10,7 +12,7 @@ import (
 	"testing"
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
-	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 func TestLeafSignedData(t *testing.T) {
@@ -23,9 +25,9 @@ func TestLeafSignedData(t *testing.T) {
 func TestSignLeaf(t *testing.T) {
 	for _, table := range []struct {
 		desc     string
-		checksum *merkle.Hash
-		signer   crypto.Signer
-		wantSig  *Signature
+		checksum *crypto.Hash
+		signer   stdcrypto.Signer
+		wantSig  *crypto.Signature
 		wantErr  bool
 	}{
 		{
@@ -66,8 +68,8 @@ func TestLeafVerify(t *testing.T) {
 
 	leaf := Leaf{
 		Checksum:  *checksum,
-		Signature: *sig,
-		KeyHash:   *merkle.HashFn(pub[:]),
+		Signature: sig,
+		KeyHash:   crypto.HashBytes(pub[:]),
 	}
 	if !leaf.Verify(&pub) {
 		t.Errorf("failed verifying a valid statement")
@@ -223,39 +225,43 @@ func TestLeavesFromASCII(t *testing.T) {
 	}
 }
 
-func validChecksum(t *testing.T) *merkle.Hash {
-	return merkle.HashFn(newHashBufferInc(t)[:])
+func validChecksum(t *testing.T) *crypto.Hash {
+	hash := crypto.HashBytes(newHashBufferInc(t)[:])
+	return &hash
 }
 
 func validLeafSignedDataBytes(t *testing.T) []byte {
+	hash := crypto.HashBytes(newHashBufferInc(t)[:])
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
 		[]byte{0, 0, 0, 23}, []byte("tree_leaf:v0@sigsum.org"),
 		[]byte{0, 0, 0, 0},
 		[]byte{0, 0, 0, 6}, []byte("sha256"),
-		[]byte{0, 0, 0, 32}, merkle.HashFn(newHashBufferInc(t)[:])[:],
+		[]byte{0, 0, 0, 32}, hash[:],
 	}, nil)
 }
 
 func validLeaf(t *testing.T) *Leaf {
 	return &Leaf{
-		Checksum:  *merkle.HashFn(newHashBufferInc(t)[:]),
+		Checksum:  crypto.HashBytes(newHashBufferInc(t)[:]),
 		Signature: *newSigBufferInc(t),
 		KeyHash:   *newHashBufferInc(t),
 	}
 }
 
 func validLeafBytes(t *testing.T) []byte {
+	checksum := crypto.HashBytes(newHashBufferInc(t)[:])
 	return bytes.Join([][]byte{
-		merkle.HashFn(newHashBufferInc(t)[:])[:],
+		checksum[:],
 		newSigBufferInc(t)[:],
 		newHashBufferInc(t)[:],
 	}, nil)
 }
 
 func validLeafASCII(t *testing.T) string {
+	checksum := crypto.HashBytes(newHashBufferInc(t)[:])
 	return fmt.Sprintf("%s=%x\n%s=%x\n%s=%x\n",
-		"checksum", merkle.HashFn(newHashBufferInc(t)[:])[:],
+		"checksum", checksum[:],
 		"signature", newSigBufferInc(t)[:],
 		"key_hash", newHashBufferInc(t)[:],
 	)
@@ -269,9 +275,9 @@ func validLeaves(t *testing.T) *Leaves {
 func validLeavesASCII(t *testing.T) string {
 	t.Helper()
 	return validLeafASCII(t) + fmt.Sprintf("%s=%x\n%s=%x\n%s=%x\n",
-		"checksum", merkle.Hash{},
-		"signature", Signature{},
-		"key_hash", merkle.Hash{},
+		"checksum", crypto.Hash{},
+		"signature", crypto.Signature{},
+		"key_hash", crypto.Hash{},
 	)
 }
 
@@ -291,4 +297,45 @@ func invalidLeavesASCII(t *testing.T, key string) string {
 		t.Fatalf("must have a valid key to remove")
 	}
 	return ret
+}
+
+func newKeyPair(t *testing.T) (stdcrypto.Signer, crypto.PublicKey) {
+	vk, sk, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var pub crypto.PublicKey
+	copy(pub[:], vk[:])
+	return sk, pub
+}
+
+func newHashBufferInc(t *testing.T) *crypto.Hash {
+	t.Helper()
+
+	var buf crypto.Hash
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(i)
+	}
+	return &buf
+}
+
+func newSigBufferInc(t *testing.T) *crypto.Signature {
+	t.Helper()
+
+	var buf crypto.Signature
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(i)
+	}
+	return &buf
+}
+
+func newPubBufferInc(t *testing.T) *crypto.PublicKey {
+	t.Helper()
+
+	var buf crypto.PublicKey
+	for i := 0; i < len(buf); i++ {
+		buf[i] = byte(i)
+	}
+	return &buf
 }

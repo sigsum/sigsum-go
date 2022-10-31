@@ -4,8 +4,8 @@ package merkle
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 type Prefix uint8
@@ -15,46 +15,27 @@ const (
 	PrefixInteriorNode
 )
 
-var (
-	prefixLeafNode     = []byte{byte(PrefixLeafNode)}
-	prefixInteriorNode = []byte{byte(PrefixInteriorNode)}
-)
-
-const (
-	HashSize = sha256.Size
-)
-
-type Hash [HashSize]byte
-
-func HashFn(b []byte) *Hash {
-	var ret Hash
-	h := sha256.Sum256(b)
-	copy(ret[:], h[:])
-	return &ret
+func formatLeafNode(b []byte) []byte {
+	prefixLeafNode := []byte{byte(PrefixLeafNode)}
+	return bytes.Join([][]byte{prefixLeafNode, b}, nil)
 }
 
-func HashLeafNode(leaf []byte) *Hash {
-	var ret Hash
-	h := sha256.New()
-	h.Write(prefixLeafNode)
-	h.Write(leaf)
-	copy(ret[:], h.Sum(nil))
-	return &ret
+func formatInternalNode(left, right *crypto.Hash) []byte {
+	prefixInteriorNode := []byte{byte(PrefixInteriorNode)}
+	return bytes.Join([][]byte{prefixInteriorNode, (*left)[:], (*right)[:]}, nil)
 }
 
-func HashInteriorNode(left, right Hash) *Hash {
-	var ret Hash
-	h := sha256.New()
-	h.Write(prefixInteriorNode)
-	h.Write(left[:])
-	h.Write(right[:])
-	copy(ret[:], h.Sum(nil))
-	return &ret
+func HashLeafNode(leaf []byte) crypto.Hash {
+	return crypto.HashBytes(formatLeafNode(leaf))
+}
+
+func HashInteriorNode(left, right *crypto.Hash) crypto.Hash {
+	return crypto.HashBytes(formatInternalNode(left, right))
 }
 
 // VerifyConsistency verifies that a Merkle tree is consistent.  The algorithm
 // used is in RFC 9162, §2.1.4.2.  It is the same proof technique as RFC 6962.
-func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot Hash, path []Hash) error {
+func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, path []crypto.Hash) error {
 	// Step 1
 	if len(path) == 0 {
 		return fmt.Errorf("proof input is malformed: no path")
@@ -62,7 +43,7 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot Hash, path []Ha
 
 	// Step2
 	if pow2(oldSize) {
-		path = append([]Hash{oldRoot}, path...)
+		path = append([]crypto.Hash{*oldRoot}, path...)
 	}
 
 	// Step 3
@@ -89,9 +70,9 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot Hash, path []Ha
 		// Step 6(b)
 		if lsb(fn) || fn == sn {
 			// Step 6(b), i
-			fr = *HashInteriorNode(c, fr)
+			fr = HashInteriorNode(&c, &fr)
 			// Step 6(b), ii
-			sr = *HashInteriorNode(c, sr)
+			sr = HashInteriorNode(&c, &sr)
 			// Step 6(b), iii
 			if !lsb(fn) {
 				for {
@@ -105,7 +86,7 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot Hash, path []Ha
 			}
 		} else {
 			// Step 6(b), i
-			sr = *HashInteriorNode(sr, c)
+			sr = HashInteriorNode(&sr, &c)
 		}
 
 		// Step 6(c)
@@ -128,7 +109,7 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot Hash, path []Ha
 
 // VerifyInclusion verifies that something is in a Merkle tree.  The algorithm
 // used is in RFC 9162, §2.1.3.2.  It is the same proof technique as RFC 6962.
-func VerifyInclusion(leaf Hash, index, size uint64, root Hash, path []Hash) error {
+func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
 	// Step 1
 	if index >= size {
 		return fmt.Errorf("proof input is malformed: index out of range")
@@ -139,7 +120,7 @@ func VerifyInclusion(leaf Hash, index, size uint64, root Hash, path []Hash) erro
 	sn := size - 1
 
 	// Step 3
-	r := leaf
+	r := *leaf
 
 	// Step 4
 	for _, p := range path {
@@ -151,7 +132,7 @@ func VerifyInclusion(leaf Hash, index, size uint64, root Hash, path []Hash) erro
 		// Step 4(b)
 		if lsb(fn) || fn == sn {
 			// Step 4(b), i
-			r = *HashInteriorNode(p, r)
+			r = HashInteriorNode(&p, &r)
 
 			// Step 4(b), ii
 			if !lsb(fn) {
@@ -166,7 +147,7 @@ func VerifyInclusion(leaf Hash, index, size uint64, root Hash, path []Hash) erro
 			}
 		} else {
 			// Step 4(b), i
-			r = *HashInteriorNode(r, p)
+			r = HashInteriorNode(&r, &p)
 		}
 
 		// Step 4(c)

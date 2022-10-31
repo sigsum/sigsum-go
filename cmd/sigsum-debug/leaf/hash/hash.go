@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -18,18 +19,18 @@ func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) e
 	if err != nil {
 		return fmt.Errorf("read stdin: %w", err)
 	}
-	keyHash, err := fmtio.HashFromHex(optKeyHash)
+	keyHash, err := crypto.HashFromHex(optKeyHash)
 	if err != nil {
 		return fmt.Errorf("parse key hash: %w", err)
 	}
-	sig, err := fmtio.SignatureFromHex(optSignature)
+	sig, err := crypto.SignatureFromHex(optSignature)
 	if err != nil {
 		return fmt.Errorf("parse signature: %w", err)
 	}
 
-	message := merkle.HashFn(data)
+	message := crypto.HashBytes(data)
 	leaf := types.Leaf{
-		Checksum:  *merkle.HashFn(message[:]),
+		Checksum:  crypto.HashBytes(message[:]),
 		Signature: sig,
 		KeyHash:   keyHash,
 	}

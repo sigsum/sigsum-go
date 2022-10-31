@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
-	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -23,10 +23,10 @@ func Main(args []string, optPrivateKey string, optShardHint uint64) error {
 		return fmt.Errorf("parse private key: %w", err)
 	}
 
-	message := merkle.HashFn(data)
-	checksum := merkle.HashFn(message[:])
+	message := crypto.HashBytes(data)
+	checksum := crypto.HashBytes(message[:])
 
-	sig, err := types.SignLeafChecksum(priv, checksum)
+	sig, err := types.SignLeafChecksum(priv, &checksum)
 	if err != nil {
 		fmt.Errorf("sign leaf: %w", err)
 	}
