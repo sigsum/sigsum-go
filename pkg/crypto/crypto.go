@@ -21,10 +21,8 @@ type (
 	PublicKey [PublicKeySize]byte
 )
 
-func HashBytes(b []byte) (ret Hash) {
-	h := sha256.Sum256(b)
-	copy(ret[:], h[:])
-	return
+func HashBytes(b []byte) Hash {
+	return sha256.Sum256(b)
 }
 
 func Verify(pub *PublicKey, msg []byte, sig *Signature) bool {
