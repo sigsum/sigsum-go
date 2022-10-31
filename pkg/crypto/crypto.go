@@ -45,34 +45,29 @@ func Sign(priv crypto.Signer, msg []byte) (Signature, error) {
 	return ret, nil
 }
 
-func decodeHex(s string, size int) ([]byte, error) {
+func decodeHex(out []byte, s string) error {
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if len(b) != size {
-		return nil, fmt.Errorf("unexpected length of hex data, expected %d, got %d", size, len(b))
+	if len(b) != len(out) {
+		return fmt.Errorf("unexpected length of hex data, expected %d, got %d", len(out), len(b))
 	}
-	return b, nil
+	copy(out[:], b[:])
+	return nil
 }
 
 func HashFromHex(s string) (h Hash, err error) {
-	var b []byte
-	b, err = decodeHex(s, HashSize)
-	copy(h[:], b)
+	err = decodeHex(h[:], s)
 	return
 }
 
 func PublicKeyFromHex(s string) (pub PublicKey, err error) {
-	var b []byte
-	b, err = decodeHex(s, PublicKeySize)
-	copy(pub[:], b)
+	err = decodeHex(pub[:], s)
 	return
 }
 
 func SignatureFromHex(s string) (sig Signature, err error) {
-	var b []byte
-	b, err = decodeHex(s, SignatureSize)
-	copy(sig[:], b)
+	err = decodeHex(sig[:], s)
 	return
 }
