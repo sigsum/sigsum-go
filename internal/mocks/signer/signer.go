@@ -1,22 +1,20 @@
 package signer
 
 import (
-	"crypto"
-	"crypto/ed25519"
-	"io"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 // Signer implements crypto.Signer with fixed outputs.  Use for tests only.
 type Signer struct {
-	PublicKey []byte
-	Signature []byte
+	PublicKey crypto.PublicKey
+	Signature crypto.Signature
 	Error     error
 }
 
 func (s *Signer) Public() crypto.PublicKey {
-	return ed25519.PublicKey(s.PublicKey[:])
+	return s.PublicKey
 }
 
-func (s *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
-	return s.Signature[:], s.Error
+func (s *Signer) Sign(_ []byte) (crypto.Signature, error) {
+	return s.Signature, s.Error
 }

@@ -3,10 +3,6 @@ package fmtio
 
 import (
 	"bytes"
-	"crypto"
-	"crypto/ed25519"
-	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -27,15 +23,4 @@ func StringFromStdin() (string, error) {
 		return "", err
 	}
 	return string(bytes.TrimSpace(b)), nil
-}
-
-func SignerFromHex(s string) (crypto.Signer, error) {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-	if n := len(b); n != ed25519.SeedSize {
-		return nil, fmt.Errorf("invalid size %d", n)
-	}
-	return ed25519.NewKeyFromSeed(b), nil
 }

@@ -19,7 +19,7 @@ func Main(args []string, optPrivateKey, optKeyHash string) error {
 	if err != nil {
 		return fmt.Errorf("read stdin: %w", err)
 	}
-	priv, err := fmtio.SignerFromHex(optPrivateKey)
+	priv, err := crypto.SignerFromHex(optPrivateKey)
 	if err != nil {
 		return fmt.Errorf("parse private key: %v", err)
 	}

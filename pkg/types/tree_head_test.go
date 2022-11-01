@@ -2,7 +2,6 @@ package types
 
 import (
 	"bytes"
-	stdcrypto "crypto"
 	"fmt"
 	"io"
 	"reflect"
@@ -25,20 +24,20 @@ func TestTreeHeadSign(t *testing.T) {
 	for _, table := range []struct {
 		desc    string
 		th      *TreeHead
-		signer  stdcrypto.Signer
+		signer  crypto.Signer
 		wantSig *crypto.Signature
 		wantErr bool
 	}{
 		{
 			desc:    "invalid: signer error",
 			th:      validTreeHead(t),
-			signer:  &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], fmt.Errorf("signing error")},
+			signer:  &signer.Signer{*newPubBufferInc(t), *newSigBufferInc(t), fmt.Errorf("signing error")},
 			wantErr: true,
 		},
 		{
 			desc:    "valid",
 			th:      validTreeHead(t),
-			signer:  &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], nil},
+			signer:  &signer.Signer{*newPubBufferInc(t), *newSigBufferInc(t), nil},
 			wantSig: newSigBufferInc(t),
 		},
 	} {
@@ -110,7 +109,7 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 
 func TestSignedTreeHeadVerify(t *testing.T) {
 	th := validTreeHead(t)
-	signer, pub := newKeyPair(t)
+	pub, signer := newKeyPair(t)
 	kh := crypto.HashBytes(pub[:])
 
 	sth, err := th.Sign(signer, &kh)
