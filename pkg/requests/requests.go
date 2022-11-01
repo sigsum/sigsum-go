@@ -12,9 +12,9 @@ import (
 )
 
 type Leaf struct {
-	Message   crypto.Hash      `ascii:"message"`
-	Signature crypto.Signature `ascii:"signature"`
-	PublicKey crypto.PublicKey `ascii:"public_key"`
+	Message   crypto.Hash
+	Signature crypto.Signature
+	PublicKey crypto.PublicKey
 }
 
 type Leaves struct {

@@ -33,10 +33,10 @@ func writeHashes(w io.Writer, name string, hashes []crypto.Hash) error {
 
 // Note the tree_size is not included on the wire.
 func (pr *InclusionProof) ToASCII(w io.Writer) error {
- 	if err := ascii.WriteInt(w, "leaf_index", pr.LeafIndex); err != nil {
- 		return err
- 	}
- 	return writeHashes(w, "inclusion_path", pr.Path)
+	if err := ascii.WriteInt(w, "leaf_index", pr.LeafIndex); err != nil {
+		return err
+	}
+	return writeHashes(w, "inclusion_path", pr.Path)
 }
 
 func (pr *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
@@ -56,7 +56,7 @@ func (pr *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
 }
 
 func (pr *ConsistencyProof) ToASCII(w io.Writer) error {
- 	return writeHashes(w, "consistency_path", pr.Path)
+	return writeHashes(w, "consistency_path", pr.Path)
 }
 
 func (pr *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {

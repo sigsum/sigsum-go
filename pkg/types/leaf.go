@@ -71,14 +71,14 @@ func (l *Leaf) FromBinary(b []byte) error {
 
 func (l *Leaves) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
- 	for {
- 		v, err := p.GetValues("leaf", 3)
- 		if err == io.EOF {
- 			return nil
- 		}
- 		if err != nil {
- 			return err
- 		}
+	for {
+		v, err := p.GetValues("leaf", 3)
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 		checksum, err := crypto.HashFromHex(v[0])
 		if err != nil {
 			return fmt.Errorf("invalid leaf checksum: %v", err)
@@ -91,10 +91,10 @@ func (l *Leaves) FromASCII(r io.Reader) error {
 		if err != nil {
 			return fmt.Errorf("invalid leaf key hash: %v", err)
 		}
- 		*l = append(*l, Leaf{
-			Checksum: checksum,
+		*l = append(*l, Leaf{
+			Checksum:  checksum,
 			Signature: signature,
-			KeyHash: keyHash,
+			KeyHash:   keyHash,
 		})
 	}
 }

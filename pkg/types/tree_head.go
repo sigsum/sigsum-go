@@ -61,27 +61,27 @@ func (th *TreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature, k
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
- 	if err := ascii.WriteInt(w, "timestamp", th.Timestamp); err != nil {
- 		return err
- 	}
- 	if err := ascii.WriteInt(w, "tree_size", th.TreeSize); err != nil {
- 		return err
- 	}
- 	return ascii.WriteHash(w, "root_hash", &th.RootHash)
+	if err := ascii.WriteInt(w, "timestamp", th.Timestamp); err != nil {
+		return err
+	}
+	if err := ascii.WriteInt(w, "tree_size", th.TreeSize); err != nil {
+		return err
+	}
+	return ascii.WriteHash(w, "root_hash", &th.RootHash)
 }
 
 // Doesn't require EOF, so it can be used also with (co)signatures.
 func (th *TreeHead) fromASCII(p *ascii.Parser) error {
 	var err error
- 	th.Timestamp, err = p.GetInt("timestamp")
- 	if err != nil {
- 		return err
- 	}
- 	th.TreeSize, err = p.GetInt("tree_size")
- 	if err != nil {
- 		return err
- 	}
- 	th.RootHash, err = p.GetHash("root_hash")
+	th.Timestamp, err = p.GetInt("timestamp")
+	if err != nil {
+		return err
+	}
+	th.TreeSize, err = p.GetInt("tree_size")
+	if err != nil {
+		return err
+	}
+	th.RootHash, err = p.GetHash("root_hash")
 	return err
 }
 
@@ -95,10 +95,10 @@ func (th *TreeHead) FromASCII(r io.Reader) error {
 }
 
 func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
- 	if err := sth.TreeHead.ToASCII(w); err != nil {
- 		return err
- 	}
- 	return ascii.WriteSignature(w, "signature", &sth.Signature)
+	if err := sth.TreeHead.ToASCII(w); err != nil {
+		return err
+	}
+	return ascii.WriteSignature(w, "signature", &sth.Signature)
 }
 
 func (sth *SignedTreeHead) fromASCII(p *ascii.Parser) error {
@@ -107,7 +107,7 @@ func (sth *SignedTreeHead) fromASCII(p *ascii.Parser) error {
 		return err
 	}
 	sth.Signature, err = p.GetSignature("signature")
-	return err;
+	return err
 }
 
 func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
@@ -129,9 +129,9 @@ func (cs *Cosignature) ToASCII(w io.Writer) error {
 }
 
 func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
- 	if err := cth.SignedTreeHead.ToASCII(w); err != nil {
- 		return err
- 	}
+	if err := cth.SignedTreeHead.ToASCII(w); err != nil {
+		return err
+	}
 	for _, cs := range cth.Cosignatures {
 		if err := cs.ToASCII(w); err != nil {
 			return err
@@ -160,7 +160,7 @@ func cosignaturesFromASCII(p *ascii.Parser) ([]Cosignature, error) {
 			return nil, err
 		}
 		cosignatures = append(cosignatures, Cosignature{
-			KeyHash: keyHash, 
+			KeyHash:   keyHash,
 			Signature: signature,
 		})
 	}
