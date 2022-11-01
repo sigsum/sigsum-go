@@ -21,29 +21,53 @@ type ConsistencyProof struct {
 	Path    []crypto.Hash
 }
 
-func (p *InclusionProof) ToASCII(w io.Writer) error {
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, p)
+func writeHashes(w io.Writer, name string, hashes []crypto.Hash) error {
+	for _, hash := range hashes {
+		err := ascii.WriteHash(w, name, &hash)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (p *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
-	p.TreeSize = treeSize
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, p)
+// Note the tree_size is not included on the wire.
+func (pr *InclusionProof) ToASCII(w io.Writer) error {
+ 	if err := ascii.WriteInt(w, "leaf_index", pr.LeafIndex); err != nil {
+ 		return err
+ 	}
+ 	return writeHashes(w, "inclusion_path", pr.Path)
 }
 
-func (p *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
-	return merkle.VerifyInclusion(leaf, p.LeafIndex, p.TreeSize, root, p.Path)
+func (pr *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
+	pr.TreeSize = treeSize
+	p := ascii.NewParser(r)
+	var err error
+	pr.LeafIndex, err = p.GetInt("leaf_index")
+	if pr.LeafIndex >= treeSize {
+		return fmt.Errorf("leaf_index out of range")
+	}
+	pr.Path, err = p.GetHashes("inclusion_path")
+	return err
 }
 
-func (p *ConsistencyProof) ToASCII(w io.Writer) error {
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Serialize(w, p)
+func (pr *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
+	return merkle.VerifyInclusion(leaf, pr.LeafIndex, pr.TreeSize, root, pr.Path)
 }
 
-func (p *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {
-	p.OldSize = oldSize
-	p.NewSize = newSize
-	return fmt.Errorf("not implemented") // XXX ascii.StdEncoding.Deserialize(r, p)
+func (pr *ConsistencyProof) ToASCII(w io.Writer) error {
+ 	return writeHashes(w, "consistency_path", pr.Path)
 }
 
-func (p *ConsistencyProof) Verify(oldRoot, newRoot *crypto.Hash) error {
-	return merkle.VerifyConsistency(p.OldSize, p.NewSize, oldRoot, newRoot, p.Path)
+func (pr *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {
+	pr.OldSize = oldSize
+	pr.NewSize = newSize
+	p := ascii.NewParser(r)
+	var err error
+	pr.Path, err = p.GetHashes("consistency_path")
+	return err
+}
+
+func (pr *ConsistencyProof) Verify(oldRoot, newRoot *crypto.Hash) error {
+	return merkle.VerifyConsistency(pr.OldSize, pr.NewSize, oldRoot, newRoot, pr.Path)
 }

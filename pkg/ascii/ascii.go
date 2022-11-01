@@ -91,44 +91,6 @@ func split(s string, n int) ([]string, error) {
 	return append(values, s), nil
 }
 
-// func parseLeaf(s string) (types.Leaf, error) {
-// 	values, err := split(s, 3)
-// 	var leaf types.Leaf
-// 	if err != nil {
-// 		return leaf, fmt.Errorf("invalid leaf: %v", err)
-// 	}
-// 	leaf.Checksum, err = HashFromHex(values[0])
-// 	if err != nil {
-// 		return leaf, fmt.Errorf("invalid leaf checksum: %v", err)
-// 	}
-// 	leaf.Signature, err = SignatureFromHex(values[1])
-// 	if err != nil {
-// 		return leaf, fmt.Errorf("invalid leaf signature: %v", err)
-// 	}
-// 	leaf.KeyHash, err = HashFromHex(values[2])
-// 	if err != nil {
-// 		return leaf, fmt.Errorf("invalid leaf key hash: %v", err)
-// 	}
-// 	return leaf, nil
-// }
-// 
-// func parseCosignature(s string) (types.Cosignature, error) {
-// 	values, err := split(s, 2)
-// 	var cosignature types.Cosignature
-// 	if err != nil {
-// 		return cosignature, fmt.Errorf("invalid cosignature: %v", err)
-// 	}
-// 	cosignature.KeyHash, err = HashFromHex(values[0])
-// 	if err != nil {
-// 		return cosignature, fmt.Errorf("invalid cosignature key hash: %v", err)
-// 	}
-// 	cosignature.Signature, err = SignatureFromHex(values[1])
-// 	if err != nil {
-// 		return cosignature, fmt.Errorf("invalid cosignature signature: %v", err)
-// 	}
-// 	return cosignature, nil
-// }
-
 type Parser struct {
 	scanner *bufio.Scanner
 }
@@ -146,7 +108,7 @@ func (p *Parser) GetEOF() error {
 	return nil
 }
 
-func (p *Parser) Next(name string) (string, error) {
+func (p *Parser) next(name string) (string, error) {
 	if !p.scanner.Scan() {
 		return "", io.EOF
 	}
@@ -164,7 +126,7 @@ func (p *Parser) Next(name string) (string, error) {
 }
 
 func (p *Parser) GetInt(name string) (uint64, error) {
-	v, err := p.Next(name)
+	v, err := p.next(name)
 	if err != nil {
 		return 0, err
 	}
@@ -172,7 +134,7 @@ func (p *Parser) GetInt(name string) (uint64, error) {
 }
 
 func (p *Parser) GetHash(name string) (crypto.Hash, error) {
-	v, err := p.Next(name)
+	v, err := p.next(name)
 	if err != nil {
 		return crypto.Hash{}, err
 	}
@@ -180,7 +142,7 @@ func (p *Parser) GetHash(name string) (crypto.Hash, error) {
 }
 
 func (p *Parser) GetPublicKey(name string) (crypto.PublicKey, error) {
-	v, err := p.Next(name)
+	v, err := p.next(name)
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
@@ -188,133 +150,26 @@ func (p *Parser) GetPublicKey(name string) (crypto.PublicKey, error) {
 }
 
 func (p *Parser) GetSignature(name string) (crypto.Signature, error) {
-	v, err := p.Next(name)
+	v, err := p.next(name)
 	if err != nil {
 		return crypto.Signature{}, err
 	}
 	return SignatureFromHex(v)
 }
 
-// func (p *Parser) GetCosignature() (types.Cosignature, error) {
-// 	v, err := p.Next("cosignature")
-// 	if err != nil {
-// 		return types.Cosignature{}, err
-// 	}
-// 	cosignature, err := parseCosignature(v)
-// 	if err == nil {
-// 		err = p.GetEOF()
-// 	}
-// 	return cosignature, err
-// }
-// 
-// func (p *Parser) getCosignatures() ([]types.Cosignature, error) {
-// 	var cosignatures []types.Cosignature
-// 	for {
-// 		v, err := p.Next("cosignature")
-// 		if err == io.EOF {
-// 			return cosignatures, nil
-// 		}
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		cosignature, err := parseCosignature(v)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		cosignatures = append(cosignatures, cosignature)
-// 	}
-// }
-// 
-// func (p *Parser) GetLeaves() ([]types.Leaf, error) {
-// 	var leaves []types.Leaf
-// 	for {
-// 		v, err := p.Next("leaf")
-// 		if err == io.EOF {
-// 			return leaves, nil
-// 		}
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		leaf, err := parseLeaf(v)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		leaves = append(leaves, leaf)
-// 	}
-// }
-// 
-// // Doesn't require EOF, so it can be used also with (co)signatures.
-// func (p *Parser) getTreeHead() (types.TreeHead, error) {
-// 	timestamp, err := p.GetInt("timestamp")
-// 	if err != nil {
-// 		return types.TreeHead{}, err
-// 	}
-// 	treeSize, err := p.GetInt("tree_size")
-// 	if err != nil {
-// 		return types.TreeHead{}, err
-// 	}
-// 	rootHash, err := p.GetHash("root_hash")
-// 	if err != nil {
-// 		return types.TreeHead{}, err
-// 	}
-// 	return types.TreeHead{
-// 		Timestamp: timestamp,
-// 		TreeSize:  treeSize,
-// 		RootHash:  rootHash,
-// 	}, nil
-// }
-// 
-// func (p *Parser) GetTreeHead() (types.TreeHead, error) {
-// 	th, err := p.getTreeHead()
-// 	if err == nil {
-// 		err = p.GetEOF()
-// 	}
-// 	return th, err
-// }
-// 
-// // Doesn't require EOF, so it can be used also with cosignatures.
-// func (p *Parser) getSignedTreeHead() (types.SignedTreeHead, error) {
-// 	th, err := p.getTreeHead()
-// 	if err != nil {
-// 		return types.SignedTreeHead{}, err
-// 	}
-// 	signature, err := p.GetSignature("signature")
-// 	if err != nil {
-// 		return types.SignedTreeHead{}, err
-// 	}
-// 	return types.SignedTreeHead{
-// 		TreeHead:  th,
-// 		Signature: signature}, nil
-// }
-// 
-// func (p *Parser) GetSignedTreeHead() (types.SignedTreeHead, error) {
-// 	sth, err := p.getSignedTreeHead()
-// 	if err == nil {
-// 		err = p.GetEOF()
-// 	}
-// 	return sth, err
-// }
-// 
-// func (p *Parser) GetCosignedTreeHead() (types.CosignedTreeHead, error) {
-// 	sth, err := p.getSignedTreeHead()
-// 	if err != nil {
-// 		return types.CosignedTreeHead{}, err
-// 	}
-// 	cosignatures, err := p.getCosignatures()
-// 	if err != nil {
-// 		return types.CosignedTreeHead{}, err
-// 	}
-// 	return types.CosignedTreeHead{
-// 		SignedTreeHead: sth,
-// 		Cosignatures:   cosignatures,
-// 	}, nil
-// }
+func (p *Parser) GetValues(name string, count int) ([]string, error) {
+	v, err := p.next(name)
+	if err != nil {
+		return nil, err
+	}
+	return split(v, count)
+}
 
 // Treats empty list as an error.
-func (p *Parser) getHashes(name string) ([]crypto.Hash, error) {
+func (p *Parser) GetHashes(name string) ([]crypto.Hash, error) {
 	var hashes []crypto.Hash
 	for {
-		v, err := p.Next(name)
+		v, err := p.next(name)
 		if err == io.EOF {
 			if len(hashes) == 0 {
 				return nil, fmt.Errorf("invalid path, empty")
@@ -332,35 +187,6 @@ func (p *Parser) getHashes(name string) ([]crypto.Hash, error) {
 		hashes = append(hashes, hash)
 	}
 }
-
-// func (p *Parser) GetInclusionProof(treeSize uint64) (types.InclusionProof, error) {
-// 	leafIndex, err := p.GetInt("leaf_index")
-// 	if err != nil {
-// 		return types.InclusionProof{}, err
-// 	}
-// 	if leafIndex >= treeSize {
-// 		return types.InclusionProof{}, fmt.Errorf("leaf_index out of range")
-// 	}
-// 	hashes, err := p.getHashes("inclusion_path")
-// 	if err != nil {
-// 		return types.InclusionProof{}, err
-// 	}
-// 	return types.InclusionProof{
-// 		TreeSize:  treeSize,
-// 		LeafIndex: leafIndex,
-// 		Path:      hashes,
-// 	}, nil
-// }
-// 
-// func (p *Parser) GetConsistencyProof() (types.ConsistencyProof, error) {
-// 	hashes, err := p.getHashes("consistency_path")
-// 	if err != nil {
-// 		return types.ConsistencyProof{}, err
-// 	}
-// 	return types.ConsistencyProof{
-// 		Path: hashes,
-// 	}, nil
-// }
 
 func WriteLine(w io.Writer, key, value string) error {
 	_, err := fmt.Fprintf(w, "%s=%s\n", key, value)
@@ -400,63 +226,3 @@ func WritePublicKey(w io.Writer, name string, k *crypto.PublicKey) error {
 func WriteSignature(w io.Writer, name string, s *crypto.Signature) error {
 	return WriteLineHex(w, name, (*s)[:])
 }
-
-// func WriteCosignature(w io.Writer, c *types.Cosignature) error {
-// 	return WriteLineHex(w, "cosignature", c.KeyHash[:], c.Signature[:])
-// }
-// 
-// func WriteLeaf(w io.Writer, l *types.Leaf) error {
-// 	return WriteLineHex(w, "leaf", l.Checksum[:], l.Signature[:], l.KeyHash[:])
-// }
-// 
-// func WriteTreeHead(w io.Writer, h *types.TreeHead) error {
-// 	if err := WriteInt(w, "timestamp", h.Timestamp); err != nil {
-// 		return err
-// 	}
-// 	if err := WriteInt(w, "tree_size", h.TreeSize); err != nil {
-// 		return err
-// 	}
-// 	return WriteHash(w, "root_hash", &h.RootHash)
-// }
-// 
-// func WriteSignedTreeHead(w io.Writer, h *types.SignedTreeHead) error {
-// 	if err := WriteTreeHead(w, &h.TreeHead); err != nil {
-// 		return err
-// 	}
-// 	return WriteSignature(w, "signature", &h.Signature)
-// }
-// 
-// func WriteCosignedTreeHead(w io.Writer, h *types.CosignedTreeHead) error {
-// 	if err := WriteSignedTreeHead(w, &h.SignedTreeHead); err != nil {
-// 		return err
-// 	}
-// 	for _, cosignature := range h.Cosignatures {
-// 		if err := WriteCosignature(w, &cosignature); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
-
-func writeHashes(w io.Writer, name string, hashes []crypto.Hash) error {
-	for _, hash := range hashes {
-		err := WriteHash(w, name, &hash)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// // Note the tree_size is not included on the wire.
-// func WriteInclusionProof(w io.Writer, p *types.InclusionProof) error {
-// 	if err := WriteInt(w, "leaf_index", p.LeafIndex); err != nil {
-// 		return err
-// 	}
-// 	return writeHashes(w, "inclusion_path", p.Path)
-// }
-// 
-// // Note the tree sizes are not included on the wire.
-// func WriteConsistencyProof(w io.Writer, p *types.ConsistencyProof) error {
-// 	return writeHashes(w, "consistency_path", p.Path)
-// }

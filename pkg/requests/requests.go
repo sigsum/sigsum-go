@@ -34,8 +34,8 @@ type ConsistencyProof struct {
 
 // TODO: Replace with type alias (golang 1.9 feature)
 type Cosignature struct {
-	Cosignature crypto.Signature
-	KeyHash     crypto.Hash
+	KeyHash   crypto.Hash
+	Signature crypto.Signature
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
@@ -64,8 +64,7 @@ func (req *ConsistencyProof) ToURL(url string) string {
 }
 
 func (req *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.WriteCosignature(w,
-		&types.Cosignature{req.KeyHash, req.Signature})
+	return ascii.WriteLineHex(w, "cosignature", req.KeyHash[:], req.Signature[:])
 }
 
 func (req *Leaf) FromASCII(r io.Reader) error {
@@ -136,11 +135,17 @@ func (req *ConsistencyProof) FromURL(url string) (err error) {
 
 func (req *Cosignature) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
-	cosig, err := p.GetCosignature()
+	v, err := p.GetValues("cosignature", 2)
 	if err != nil {
 		return err
 	}
-	req.Signature = cosig.Signature
-	req.KeyHash = cosig.KeyHash
-	return nil
+	req.KeyHash, err = crypto.HashFromHex(v[0])
+	if err != nil {
+		return err
+	}
+	req.Signature, err = crypto.SignatureFromHex(v[1])
+	if err != nil {
+		return err
+	}
+	return p.GetEOF()
 }
