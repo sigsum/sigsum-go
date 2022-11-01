@@ -1,21 +1,4 @@
-// package ascii implements an ASCII key-value parser.
-//
-// The top-most (de)serialize must operate on a struct pointer.  A struct may
-// contain other structs, in which case all tag names should be unique.  Public
-// fields without tag names are ignored.  Private fields are also ignored.
-//
-// The supported field types are:
-// - struct
-// - string (no empty strings)
-// - uint64 (only digits in ASCII representation)
-// - byte array (only lower-case hex in ASCII representation)
-// - slice of uint64 (no empty slices)
-// - slice of byte array (no empty slices)
-//
-// A key must not contain an encoding's end-of-key value.
-// A value must not contain an encoding's end-of-value value.
-//
-// For additional details, please refer to the Sigsum v0 API documentation.
+// package ascii implements an ASCII key-value parser and writer
 package ascii
 
 import (
@@ -186,43 +169,4 @@ func (p *Parser) GetHashes(name string) ([]crypto.Hash, error) {
 		}
 		hashes = append(hashes, hash)
 	}
-}
-
-func WriteLine(w io.Writer, key, value string) error {
-	_, err := fmt.Fprintf(w, "%s=%s\n", key, value)
-	return err
-}
-
-func WriteLineHex(w io.Writer, key string, first []byte, rest ...[]byte) error {
-	_, err := fmt.Fprintf(w, "%s=%s", key, hex.EncodeToString(first))
-	if err != nil {
-		return err
-	}
-	for _, b := range rest {
-		_, err := fmt.Fprintf(w, " %s", hex.EncodeToString(b))
-		if err != nil {
-			return err
-		}
-	}
-	_, err = fmt.Fprintf(w, "\n")
-	return err
-}
-
-func WriteInt(w io.Writer, name string, i uint64) error {
-	if i >= (1 << 63) {
-		return fmt.Errorf("out of range negative number: %d", i)
-	}
-	return WriteLine(w, name, strconv.FormatUint(i, 10))
-}
-
-func WriteHash(w io.Writer, name string, h *crypto.Hash) error {
-	return WriteLineHex(w, name, (*h)[:])
-}
-
-func WritePublicKey(w io.Writer, name string, k *crypto.PublicKey) error {
-	return WriteLineHex(w, name, (*k)[:])
-}
-
-func WriteSignature(w io.Writer, name string, s *crypto.Signature) error {
-	return WriteLineHex(w, name, (*s)[:])
 }
