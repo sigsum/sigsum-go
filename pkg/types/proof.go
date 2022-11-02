@@ -24,6 +24,9 @@ type ConsistencyProof struct {
 }
 
 func (h *hashes) toASCII(w io.Writer, name string) error {
+	if len(*h) == 0 {
+		return fmt.Errorf("internal error, empty %s", name)
+	}
 	for _, hash := range *h {
 		err := ascii.WriteHash(w, name, &hash)
 		if err != nil {
