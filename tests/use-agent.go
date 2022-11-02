@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"crypto"
-	"crypto/ed25519"
 	"io"
 	"log"
 	"os"
 	"strings"
 
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 )
 
@@ -29,16 +27,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("parsing key failed: %v", err)
 	}
-	if !bytes.Equal(signer.Public().(ed25519.PublicKey), pubKey[:]) {
+	if signer.Public() != pubKey {
 		log.Fatalf("internal error, public key inconsistency\n  %x\n  %x\n",
-			pubKey, signer.Public().(ed25519.PublicKey))
+			pubKey, signer.Public())
 	}
 	msg := []byte("squemish ossifrage")
-	signature, err := signer.Sign(nil, msg, crypto.Hash(0))
+	signature, err := signer.Sign(msg)
 	if err != nil {
 		log.Fatalf("signing failed: %v", err)
 	}
-	if !ed25519.Verify(pubKey[:], msg, signature) {
+	if !crypto.Verify(&pubKey, msg, &signature) {
 		log.Fatal("signature appears invalid!")
 	}
 }

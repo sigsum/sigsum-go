@@ -2,13 +2,12 @@ package ssh
 
 import (
 	"bytes"
-	"crypto"
-	"crypto/ed25519"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"net"
 	"os"
+
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 const (
@@ -23,7 +22,7 @@ type Connection struct {
 }
 
 type Signer struct {
-	publicKey ed25519.PublicKey
+	publicKey crypto.PublicKey
 	conn      *Connection
 }
 
@@ -75,7 +74,7 @@ func (c *Connection) request(msg []byte) ([]byte, error) {
 	return buffer, nil
 }
 
-func (c Connection) SignEd25519(publicKey ed25519.PublicKey, msg []byte) ([]byte, error) {
+func (c Connection) SignEd25519(publicKey *crypto.PublicKey, msg []byte) (crypto.Signature, error) {
 	buffer, err := c.request(bytes.Join([][]byte{
 		[]byte{sshAgentSignRequest},
 		serializeString(serializePublicEd25519(publicKey)),
@@ -83,27 +82,27 @@ func (c Connection) SignEd25519(publicKey ed25519.PublicKey, msg []byte) ([]byte
 		serializeUint32(0), // flags
 	}, nil))
 	if err != nil {
-		return nil, err
+		return crypto.Signature{}, err
 	}
 
 	switch msgType, body := buffer[0], buffer[1:]; msgType {
 	case sshAgentFailure:
-		return nil, fmt.Errorf("ssh-agent refused signature request")
+		return crypto.Signature{}, fmt.Errorf("ssh-agent refused signature request")
 	case sshAgentSignResponse:
 		return parseSignature(body)
 	default:
-		return nil, fmt.Errorf("unexpected ssh-agent response, type %d", msgType)
+		return crypto.Signature{}, fmt.Errorf("unexpected ssh-agent response, type %d", msgType)
 	}
 }
 
-func (c Connection) NewSigner(publicKey ed25519.PublicKey) (*Signer, error) {
+func (c Connection) NewSigner(publicKey *crypto.PublicKey) (*Signer, error) {
 	// TODO: Use SSH_AGENTC_REQUEST_IDENIFIER to list public keys,
 	// and fail if given key is not on the list.
-	return &Signer{publicKey: publicKey, conn: &c}, nil
+	return &Signer{publicKey: *publicKey, conn: &c}, nil
 }
 
-func (s *Signer) Sign(_ io.Reader, message []byte, _ crypto.SignerOpts) ([]byte, error) {
-	return s.conn.SignEd25519(s.publicKey, message)
+func (s *Signer) Sign(message []byte) (crypto.Signature, error) {
+	return s.conn.SignEd25519(&s.publicKey, message)
 }
 
 func (s *Signer) Public() crypto.PublicKey {

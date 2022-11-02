@@ -47,13 +47,10 @@ func SignedData(namespace string, msg []byte) []byte {
 	return SignedDataFromHash(namespace, &hash)
 }
 
-func serializePublicEd25519(pub []byte) []byte {
-	if len(pub) != 32 {
-		log.Panicf("invalid ed25519 public key, got size %d", len(pub))
-	}
+func serializePublicEd25519(pub *crypto.PublicKey) []byte {
 	return bytes.Join([][]byte{
 		serializeString([]byte("ssh-ed25519")),
-		serializeString(pub)},
+		serializeString(pub[:])},
 		nil)
 }
 
@@ -65,47 +62,49 @@ func skipPrefix(buffer []byte, prefix []byte) []byte {
 	return buffer[len(prefix):]
 }
 
-func parseSignature(blob []byte) ([]byte, error) {
+func parseSignature(blob []byte) (crypto.Signature, error) {
 	signature := skipPrefix(blob, bytes.Join([][]byte{
 		serializeUint32(83), // length of signature
 		serializeString([]byte("ssh-ed25519")),
-		serializeUint32(64)}, nil))
+		serializeUint32(crypto.SignatureSize)}, nil))
 	if signature == nil {
-		return nil, fmt.Errorf("invalid signature blob")
+		return crypto.Signature{}, fmt.Errorf("invalid signature blob")
 	}
-	if len(signature) != 64 {
-		return nil, fmt.Errorf("bad signature length: %d", len(signature))
+	if len(signature) != crypto.SignatureSize {
+		return crypto.Signature{}, fmt.Errorf("bad signature length: %d", len(signature))
 	}
-	// Short and exclusively owned, no need to copy.
-	return signature, nil
+	var ret crypto.Signature
+	copy(ret[:], signature)
+	return ret, nil
 }
 
-func ParsePublicEd25519(asciiKey string) ([]byte, error) {
+func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
 	// Split into fields, recognizing exclusively ascii space and TAB
 	fields := strings.FieldsFunc(asciiKey, func(c rune) bool {
 		return c == ' ' || c == '\t'
 	})
 	if len(fields) < 2 {
-		return nil, fmt.Errorf("invalid public key, splitting line failed")
+		return crypto.PublicKey{}, fmt.Errorf("invalid public key, splitting line failed")
 	}
 	if fields[0] != "ssh-ed25519" {
-		return nil, fmt.Errorf("unsupported public key type: %v", fields[0])
+		return crypto.PublicKey{}, fmt.Errorf("unsupported public key type: %v", fields[0])
 	}
 	blob, err := base64.StdEncoding.DecodeString(fields[1])
 	if err != nil {
-		return nil, err
+		return crypto.PublicKey{}, err
 	}
 	pub := skipPrefix(blob, bytes.Join([][]byte{
 		serializeString([]byte("ssh-ed25519")),
-		serializeUint32(32),
+		serializeUint32(crypto.PublicKeySize),
 	}, nil))
 
 	if pub == nil {
-		return nil, fmt.Errorf("invalid public key blob prefix")
+		return crypto.PublicKey{}, fmt.Errorf("invalid public key blob prefix")
 	}
-	if len(pub) != 32 {
-		return nil, fmt.Errorf("invalid public key length: %v", len(blob))
+	if len(pub) != crypto.PublicKeySize {
+		return crypto.PublicKey{}, fmt.Errorf("invalid public key length: %v", len(blob))
 	}
-	// Short and exclusively owned, no need to copy.
-	return pub, nil
+	var ret crypto.PublicKey
+	copy(ret[:], pub)
+	return ret, nil
 }
