@@ -69,6 +69,17 @@ func (l *Leaf) FromBinary(b []byte) error {
 	return nil
 }
 
+func (l *Leaves) ToASCII(w io.Writer) error {
+	for _, leaf := range *l {
+		if err := ascii.WriteLineHex(w, "leaf",
+			leaf.Checksum[:], leaf.Signature[:], leaf.KeyHash[:]);
+		err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (l *Leaves) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
 	for {
