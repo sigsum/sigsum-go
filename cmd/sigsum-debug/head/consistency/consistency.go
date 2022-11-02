@@ -1,10 +1,9 @@
 package consistency
 
 import (
-	"bytes"
 	"fmt"
+	"os"
 
-	"sigsum.org/sigsum-go/internal/fmtio"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -13,12 +12,8 @@ func Main(args []string, optOldSize, optNewSize uint64, optOldRoot, optNewRoot s
 	if len(args) != 0 {
 		return fmt.Errorf("trailing arguments: %v", args)
 	}
-	b, err := fmtio.BytesFromStdin()
-	if err != nil {
-		return fmt.Errorf("read: %w", err)
-	}
 	var proof types.ConsistencyProof
-	if err := proof.FromASCII(bytes.NewBuffer(b), optOldSize, optNewSize); err != nil {
+	if err := proof.FromASCII(os.Stdin, optOldSize, optNewSize); err != nil {
 		return fmt.Errorf("parse proof: %w", err)
 	}
 	oldRoot, err := crypto.HashFromHex(optOldRoot)

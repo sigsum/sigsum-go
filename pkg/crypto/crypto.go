@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 )
 
 const (
@@ -31,6 +32,15 @@ type Signer interface {
 
 func HashBytes(b []byte) Hash {
 	return sha256.Sum256(b)
+}
+
+func HashFile(f io.Reader) (digest Hash, err error) {
+	h := sha256.New()
+	if _, err = io.Copy(h, f); err != nil {
+		return
+	}
+	copy(digest[:], h.Sum(nil))
+	return
 }
 
 func Verify(pub *PublicKey, msg []byte, sig *Signature) bool {

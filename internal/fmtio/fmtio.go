@@ -7,14 +7,6 @@ import (
 	"os"
 )
 
-func BytesFromStdin() ([]byte, error) {
-	b, err := ioutil.ReadAll(os.Stdin)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
 // StringFromStdin reads bytes from stdin, parsing them as a string without
 // leading and trailing white space
 func StringFromStdin() (string, error) {
