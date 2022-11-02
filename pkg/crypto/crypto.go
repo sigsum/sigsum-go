@@ -45,14 +45,17 @@ func NewEd25519Signer(key *PrivateKey) Signer {
 	return &ed25519Signer{secret: ed25519.NewKeyFromSeed((*key)[:])}
 }
 
-func (s *ed25519Signer) Sign(msg []byte) (ret Signature, err error) {
+func (s *ed25519Signer) Sign(msg []byte) (Signature, error) {
 	sig, err := s.secret.Sign(nil, msg, crypto.Hash(0))
-	if len(sig) != SignatureSize {
-		err = fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
-	} else if err == nil {
-		copy(ret[:], sig)
+	if err != nil {
+		return Signature{}, err
 	}
-	return
+	if len(sig) != SignatureSize {
+		return Signature{}, fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
+	}
+	var ret Signature
+	copy(ret[:], sig)
+	return ret, nil
 }
 
 func (s *ed25519Signer) Public() (ret PublicKey) {
@@ -65,8 +68,9 @@ func NewKeyPair() (PublicKey, Signer, error) {
 	n, err := rand.Read(secret[:])
 	if err != nil {
 		return PublicKey{}, nil, err
-	} else if n != PrivateKeySize {
-		return PublicKey{}, nil, fmt.Errorf("Key generation failed, got only %d out of %d random bytes",
+	}
+	if n != PrivateKeySize {
+		return PublicKey{}, nil, fmt.Errorf("key generation failed, got only %d out of %d random bytes",
 			n, PrivateKeySize)
 	}
 	signer := NewEd25519Signer(&secret)
