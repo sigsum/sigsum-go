@@ -3,7 +3,6 @@ package ascii
 
 import (
 	"bufio"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
@@ -13,65 +12,26 @@ import (
 )
 
 // Basic value types
-func IntFromDecimal(s string) (uint64, error) {
+func intFromDecimal(s string) (uint64, error) {
 	// Use ParseUint, to not accept leading +/-.
 	i, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
 		return 0, err
 	}
-	if i < 0 || i >= (1<<63) {
+	if i >= (1<<63) {
 		return 0, fmt.Errorf("integer %d is out of range", i)
 	}
 	return i, nil
 }
 
-func decodeHex(s string, size int) ([]byte, error) {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-	if len(b) != size {
-		return nil, fmt.Errorf("unexpected length of hex data, expected %d, got %d", size, len(b))
-	}
-	return b, nil
-}
-
-func HashFromHex(s string) (h crypto.Hash, err error) {
-	var b []byte
-	b, err = decodeHex(s, crypto.HashSize)
-	copy(h[:], b)
-	return
-}
-
-func PublicKeyFromHex(s string) (pub crypto.PublicKey, err error) {
-	var b []byte
-	b, err = decodeHex(s, crypto.PublicKeySize)
-	copy(pub[:], b)
-	return
-}
-
-func SignatureFromHex(s string) (sig crypto.Signature, err error) {
-	var b []byte
-	b, err = decodeHex(s, crypto.SignatureSize)
-	copy(sig[:], b)
-	return
-}
-
 func split(s string, n int) ([]string, error) {
-	values := []string{}
+	values := strings.Split(s, " ")
 
-	for i := 0; i < n-1; i++ {
-		space := strings.Index(s, " ")
-		if space < 0 {
-			return nil, fmt.Errorf("too few values, expected %d", n)
-		}
-		values = append(values, s[:space])
-		s = s[space+1:]
+	if len(values) != n {
+		return nil, fmt.Errorf("bad number of values, got %d, expected %d",
+			len(values), n)
 	}
-	if strings.Index(s, " ") >= 0 {
-		return nil, fmt.Errorf("too many values, expected %d", n)
-	}
-	return append(values, s), nil
+	return values, nil
 }
 
 type Parser struct {
@@ -113,7 +73,7 @@ func (p *Parser) GetInt(name string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return IntFromDecimal(v)
+	return intFromDecimal(v)
 }
 
 func (p *Parser) GetHash(name string) (crypto.Hash, error) {
@@ -121,7 +81,7 @@ func (p *Parser) GetHash(name string) (crypto.Hash, error) {
 	if err != nil {
 		return crypto.Hash{}, err
 	}
-	return HashFromHex(v)
+	return crypto.HashFromHex(v)
 }
 
 func (p *Parser) GetPublicKey(name string) (crypto.PublicKey, error) {
@@ -129,7 +89,7 @@ func (p *Parser) GetPublicKey(name string) (crypto.PublicKey, error) {
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
-	return PublicKeyFromHex(v)
+	return crypto.PublicKeyFromHex(v)
 }
 
 func (p *Parser) GetSignature(name string) (crypto.Signature, error) {
@@ -137,7 +97,7 @@ func (p *Parser) GetSignature(name string) (crypto.Signature, error) {
 	if err != nil {
 		return crypto.Signature{}, err
 	}
-	return SignatureFromHex(v)
+	return crypto.SignatureFromHex(v)
 }
 
 func (p *Parser) GetValues(name string, count int) ([]string, error) {
@@ -163,7 +123,7 @@ func (p *Parser) GetHashes(name string) ([]crypto.Hash, error) {
 		if err != nil {
 			return nil, err
 		}
-		hash, err := HashFromHex(v)
+		hash, err := crypto.HashFromHex(v)
 		if err != nil {
 			return nil, err
 		}
