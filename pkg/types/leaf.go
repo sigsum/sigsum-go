@@ -74,6 +74,9 @@ func (l *Leaves) FromASCII(r io.Reader) error {
 	for {
 		v, err := p.GetValues("leaf", 3)
 		if err == io.EOF {
+			if len(*l) == 0 {
+				return fmt.Errorf("no leaves")
+			}
 			return nil
 		}
 		if err != nil {

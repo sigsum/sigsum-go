@@ -9,20 +9,22 @@ import (
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
+type hashes []crypto.Hash
+
 type InclusionProof struct {
 	TreeSize  uint64
 	LeafIndex uint64
-	Path      []crypto.Hash
+	Path      hashes
 }
 
 type ConsistencyProof struct {
 	NewSize uint64
 	OldSize uint64
-	Path    []crypto.Hash
+	Path    hashes
 }
 
-func writeHashes(w io.Writer, name string, hashes []crypto.Hash) error {
-	for _, hash := range hashes {
+func (h *hashes) toASCII(w io.Writer, name string) error {
+	for _, hash := range *h {
 		err := ascii.WriteHash(w, name, &hash)
 		if err != nil {
 			return err
@@ -31,12 +33,30 @@ func writeHashes(w io.Writer, name string, hashes []crypto.Hash) error {
 	return nil
 }
 
+// Treats empty list as an error.
+func (h *hashes) fromASCII(p *ascii.Parser, name string) error {
+	for {
+		hash, err := p.GetHash(name)
+		if err == io.EOF {
+			if len(*h) == 0 {
+				return fmt.Errorf("invalid path, empty")
+			}
+
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		*h = append(*h, hash)
+	}
+}
+
 // Note the tree_size is not included on the wire.
 func (pr *InclusionProof) ToASCII(w io.Writer) error {
 	if err := ascii.WriteInt(w, "leaf_index", pr.LeafIndex); err != nil {
 		return err
 	}
-	return writeHashes(w, "inclusion_path", pr.Path)
+	return pr.Path.toASCII(w, "inclusion_path")
 }
 
 func (pr *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
@@ -44,11 +64,13 @@ func (pr *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
 	p := ascii.NewParser(r)
 	var err error
 	pr.LeafIndex, err = p.GetInt("leaf_index")
+	if err != nil {
+		return err
+	}
 	if pr.LeafIndex >= treeSize {
 		return fmt.Errorf("leaf_index out of range")
 	}
-	pr.Path, err = p.GetHashes("inclusion_path")
-	return err
+	return pr.Path.fromASCII(&p, "inclusion_path")
 }
 
 func (pr *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
@@ -56,16 +78,14 @@ func (pr *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
 }
 
 func (pr *ConsistencyProof) ToASCII(w io.Writer) error {
-	return writeHashes(w, "consistency_path", pr.Path)
+	return pr.Path.toASCII(w, "consistency_path")
 }
 
 func (pr *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {
 	pr.OldSize = oldSize
 	pr.NewSize = newSize
 	p := ascii.NewParser(r)
-	var err error
-	pr.Path, err = p.GetHashes("consistency_path")
-	return err
+	return pr.Path.fromASCII(&p, "consistency_path")
 }
 
 func (pr *ConsistencyProof) Verify(oldRoot, newRoot *crypto.Hash) error {

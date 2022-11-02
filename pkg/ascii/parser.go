@@ -18,7 +18,7 @@ func intFromDecimal(s string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if i >= (1<<63) {
+	if i >= (1 << 63) {
 		return 0, fmt.Errorf("integer %d is out of range", i)
 	}
 	return i, nil
@@ -106,27 +106,4 @@ func (p *Parser) GetValues(name string, count int) ([]string, error) {
 		return nil, err
 	}
 	return split(v, count)
-}
-
-// Treats empty list as an error.
-func (p *Parser) GetHashes(name string) ([]crypto.Hash, error) {
-	var hashes []crypto.Hash
-	for {
-		v, err := p.next(name)
-		if err == io.EOF {
-			if len(hashes) == 0 {
-				return nil, fmt.Errorf("invalid path, empty")
-			}
-
-			return hashes, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		hash, err := crypto.HashFromHex(v)
-		if err != nil {
-			return nil, err
-		}
-		hashes = append(hashes, hash)
-	}
 }
