@@ -1,7 +1,6 @@
 package types
 
 import (
-	stdcrypto "crypto"
 	"fmt"
 	"io"
 
@@ -26,15 +25,15 @@ func leafSignedData(checksum *crypto.Hash) []byte {
 	return ssh.SignedDataFromHash(TreeLeafNamespace, *checksum)
 }
 
-func SignLeafChecksum(signer stdcrypto.Signer, checksum *crypto.Hash) (crypto.Signature, error) {
-	return crypto.Sign(signer, leafSignedData(checksum))
+func SignLeafChecksum(signer crypto.Signer, checksum *crypto.Hash) (crypto.Signature, error) {
+	return signer.Sign(leafSignedData(checksum))
 }
 
 func VerifyLeafChecksum(key *crypto.PublicKey, checksum *crypto.Hash, sig *crypto.Signature) bool {
 	return crypto.Verify(key, leafSignedData(checksum), sig)
 }
 
-func SignLeafMessage(signer stdcrypto.Signer, msg []byte) (crypto.Signature, error) {
+func SignLeafMessage(signer crypto.Signer, msg []byte) (crypto.Signature, error) {
 	checksum := crypto.HashBytes(msg)
 	return SignLeafChecksum(signer, &checksum)
 }

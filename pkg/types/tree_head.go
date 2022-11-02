@@ -1,7 +1,6 @@
 package types
 
 import (
-	stdcrypto "crypto"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -41,8 +40,8 @@ func (th *TreeHead) toSignedData(keyHash *crypto.Hash) []byte {
 	return ssh.SignedData(TreeHeadNamespace, b)
 }
 
-func (th *TreeHead) Sign(s stdcrypto.Signer, kh *crypto.Hash) (*SignedTreeHead, error) {
-	sig, err := crypto.Sign(s, th.toSignedData(kh))
+func (th *TreeHead) Sign(signer crypto.Signer, kh *crypto.Hash) (*SignedTreeHead, error) {
+	sig, err := signer.Sign(th.toSignedData(kh))
 	if err != nil {
 		return nil, fmt.Errorf("types: failed signing tree head")
 	}

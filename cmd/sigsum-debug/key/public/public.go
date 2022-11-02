@@ -1,12 +1,12 @@
 package public
 
 import (
-	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/fmtio"
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 func Main(args []string) error {
@@ -18,15 +18,11 @@ func Main(args []string) error {
 		return fmt.Errorf("read stdin: %w", err)
 	}
 
-	priv, err := fmtio.SignerFromHex(s)
+	priv, err := crypto.SignerFromHex(s)
 	if err != nil {
 		return fmt.Errorf("parse key: %w", err)
 	}
-	pub, ok := priv.Public().(ed25519.PublicKey)
-	if !ok {
-		return fmt.Errorf("not an ed25519 key")
-	}
-
+	pub := priv.Public()
 	fmt.Printf("%s\n", hex.EncodeToString(pub[:]))
 	return nil
 }
