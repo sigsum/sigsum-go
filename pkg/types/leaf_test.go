@@ -2,9 +2,6 @@ package types
 
 import (
 	"bytes"
-	stdcrypto "crypto"
-	"crypto/ed25519"
-	"crypto/rand"
 	"fmt"
 	"io"
 	"reflect"
@@ -26,20 +23,20 @@ func TestSignLeaf(t *testing.T) {
 	for _, table := range []struct {
 		desc     string
 		checksum *crypto.Hash
-		signer   stdcrypto.Signer
+		signer   crypto.Signer
 		wantSig  *crypto.Signature
 		wantErr  bool
 	}{
 		{
 			desc:     "invalid: signer error",
 			checksum: validChecksum(t),
-			signer:   &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], fmt.Errorf("signing error")},
+			signer:   &signer.Signer{*newPubBufferInc(t), *newSigBufferInc(t), fmt.Errorf("signing error")},
 			wantErr:  true,
 		},
 		{
 			desc:     "valid",
 			checksum: validChecksum(t),
-			signer:   &signer.Signer{newPubBufferInc(t)[:], newSigBufferInc(t)[:], nil},
+			signer:   &signer.Signer{*newPubBufferInc(t), *newSigBufferInc(t), nil},
 			wantSig:  newSigBufferInc(t),
 		},
 	} {
@@ -59,7 +56,7 @@ func TestSignLeaf(t *testing.T) {
 
 func TestLeafVerify(t *testing.T) {
 	checksum := validChecksum(t)
-	signer, pub := newKeyPair(t)
+	pub, signer := newKeyPair(t)
 
 	sig, err := SignLeafChecksum(signer, checksum)
 	if err != nil {
@@ -299,15 +296,12 @@ func invalidLeavesASCII(t *testing.T, key string) string {
 	return ret
 }
 
-func newKeyPair(t *testing.T) (stdcrypto.Signer, crypto.PublicKey) {
-	vk, sk, err := ed25519.GenerateKey(rand.Reader)
+func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {
+	pub, signer, err := crypto.NewKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	var pub crypto.PublicKey
-	copy(pub[:], vk[:])
-	return sk, pub
+	return pub, signer
 }
 
 func newHashBufferInc(t *testing.T) *crypto.Hash {

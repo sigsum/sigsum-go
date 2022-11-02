@@ -2,8 +2,6 @@ package crypto
 
 import (
 	"bytes"
-	"crypto"
-	"crypto/ed25519"
 	"encoding/hex"
 	"strings"
 	"testing"
@@ -131,17 +129,6 @@ func TestHash(t *testing.T) {
 	}
 }
 
-func mustDecodeHex(t *testing.T, s string, size int) []byte {
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(b) != size {
-		t.Fatalf("unexpected hex data length, got %d, expected %d", len(b), size)
-	}
-	return b
-}
-
 func mustSignatureFromHex(t *testing.T, s string) Signature {
 	signature, err := SignatureFromHex(s)
 	if err != nil {
@@ -158,14 +145,21 @@ func mustPublicKeyFromHex(t *testing.T, s string) PublicKey {
 	return pub
 }
 
+func mustSignerFromHex(t *testing.T, s string) Signer {
+	signer, err := SignerFromHex(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return signer
+}
+
 // Basic sanity check, not intended as a thorough ed25519 test. Uses
 // second line from https://ed25519.cr.yp.to/python/sign.input (single
 // byte message).
 func TestSign(t *testing.T) {
-	var signer crypto.Signer = ed25519.NewKeyFromSeed(mustDecodeHex(t,
-		"4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb", ed25519.SeedSize))
+	signer := mustSignerFromHex(t, "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb")
 	msg := []byte{0x72}
-	signature, err := Sign(signer, msg)
+	signature, err := signer.Sign(msg)
 	if err != nil {
 		t.Fatalf("sign failed: %v", err)
 	}
@@ -183,12 +177,13 @@ func TestSign(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
-	var signer crypto.Signer = ed25519.NewKeyFromSeed(incBytes(ed25519.SeedSize))
-	var pub PublicKey
-	copy(pub[:], signer.Public().(ed25519.PublicKey)[:])
+	var secret PrivateKey
+	copy(secret[:], incBytes(PrivateKeySize))
+	signer := NewEd25519Signer(&secret)
+	pub := signer.Public()
 
 	message := []byte("squeemish ossifrage")
-	signature, err := Sign(signer, message)
+	signature, err := signer.Sign(message)
 	if err != nil {
 		t.Fatalf("sign failed: %v", err)
 	}

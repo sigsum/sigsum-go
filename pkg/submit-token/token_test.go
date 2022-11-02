@@ -6,9 +6,6 @@ import (
 	"log"
 	"testing"
 
-	stdcrypto "crypto"
-	"crypto/ed25519"
-	"crypto/rand"
 	"fmt"
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -27,15 +24,12 @@ func verifierWithResponses(logKey *crypto.PublicKey, domain string, responses []
 	}
 }
 
-func newKeyPair(t *testing.T) (stdcrypto.Signer, crypto.PublicKey) {
-	vk, sk, err := ed25519.GenerateKey(rand.Reader)
+func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {
+	pub, signer, err := crypto.NewKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	var pub crypto.PublicKey
-	copy(pub[:], vk[:])
-	return sk, pub
+	return pub, signer
 }
 
 func TestVerify(t *testing.T) {
@@ -45,10 +39,10 @@ func TestVerify(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	signer, pub := newKeyPair(t)
+	pub, signer := newKeyPair(t)
 	hexKey := hex.EncodeToString(pub[:])
 
-	signature, err := crypto.Sign(signer, ssh.SignedData("submit-token:v0@sigsum.org", logKey[:]))
+	signature, err := signer.Sign(ssh.SignedData("submit-token:v0@sigsum.org", logKey[:]))
 	if err != nil {
 		log.Fatal(err.Error())
 	}
