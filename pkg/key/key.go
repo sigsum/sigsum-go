@@ -35,7 +35,7 @@ func ParsePrivateKey(ascii string) (crypto.Signer, error) {
 		}
 		c, err := ssh.Connect()
 		if err != nil {
-			return nil, fmt.Errorf("only public key availble, and no ssh-agent: %v", err)
+			return nil, fmt.Errorf("only public key available, and no ssh-agent: %v", err)
 		}
 		return c.NewSigner(&key)
 	}
