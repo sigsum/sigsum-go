@@ -3,9 +3,9 @@ package hash
 import (
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 
-	"sigsum.org/sigsum-go/internal/fmtio"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -14,10 +14,6 @@ import (
 func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) error {
 	if len(args) != 0 {
 		return fmt.Errorf("trailing arguments: %s", strings.Join(args, ", "))
-	}
-	data, err := fmtio.BytesFromStdin()
-	if err != nil {
-		return fmt.Errorf("read stdin: %w", err)
 	}
 	keyHash, err := crypto.HashFromHex(optKeyHash)
 	if err != nil {
@@ -28,7 +24,10 @@ func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) e
 		return fmt.Errorf("parse signature: %w", err)
 	}
 
-	message := crypto.HashBytes(data)
+	message, err := crypto.HashFile(os.Stdin)
+	if err != nil {
+		return fmt.Errorf("read stdin: %w", err)
+	}
 	leaf := types.Leaf{
 		Checksum:  crypto.HashBytes(message[:]),
 		Signature: sig,

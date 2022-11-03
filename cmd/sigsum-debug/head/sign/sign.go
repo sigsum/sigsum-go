@@ -1,12 +1,11 @@
 package sign
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 
-	"sigsum.org/sigsum-go/internal/fmtio"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -14,10 +13,6 @@ import (
 func Main(args []string, optPrivateKey, optKeyHash string) error {
 	if len(args) != 0 {
 		return fmt.Errorf("trailing arguments: %s", strings.Join(args, ", "))
-	}
-	b, err := fmtio.BytesFromStdin()
-	if err != nil {
-		return fmt.Errorf("read stdin: %w", err)
 	}
 	priv, err := crypto.SignerFromHex(optPrivateKey)
 	if err != nil {
@@ -29,7 +24,7 @@ func Main(args []string, optPrivateKey, optKeyHash string) error {
 	}
 
 	var input types.SignedTreeHead
-	if err := input.FromASCII(bytes.NewBuffer(b)); err != nil {
+	if err := input.FromASCII(os.Stdin); err != nil {
 		return fmt.Errorf("parse signed tree head: %v", err)
 	}
 	output, err := input.TreeHead.Sign(priv, &keyHash)

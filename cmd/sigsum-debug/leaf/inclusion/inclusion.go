@@ -1,10 +1,9 @@
 package inclusion
 
 import (
-	"bytes"
 	"fmt"
+	"os"
 
-	"sigsum.org/sigsum-go/internal/fmtio"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -13,12 +12,8 @@ func Main(args []string, optLeafHash, optRootHash string, optTreeSize uint64) er
 	if len(args) != 0 {
 		return fmt.Errorf("trailing arguments: %v", args)
 	}
-	b, err := fmtio.BytesFromStdin()
-	if err != nil {
-		return fmt.Errorf("read: %w", err)
-	}
 	var proof types.InclusionProof
-	if err := proof.FromASCII(bytes.NewBuffer(b), optTreeSize); err != nil {
+	if err := proof.FromASCII(os.Stdin, optTreeSize); err != nil {
 		return fmt.Errorf("parse proof: %w", err)
 	}
 	leafHash, err := crypto.HashFromHex(optLeafHash)
