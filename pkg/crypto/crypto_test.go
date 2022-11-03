@@ -122,9 +122,18 @@ func TestHash(t *testing.T) {
 		{"", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
 		{"abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"},
 	} {
-		if got, want := HashBytes([]byte(table.in)), mustHashFromHex(t, table.out); got != want {
-			t.Errorf("incorrect hash of %q: got: %x, expected: %x",
-				table.in, got[:], want)
+		want := mustHashFromHex(t, table.out)
+		in := []byte(table.in)
+		if got := HashBytes(in); got != want {
+			t.Errorf("incorrect HashBytes of %q: got: %x, expected: %x",
+				table.in, got, want)
+		}
+		if got, err := HashFile(bytes.NewBuffer(in)); err != nil || got != want {
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Errorf("incorrect HashFile of %q: got: %x, expected: %x",
+				table.in, got, want)
 		}
 	}
 }
