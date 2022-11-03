@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
+	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -121,6 +123,55 @@ func TestLeafFromBinary(t *testing.T) {
 	}
 }
 
+func TestLeafToASCII(t *testing.T) {
+	desc := "valid:, buffers 0x00,0x01,..."
+	buf := bytes.NewBuffer(nil)
+	if err := validLeaf(t).ToASCII(buf); err != nil {
+		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
+	}
+	if got, want := string(buf.Bytes()), validLeafASCII(t); got != want {
+		t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
+	}
+}
+
+func TestLeafFromASCII(t *testing.T) {
+	for _, table := range []struct {
+		desc       string
+		serialized io.Reader
+		wantErr    bool
+		want       *Leaf
+	}{
+		{
+			desc:       "invalid: not a tree leaf (wrong key)",
+			serialized: bytes.NewBuffer([]byte("tree_size=0\n")),
+			wantErr:    true,
+		},
+		{
+			desc:       "invalid: not a tree leaf (too many values)",
+			serialized: bytes.NewBuffer([]byte(invalidLeafASCII(t))),
+			wantErr:    true,
+		},
+		{
+			desc:       "valid: buffers 0x00,0x01,...",
+			serialized: bytes.NewBuffer([]byte(validLeafASCII(t))),
+			want:       validLeaf(t),
+		},
+	} {
+		var leaf Leaf
+		p := ascii.NewParser(table.serialized)
+		err := leaf.fromASCII(&p)
+		if got, want := err != nil, table.wantErr; got != want {
+			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+		}
+		if err != nil {
+			continue
+		}
+		if got, want := &leaf, table.want; !reflect.DeepEqual(got, want) {
+			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
+		}
+	}
+}
+
 func TestLeavesFromASCII(t *testing.T) {
 	for _, table := range []struct {
 		desc       string
@@ -209,6 +260,12 @@ func validLeafASCII(t *testing.T) string {
 	checksum := crypto.HashBytes(newHashBufferInc(t)[:])
 	return fmt.Sprintf("%s=%x %x %x\n",
 		"leaf", checksum, newSigBufferInc(t)[:], newHashBufferInc(t)[:])
+}
+
+func invalidLeafASCII(t *testing.T) string {
+	s := validLeafASCII(t)
+	// Add an extra value
+	return fmt.Sprintf("%s 0\n", strings.TrimSpace(s))
 }
 
 func validLeaves(t *testing.T) *[]Leaf {

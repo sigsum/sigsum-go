@@ -67,12 +67,36 @@ func (l *Leaf) FromBinary(b []byte) error {
 	return nil
 }
 
+func (l *Leaf) ToASCII(w io.Writer) error {
+	return ascii.WriteLineHex(w, "leaf",
+		l.Checksum[:], l.Signature[:], l.KeyHash[:])
+}
+
 func LeavesToASCII(w io.Writer, leaves []Leaf) error {
 	for _, leaf := range leaves {
-		if err := ascii.WriteLineHex(w, "leaf",
-			leaf.Checksum[:], leaf.Signature[:], leaf.KeyHash[:]); err != nil {
+		if err := leaf.ToASCII(w); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (l *Leaf) fromASCII(p *ascii.Parser) error {
+	v, err := p.GetValues("leaf", 3)
+	if err != nil {
+		return err
+	}
+	l.Checksum, err = crypto.HashFromHex(v[0])
+	if err != nil {
+		return fmt.Errorf("invalid leaf checksum: %v", err)
+	}
+	l.Signature, err = crypto.SignatureFromHex(v[1])
+	if err != nil {
+		return fmt.Errorf("invalid leaf signature: %v", err)
+	}
+	l.KeyHash, err = crypto.HashFromHex(v[2])
+	if err != nil {
+		return fmt.Errorf("invalid leaf key hash: %v", err)
 	}
 	return nil
 }
@@ -81,7 +105,8 @@ func LeavesFromASCII(r io.Reader) ([]Leaf, error) {
 	var leaves []Leaf
 	p := ascii.NewParser(r)
 	for {
-		v, err := p.GetValues("leaf", 3)
+		var leaf Leaf
+		err := leaf.fromASCII(&p)
 		if err == io.EOF {
 			if len(leaves) == 0 {
 				return nil, fmt.Errorf("no leaves")
@@ -91,22 +116,6 @@ func LeavesFromASCII(r io.Reader) ([]Leaf, error) {
 		if err != nil {
 			return nil, err
 		}
-		checksum, err := crypto.HashFromHex(v[0])
-		if err != nil {
-			return nil, fmt.Errorf("invalid leaf checksum: %v", err)
-		}
-		signature, err := crypto.SignatureFromHex(v[1])
-		if err != nil {
-			return nil, fmt.Errorf("invalid leaf signature: %v", err)
-		}
-		keyHash, err := crypto.HashFromHex(v[2])
-		if err != nil {
-			return nil, fmt.Errorf("invalid leaf key hash: %v", err)
-		}
-		leaves = append(leaves, Leaf{
-			Checksum:  checksum,
-			Signature: signature,
-			KeyHash:   keyHash,
-		})
+		leaves = append(leaves, leaf)
 	}
 }
