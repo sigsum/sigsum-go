@@ -20,7 +20,7 @@ type Client interface {
 	GetCosignedTreeHead(context.Context) (types.CosignedTreeHead, error)
 	GetInclusionProof(context.Context, requests.InclusionProof) (types.InclusionProof, error)
 	GetConsistencyProof(context.Context, requests.ConsistencyProof) (types.ConsistencyProof, error)
-	GetLeaves(context.Context, requests.Leaves) (types.Leaves, error)
+	GetLeaves(context.Context, requests.Leaves) ([]types.Leaf, error)
 
 	AddLeaf(context.Context, requests.Leaf) (bool, error)
 	AddCosignature(context.Context, requests.Cosignature) error
@@ -108,13 +108,14 @@ func (cli *client) GetConsistencyProof(ctx context.Context, req requests.Consist
 	return proof, nil
 }
 
-func (cli *client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves types.Leaves, err error) {
+func (cli *client) GetLeaves(ctx context.Context, req requests.Leaves) ([]types.Leaf, error) {
 	body, _, err := cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.LogURL)))
 	if err != nil {
-		return leaves, fmt.Errorf("get: %w", err)
+		return nil, fmt.Errorf("get: %w", err)
 	}
-	if err := leaves.FromASCII(bytes.NewBuffer(body)); err != nil {
-		return leaves, fmt.Errorf("parse: %w", err)
+	leaves, err := types.LeavesFromASCII(bytes.NewBuffer(body))
+	if err != nil {
+		return nil, fmt.Errorf("parse: %w", err)
 	}
 	return leaves, nil
 }
