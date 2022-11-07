@@ -248,27 +248,24 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 			},
 			Signature: *newSigBufferInc(t),
 		},
-		Cosignature: []crypto.Signature{
-			crypto.Signature{},
-			*newSigBufferInc(t),
-		},
-		KeyHash: []crypto.Hash{
-			crypto.Hash{},
-			*newHashBufferInc(t),
+		Cosignatures: []Cosignature{
+			Cosignature{},
+			Cosignature{
+				KeyHash:   *newHashBufferInc(t),
+				Signature: *newSigBufferInc(t),
+			},
 		},
 	}
 }
 
 func validCosignedTreeHeadASCII(t *testing.T) string {
 	t.Helper()
-	return fmt.Sprintf("%s=%d\n%s=%d\n%s=%x\n%s=%x\n%s=%x\n%s=%x\n%s=%x\n%s=%x\n",
+	return fmt.Sprintf("%s=%d\n%s=%d\n%s=%x\n%s=%x\n%s=%x %x\n%s=%x %x\n",
 		"timestamp", 1,
 		"tree_size", 2,
 		"root_hash", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
-		"cosignature", crypto.Signature{},
-		"cosignature", newSigBufferInc(t)[:],
-		"key_hash", crypto.Hash{},
-		"key_hash", newHashBufferInc(t)[:],
+		"cosignature", crypto.Hash{}, crypto.Signature{},
+		"cosignature", newHashBufferInc(t)[:], newSigBufferInc(t)[:],
 	)
 }

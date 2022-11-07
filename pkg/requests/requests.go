@@ -12,9 +12,9 @@ import (
 )
 
 type Leaf struct {
-	Message   crypto.Hash      `ascii:"message"`
-	Signature crypto.Signature `ascii:"signature"`
-	PublicKey crypto.PublicKey `ascii:"public_key"`
+	Message   crypto.Hash
+	Signature crypto.Signature
+	PublicKey crypto.PublicKey
 }
 
 type Leaves struct {
@@ -32,13 +32,20 @@ type ConsistencyProof struct {
 	NewSize uint64
 }
 
+// TODO: Replace with type alias (golang 1.9 feature)
 type Cosignature struct {
-	Cosignature crypto.Signature `ascii:"cosignature"`
-	KeyHash     crypto.Hash      `ascii:"key_hash"`
+	KeyHash   crypto.Hash
+	Signature crypto.Signature
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, req)
+	if err := ascii.WriteLineHex(w, "message", req.Message[:]); err != nil {
+		return err
+	}
+	if err := ascii.WriteLineHex(w, "signature", req.Signature[:]); err != nil {
+		return err
+	}
+	return ascii.WriteLineHex(w, "public_key", req.PublicKey[:])
 }
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
@@ -57,11 +64,25 @@ func (req *ConsistencyProof) ToURL(url string) string {
 }
 
 func (req *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, req)
+	return ascii.WriteLineHex(w, "cosignature", req.KeyHash[:], req.Signature[:])
 }
 
 func (req *Leaf) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, req)
+	p := ascii.NewParser(r)
+	var err error
+	req.Message, err = p.GetHash("message")
+	if err != nil {
+		return err
+	}
+	req.Signature, err = p.GetSignature("signature")
+	if err != nil {
+		return err
+	}
+	req.PublicKey, err = p.GetPublicKey("public_key")
+	if err != nil {
+		return err
+	}
+	return p.GetEOF()
 }
 
 // FromURL parses request parameters from a URL that is not slash-terminated
@@ -113,5 +134,18 @@ func (req *ConsistencyProof) FromURL(url string) (err error) {
 }
 
 func (req *Cosignature) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, req)
+	p := ascii.NewParser(r)
+	v, err := p.GetValues("cosignature", 2)
+	if err != nil {
+		return err
+	}
+	req.KeyHash, err = crypto.HashFromHex(v[0])
+	if err != nil {
+		return err
+	}
+	req.Signature, err = crypto.SignatureFromHex(v[1])
+	if err != nil {
+		return err
+	}
+	return p.GetEOF()
 }
