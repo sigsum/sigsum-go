@@ -81,15 +81,15 @@ func TestLeafFromASCII(t *testing.T) {
 			want:       validLeaf(t),
 		},
 	} {
-		var proof Leaf
-		err := proof.FromASCII(table.serialized)
+		var leaf Leaf
+		err := leaf.FromASCII(table.serialized)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
 		if err != nil {
 			continue
 		}
-		if got, want := &proof, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := &leaf, table.want; !reflect.DeepEqual(got, want) {
 			t.Errorf("got leaf request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -287,17 +287,15 @@ func validConsistencyProofASCII(t *testing.T) string {
 func validCosignature(t *testing.T) *Cosignature {
 	t.Helper()
 	return &Cosignature{
-		Cosignature: *newSigBufferInc(t),
-		KeyHash:     *newHashBufferInc(t),
+		Signature: *newSigBufferInc(t),
+		KeyHash:   *newHashBufferInc(t),
 	}
 }
 
 func validCosignatureASCII(t *testing.T) string {
 	t.Helper()
-	return fmt.Sprintf("%s=%x\n%s=%x\n",
-		"cosignature", newSigBufferInc(t)[:],
-		"key_hash", newHashBufferInc(t)[:],
-	)
+	return fmt.Sprintf("%s=%x %x\n",
+		"cosignature", newHashBufferInc(t)[:], newSigBufferInc(t)[:])
 }
 
 func newHashBufferInc(t *testing.T) *crypto.Hash {

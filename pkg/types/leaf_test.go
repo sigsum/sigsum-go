@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
+	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -123,7 +124,7 @@ func TestLeafFromBinary(t *testing.T) {
 }
 
 func TestLeafToASCII(t *testing.T) {
-	desc := "valid: shard hint 72623859790382856, buffers 0x00,0x01,..."
+	desc := "valid:, buffers 0x00,0x01,..."
 	buf := bytes.NewBuffer(nil)
 	if err := validLeaf(t).ToASCII(buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
@@ -141,13 +142,13 @@ func TestLeafFromASCII(t *testing.T) {
 		want       *Leaf
 	}{
 		{
-			desc:       "invalid: not a tree leaf (too few key-value pairs)",
-			serialized: bytes.NewBuffer([]byte("shard_hint=0\n")),
+			desc:       "invalid: not a tree leaf (wrong key)",
+			serialized: bytes.NewBuffer([]byte("tree_size=0\n")),
 			wantErr:    true,
 		},
 		{
-			desc:       "invalid: not a tree leaf (too many key-value pairs)",
-			serialized: bytes.NewBuffer(append([]byte(validLeafASCII(t)), []byte("key=value\n")...)),
+			desc:       "invalid: not a tree leaf (too many values)",
+			serialized: bytes.NewBuffer([]byte(invalidLeafASCII(t))),
 			wantErr:    true,
 		},
 		{
@@ -157,7 +158,8 @@ func TestLeafFromASCII(t *testing.T) {
 		},
 	} {
 		var leaf Leaf
-		err := leaf.FromASCII(table.serialized)
+		p := ascii.NewParser(table.serialized)
+		err := leaf.fromASCII(&p)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -175,7 +177,7 @@ func TestLeavesFromASCII(t *testing.T) {
 		desc       string
 		serialized io.Reader
 		wantErr    bool
-		want       *Leaves
+		want       *[]Leaf
 	}{
 		{
 			desc:       "invalid: not a list of tree leaves (too few key-value pairs)",
@@ -208,8 +210,7 @@ func TestLeavesFromASCII(t *testing.T) {
 			want:       validLeaves(t),
 		},
 	} {
-		var leaves Leaves
-		err := leaves.FromASCII(table.serialized)
+		leaves, err := LeavesFromASCII(table.serialized)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -257,43 +258,41 @@ func validLeafBytes(t *testing.T) []byte {
 
 func validLeafASCII(t *testing.T) string {
 	checksum := crypto.HashBytes(newHashBufferInc(t)[:])
-	return fmt.Sprintf("%s=%x\n%s=%x\n%s=%x\n",
-		"checksum", checksum[:],
-		"signature", newSigBufferInc(t)[:],
-		"key_hash", newHashBufferInc(t)[:],
-	)
+	return fmt.Sprintf("%s=%x %x %x\n",
+		"leaf", checksum, newSigBufferInc(t)[:], newHashBufferInc(t)[:])
 }
 
-func validLeaves(t *testing.T) *Leaves {
+func invalidLeafASCII(t *testing.T) string {
+	s := validLeafASCII(t)
+	// Add an extra value
+	return fmt.Sprintf("%s 0\n", strings.TrimSpace(s))
+}
+
+func validLeaves(t *testing.T) *[]Leaf {
 	t.Helper()
-	return &Leaves{*validLeaf(t), Leaf{}}
+	return &[]Leaf{*validLeaf(t), Leaf{}}
 }
 
 func validLeavesASCII(t *testing.T) string {
 	t.Helper()
-	return validLeafASCII(t) + fmt.Sprintf("%s=%x\n%s=%x\n%s=%x\n",
-		"checksum", crypto.Hash{},
-		"signature", crypto.Signature{},
-		"key_hash", crypto.Hash{},
-	)
+	return validLeafASCII(t) + fmt.Sprintf("%s=%x %x %x\n",
+		"leaf", crypto.Hash{}, crypto.Signature{}, crypto.Hash{})
 }
 
 func invalidLeavesASCII(t *testing.T, key string) string {
 	buf := validLeavesASCII(t)
-	lines := strings.Split(buf, "\n")
 
-	var ret string
 	switch key {
 	case "checksum":
-		ret = strings.Join(lines[:1], "\n")
+		return buf[:11] + buf[12:]
 	case "signature":
-		ret = strings.Join(append(lines[0:1], lines[2:]...), "\n")
+		return buf[:80] + buf[82:]
 	case "key_hash":
-		ret = strings.Join(append(lines[0:2], lines[3:]...), "\n")
+		return buf[:len(buf)-10] + buf[len(buf)-9:]
 	default:
-		t.Fatalf("must have a valid key to remove")
+		t.Fatalf("must have a valid field to invalidate")
+		return ""
 	}
-	return ret
 }
 
 func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {

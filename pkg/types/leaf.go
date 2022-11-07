@@ -14,12 +14,10 @@ const (
 )
 
 type Leaf struct {
-	Checksum  crypto.Hash      `ascii:"checksum"`
-	Signature crypto.Signature `ascii:"signature"`
-	KeyHash   crypto.Hash      `ascii:"key_hash"`
+	Checksum  crypto.Hash
+	Signature crypto.Signature
+	KeyHash   crypto.Hash
 }
-
-type Leaves []Leaf
 
 func leafSignedData(checksum *crypto.Hash) []byte {
 	return ssh.SignedDataFromHash(TreeLeafNamespace, checksum)
@@ -70,38 +68,54 @@ func (l *Leaf) FromBinary(b []byte) error {
 }
 
 func (l *Leaf) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, l)
+	return ascii.WriteLineHex(w, "leaf",
+		l.Checksum[:], l.Signature[:], l.KeyHash[:])
 }
 
-func (l *Leaf) FromASCII(r io.Reader) error {
-	return ascii.StdEncoding.Deserialize(r, l)
-}
-
-func (l *Leaves) FromASCII(r io.Reader) error {
-	leaves := &struct {
-		Checksum  []crypto.Hash      `ascii:"checksum"`
-		Signature []crypto.Signature `ascii:"signature"`
-		KeyHash   []crypto.Hash      `ascii:"key_hash"`
-	}{}
-
-	if err := ascii.StdEncoding.Deserialize(r, leaves); err != nil {
-		return err
-	}
-	n := len(leaves.Checksum)
-	if n != len(leaves.Signature) {
-		return fmt.Errorf("types: mismatched leaf field counts")
-	}
-	if n != len(leaves.KeyHash) {
-		return fmt.Errorf("types: mismatched leaf field counts")
-	}
-
-	*l = make([]Leaf, 0, n)
-	for i := 0; i < n; i++ {
-		*l = append(*l, Leaf{
-			Checksum:  leaves.Checksum[i],
-			Signature: leaves.Signature[i],
-			KeyHash:   leaves.KeyHash[i],
-		})
+func LeavesToASCII(w io.Writer, leaves []Leaf) error {
+	for _, leaf := range leaves {
+		if err := leaf.ToASCII(w); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func (l *Leaf) fromASCII(p *ascii.Parser) error {
+	v, err := p.GetValues("leaf", 3)
+	if err != nil {
+		return err
+	}
+	l.Checksum, err = crypto.HashFromHex(v[0])
+	if err != nil {
+		return fmt.Errorf("invalid leaf checksum: %v", err)
+	}
+	l.Signature, err = crypto.SignatureFromHex(v[1])
+	if err != nil {
+		return fmt.Errorf("invalid leaf signature: %v", err)
+	}
+	l.KeyHash, err = crypto.HashFromHex(v[2])
+	if err != nil {
+		return fmt.Errorf("invalid leaf key hash: %v", err)
+	}
+	return nil
+}
+
+func LeavesFromASCII(r io.Reader) ([]Leaf, error) {
+	var leaves []Leaf
+	p := ascii.NewParser(r)
+	for {
+		var leaf Leaf
+		err := leaf.fromASCII(&p)
+		if err == io.EOF {
+			if len(leaves) == 0 {
+				return nil, fmt.Errorf("no leaves")
+			}
+			return leaves, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, leaf)
+	}
 }

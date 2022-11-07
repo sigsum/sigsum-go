@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"io"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
@@ -10,39 +11,89 @@ import (
 
 type InclusionProof struct {
 	TreeSize  uint64
-	LeafIndex uint64        `ascii:"leaf_index"`
-	Path      []crypto.Hash `ascii:"inclusion_path"`
+	LeafIndex uint64
+	Path      []crypto.Hash
 }
 
 type ConsistencyProof struct {
 	NewSize uint64
 	OldSize uint64
-	Path    []crypto.Hash `ascii:"consistency_path"`
+	Path    []crypto.Hash
 }
 
-func (p *InclusionProof) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, p)
+func hashesToASCII(w io.Writer, name string, hashes []crypto.Hash) error {
+	if len(hashes) == 0 {
+		return fmt.Errorf("internal error, empty %s", name)
+	}
+	for _, hash := range hashes {
+		err := ascii.WriteHash(w, name, &hash)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (p *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
-	p.TreeSize = treeSize
-	return ascii.StdEncoding.Deserialize(r, p)
+// Treats empty list as an error.
+func hashesFromASCII(p *ascii.Parser, name string) ([]crypto.Hash, error) {
+	var hashes []crypto.Hash
+	for {
+		hash, err := p.GetHash(name)
+		if err == io.EOF {
+			if len(hashes) == 0 {
+				return nil, fmt.Errorf("invalid path, empty")
+			}
+
+			return hashes, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		hashes = append(hashes, hash)
+	}
 }
 
-func (p *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
-	return merkle.VerifyInclusion(leaf, p.LeafIndex, p.TreeSize, root, p.Path)
+// Note the tree_size is not included on the wire.
+func (pr *InclusionProof) ToASCII(w io.Writer) error {
+	if err := ascii.WriteInt(w, "leaf_index", pr.LeafIndex); err != nil {
+		return err
+	}
+	return hashesToASCII(w, "inclusion_path", pr.Path)
 }
 
-func (p *ConsistencyProof) ToASCII(w io.Writer) error {
-	return ascii.StdEncoding.Serialize(w, p)
+func (pr *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
+	pr.TreeSize = treeSize
+	p := ascii.NewParser(r)
+	var err error
+	pr.LeafIndex, err = p.GetInt("leaf_index")
+	if err != nil {
+		return err
+	}
+	if pr.LeafIndex >= treeSize {
+		return fmt.Errorf("leaf_index out of range")
+	}
+	pr.Path, err = hashesFromASCII(&p, "inclusion_path")
+	return err
 }
 
-func (p *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {
-	p.OldSize = oldSize
-	p.NewSize = newSize
-	return ascii.StdEncoding.Deserialize(r, p)
+func (pr *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
+	return merkle.VerifyInclusion(leaf, pr.LeafIndex, pr.TreeSize, root, pr.Path)
 }
 
-func (p *ConsistencyProof) Verify(oldRoot, newRoot *crypto.Hash) error {
-	return merkle.VerifyConsistency(p.OldSize, p.NewSize, oldRoot, newRoot, p.Path)
+func (pr *ConsistencyProof) ToASCII(w io.Writer) error {
+	return hashesToASCII(w, "consistency_path", pr.Path)
+}
+
+func (pr *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {
+	pr.OldSize = oldSize
+	pr.NewSize = newSize
+	p := ascii.NewParser(r)
+	var err error
+
+	pr.Path, err = hashesFromASCII(&p, "consistency_path")
+	return err
+}
+
+func (pr *ConsistencyProof) Verify(oldRoot, newRoot *crypto.Hash) error {
+	return merkle.VerifyConsistency(pr.OldSize, pr.NewSize, oldRoot, newRoot, pr.Path)
 }
