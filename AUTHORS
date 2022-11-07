@@ -1,0 +1,31 @@
+Authors of the Sigsum project
+
+The copyright on the Sigsum implementation is held by the respective
+authors (or their organizations/employers).
+
+Unless file-specific copyright headers say otherwise, Sigsum is
+permissively licensed according to the BSD 2-Clause License (see the
+LICENSE file).
+
+This file contains only a summary; for more fine-grained information
+on who authored a particular file or feature, please refer to the
+version control history at:
+
+  https://git.glasklar.is/sigsum/core/sigsum-go
+
+For contributions where copyrights are held by an organization, e.g.,
+the author's employer, the copyright holder should be identified by
+the commit, preferably by using an author email address belonging to
+the organization, or otherwise explained in the commit message.
+
+File-specific copyright headers should be used when necessary to
+document the origin of a file's contents, e.g., for code copied from
+other sources, or governed by different license requirements.
+
+Authors, in chronological order of initial contribution:
+
+Rasmus Dahlberg
+Linus Nordberg
+Grégoire Détrez
+Niels Möller
+
