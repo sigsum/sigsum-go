@@ -22,7 +22,7 @@ type Leaf struct {
 type Leaves []Leaf
 
 func leafSignedData(checksum *crypto.Hash) []byte {
-	return ssh.SignedDataFromHash(TreeLeafNamespace, *checksum)
+	return ssh.SignedDataFromHash(TreeLeafNamespace, checksum)
 }
 
 func SignLeafChecksum(signer crypto.Signer, checksum *crypto.Hash) (crypto.Signature, error) {

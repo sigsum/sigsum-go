@@ -4,9 +4,10 @@ package ssh
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
 	"log"
+
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 const (
@@ -29,7 +30,7 @@ func serializeString(s []byte) []byte {
 	return buffer
 }
 
-func SignedDataFromHash(namespace string, hash [sha256.Size]byte) []byte {
+func SignedDataFromHash(namespace string, hash *crypto.Hash) []byte {
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
 		serializeString([]byte(namespace)),
@@ -39,5 +40,6 @@ func SignedDataFromHash(namespace string, hash [sha256.Size]byte) []byte {
 }
 
 func SignedData(namespace string, msg []byte) []byte {
-	return SignedDataFromHash(namespace, sha256.Sum256(msg))
+	hash := crypto.HashBytes(msg)
+	return SignedDataFromHash(namespace, &hash)
 }
