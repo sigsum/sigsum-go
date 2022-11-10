@@ -16,6 +16,10 @@ const (
 	maxNumberOfKeys = 10
 )
 
+func MakeToken(signer crypto.Signer, logKey *crypto.PublicKey) (crypto.Signature, error) {
+	return signer.Sign(ssh.SignedData(namespace, logKey[:]))
+}
+
 // Verifier can verify that a domain name is aware of a public key.
 // Name and signature corresponds to the value of the submit-token:
 // header, so signature is still hex-encoded.

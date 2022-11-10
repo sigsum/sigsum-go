@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"fmt"
-	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"strings"
 )
@@ -42,7 +41,7 @@ func TestVerify(t *testing.T) {
 	pub, signer := newKeyPair(t)
 	hexKey := hex.EncodeToString(pub[:])
 
-	signature, err := signer.Sign(ssh.SignedData("submit-token:v0@sigsum.org", logKey[:]))
+	signature, err := MakeToken(signer, &logKey)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
