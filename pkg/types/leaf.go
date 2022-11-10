@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	TreeLeafNamespace = "tree_leaf:v0@sigsum.org"
+	TreeLeafNamespace = "tree-leaf:v0@sigsum.org"
 )
 
 type Leaf struct {

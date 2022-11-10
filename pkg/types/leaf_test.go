@@ -232,7 +232,7 @@ func validLeafSignedDataBytes(t *testing.T) []byte {
 	hash := crypto.HashBytes(newHashBufferInc(t)[:])
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
-		[]byte{0, 0, 0, 23}, []byte("tree_leaf:v0@sigsum.org"),
+		[]byte{0, 0, 0, 23}, []byte("tree-leaf:v0@sigsum.org"),
 		[]byte{0, 0, 0, 0},
 		[]byte{0, 0, 0, 6}, []byte("sha256"),
 		[]byte{0, 0, 0, 32}, hash[:],
