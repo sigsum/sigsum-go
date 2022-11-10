@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	TreeHeadNamespace = "tree_head:v0@sigsum.org"
+	TreeHeadNamespace = "tree-head:v0@sigsum.org"
 )
 
 type TreeHead struct {

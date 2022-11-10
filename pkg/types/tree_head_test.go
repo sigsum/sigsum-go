@@ -208,7 +208,7 @@ func validTreeHeadSignedData(t *testing.T, keyHash *crypto.Hash) []byte {
 	checksum := crypto.HashBytes(msg)
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
-		[]byte{0, 0, 0, 23}, []byte("tree_head:v0@sigsum.org"),
+		[]byte{0, 0, 0, 23}, []byte("tree-head:v0@sigsum.org"),
 		[]byte{0, 0, 0, 0},
 		[]byte{0, 0, 0, 6}, []byte("sha256"),
 		[]byte{0, 0, 0, 32}, checksum[:],
