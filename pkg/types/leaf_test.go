@@ -177,7 +177,7 @@ func TestLeavesFromASCII(t *testing.T) {
 		desc       string
 		serialized io.Reader
 		wantErr    bool
-		want       *[]Leaf
+		want       []Leaf
 	}{
 		{
 			desc:       "invalid: not a list of tree leaves (too few key-value pairs)",
@@ -217,7 +217,7 @@ func TestLeavesFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := &leaves, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := leaves, table.want; !reflect.DeepEqual(got, want) {
 			t.Errorf("got leaves\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -268,9 +268,9 @@ func invalidLeafASCII(t *testing.T) string {
 	return fmt.Sprintf("%s 0\n", strings.TrimSpace(s))
 }
 
-func validLeaves(t *testing.T) *[]Leaf {
+func validLeaves(t *testing.T) []Leaf {
 	t.Helper()
-	return &[]Leaf{*validLeaf(t), Leaf{}}
+	return []Leaf{*validLeaf(t), Leaf{}}
 }
 
 func validLeavesASCII(t *testing.T) string {
