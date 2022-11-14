@@ -133,11 +133,11 @@ func inclusion(leaves []crypto.Hash, m uint64, stack []crypto.Hash, size uint64)
 	return p
 }
 
-func (t *Tree) ProveInclusion(index, size uint64) []crypto.Hash {
+func (t *Tree) ProveInclusion(index, size uint64) ([]crypto.Hash, error) {
 	if index >= size || size > t.Size() {
-		panic(fmt.Errorf("invalid argument index %d, size %d, tree %d", index, size, t.Size()))
+		return nil, fmt.Errorf("invalid argument index %d, size %d, tree %d", index, size, t.Size())
 	}
-	return reversePath(inclusion(t.leafs[:size], index, t.stack, t.Size()))
+	return reversePath(inclusion(t.leafs[:size], index, t.stack, t.Size())), nil
 }
 
 // Based on RFC 9161, 2.1.4.1, but produces path in opposite order.
@@ -192,11 +192,11 @@ func consistency(leaves []crypto.Hash, m uint64, stack []crypto.Hash, size uint6
 	}
 }
 
-func (t *Tree) ProveConsistency(m, n uint64) []crypto.Hash {
+func (t *Tree) ProveConsistency(m, n uint64) ([]crypto.Hash, error) {
 	if n == 0 || n > t.Size() || m >= n {
-		panic(fmt.Errorf("invalid argument m %d, n %d, tree %d", m, n, t.Size()))
+		return nil, fmt.Errorf("invalid argument m %d, n %d, tree %d", m, n, t.Size())
 	}
-	return reversePath(consistency(t.leafs[:n], m, t.stack, t.Size()))
+	return reversePath(consistency(t.leafs[:n], m, t.stack, t.Size())), nil
 }
 
 // Returns largest power of 2 smaller than n. Requires n >= 2.

@@ -105,7 +105,10 @@ func TestInclusion(t *testing.T) {
 		[]crypto.Hash{hashes[2], h01, hashes[4]},
 		[]crypto.Hash{h0123},
 	} {
-		if proof := tree.ProveInclusion(uint64(i), 5); !pathEqual(proof, p) {
+		if proof, err := tree.ProveInclusion(uint64(i), 5); err != nil || !pathEqual(proof, p) {
+			if err != nil {
+				t.Fatalf("ProveInclusion %d, 5 failed: %v", i, err)
+			}
 			t.Errorf("unexpected inclusion path\n  got: %x\n want: %x\n",
 				proof, p)
 		}
@@ -125,7 +128,10 @@ func TestInclusionValid(t *testing.T) {
 	}
 	for i := 0; i < len(hashes); i++ {
 		for n := i + 1; n <= len(hashes); n++ {
-			proof := tree.ProveInclusion(uint64(i), uint64(n))
+			proof, err := tree.ProveInclusion(uint64(i), uint64(n))
+			if err != nil {
+				t.Fatalf("ProveInclusion %d, %d failed: %v", i, n, err)
+			}
 			if err := VerifyInclusion(&hashes[i], uint64(i), uint64(n), &rootHashes[n-1], proof); err != nil {
 				t.Errorf("inclusion proof not valid, i %d, n %d: %v\n  proof: %x\n",
 					i, n, err, proof)
@@ -157,7 +163,10 @@ func TestConsistency(t *testing.T) {
 		{4, 7, []crypto.Hash{h456}},
 		{6, 7, []crypto.Hash{h45, hashes[6], h0123}},
 	} {
-		if proof := tree.ProveConsistency(table.m, table.n); !pathEqual(proof, table.path) {
+		if proof, err := tree.ProveConsistency(table.m, table.n); err != nil || !pathEqual(proof, table.path) {
+			if err != nil {
+				t.Fatalf("ProveConsistency %d, %d failed: %v", table.m, table.n, err)
+			}
 			t.Errorf("unexpected inclusion path m %d, n %d\n  got: %x\n want: %x\n",
 				table.m, table.n, proof, table.path)
 		}
@@ -177,7 +186,10 @@ func TestConsistencyValid(t *testing.T) {
 
 	for m := 1; m < len(hashes); m++ {
 		for n := m + 1; n <= len(hashes); n++ {
-			proof := tree.ProveConsistency(uint64(m), uint64(n))
+			proof, err := tree.ProveConsistency(uint64(m), uint64(n))
+			if err != nil {
+				t.Fatalf("ProveConsistency %d, %d failed: %v", m, n, err)
+			}
 			if err := VerifyConsistency(
 				uint64(m), uint64(n),
 				&rootHashes[m-1], &rootHashes[n-1], proof); err != nil {
