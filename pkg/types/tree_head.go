@@ -15,13 +15,13 @@ const (
 )
 
 type TreeHead struct {
-	Timestamp uint64
-	TreeSize  uint64
-	RootHash  crypto.Hash
+	TreeSize uint64
+	RootHash crypto.Hash
 }
 
 type SignedTreeHead struct {
 	TreeHead
+	Timestamp uint64
 	Signature crypto.Signature
 }
 
@@ -35,35 +35,34 @@ type CosignedTreeHead struct {
 	Cosignatures []Cosignature
 }
 
-func (th *TreeHead) toSignedData(keyHash *crypto.Hash) []byte {
+func (th *TreeHead) toSignedData(keyHash *crypto.Hash, timestamp uint64) []byte {
 	b := make([]byte, 80)
-	binary.BigEndian.PutUint64(b[0:8], th.Timestamp)
+	binary.BigEndian.PutUint64(b[0:8], timestamp)
 	binary.BigEndian.PutUint64(b[8:16], th.TreeSize)
 	copy(b[16:48], th.RootHash[:])
 	copy(b[48:80], keyHash[:])
 	return ssh.SignedData(TreeHeadNamespace, b)
 }
 
-func (th *TreeHead) Sign(signer crypto.Signer, kh *crypto.Hash) (*SignedTreeHead, error) {
-	sig, err := signer.Sign(th.toSignedData(kh))
+func (th *TreeHead) Sign(signer crypto.Signer, kh *crypto.Hash, timestamp uint64) (*SignedTreeHead, error) {
+	sig, err := signer.Sign(th.toSignedData(kh, timestamp))
 	if err != nil {
 		return nil, fmt.Errorf("types: failed signing tree head")
 	}
 
 	return &SignedTreeHead{
 		TreeHead:  *th,
+		Timestamp: timestamp,
 		Signature: sig,
 	}, nil
 }
 
-func (th *TreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature, kh *crypto.Hash) bool {
-	return crypto.Verify(key, th.toSignedData(kh), signature)
+func (th *TreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature,
+	kh *crypto.Hash, timestamp uint64) bool {
+	return crypto.Verify(key, th.toSignedData(kh, timestamp), signature)
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
-	if err := ascii.WriteInt(w, "timestamp", th.Timestamp); err != nil {
-		return err
-	}
 	if err := ascii.WriteInt(w, "tree_size", th.TreeSize); err != nil {
 		return err
 	}
@@ -73,10 +72,6 @@ func (th *TreeHead) ToASCII(w io.Writer) error {
 // Doesn't require EOF, so it can be used also with (co)signatures.
 func (th *TreeHead) fromASCII(p *ascii.Parser) error {
 	var err error
-	th.Timestamp, err = p.GetInt("timestamp")
-	if err != nil {
-		return err
-	}
 	th.TreeSize, err = p.GetInt("tree_size")
 	if err != nil {
 		return err
@@ -95,6 +90,9 @@ func (th *TreeHead) FromASCII(r io.Reader) error {
 }
 
 func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
+	if err := ascii.WriteInt(w, "timestamp", sth.Timestamp); err != nil {
+		return err
+	}
 	if err := sth.TreeHead.ToASCII(w); err != nil {
 		return err
 	}
@@ -102,7 +100,12 @@ func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
 }
 
 func (sth *SignedTreeHead) fromASCII(p *ascii.Parser) error {
-	err := sth.TreeHead.fromASCII(p)
+	var err error
+	sth.Timestamp, err = p.GetInt("timestamp")
+	if err != nil {
+		return err
+	}
+	err = sth.TreeHead.fromASCII(p)
 	if err != nil {
 		return err
 	}
@@ -119,9 +122,17 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 	return p.GetEOF()
 }
 
-func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
+func (sth *SignedTreeHead) Sign(signer crypto.Signer, kh *crypto.Hash) (crypto.Signature, error) {
+	return signer.Sign(sth.TreeHead.toSignedData(kh, sth.Timestamp))
+}
+
+func (sth *SignedTreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature, logKeyHash *crypto.Hash) bool {
+	return sth.TreeHead.Verify(key, signature, logKeyHash, sth.Timestamp)
+}
+
+func (sth *SignedTreeHead) VerifyLogSignature(key *crypto.PublicKey) bool {
 	keyHash := crypto.HashBytes(key[:])
-	return sth.TreeHead.Verify(key, &sth.Signature, &keyHash)
+	return sth.Verify(key, &sth.Signature, &keyHash)
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer) error {

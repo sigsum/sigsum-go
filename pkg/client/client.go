@@ -71,7 +71,7 @@ func (cli *client) GetToCosignTreeHead(ctx context.Context) (sth types.SignedTre
 	if err := sth.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return sth, fmt.Errorf("parse: %w", err)
 	}
-	if ok := sth.Verify(&cli.LogPub); !ok {
+	if ok := sth.VerifyLogSignature(&cli.LogPub); !ok {
 		return sth, fmt.Errorf("invalid log signature")
 	}
 
@@ -86,7 +86,7 @@ func (cli *client) GetCosignedTreeHead(ctx context.Context) (cth types.CosignedT
 	if err := cth.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return cth, fmt.Errorf("parse: %w", err)
 	}
-	if ok := cth.SignedTreeHead.Verify(&cli.LogPub); !ok {
+	if ok := cth.SignedTreeHead.VerifyLogSignature(&cli.LogPub); !ok {
 		return cth, fmt.Errorf("invalid log signature")
 	}
 	// TODO: verify cosignatures based on policy

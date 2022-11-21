@@ -11,10 +11,14 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
+const (
+	TreeTimestamp = 72623859790382856
+)
+
 func TestTreeHeadToSignedData(t *testing.T) {
 	desc := "valid"
 	kh := crypto.Hash{}
-	if got, want := validTreeHead(t).toSignedData(&kh),
+	if got, want := validTreeHead(t).toSignedData(&kh, TreeTimestamp),
 		validTreeHeadSignedData(t, &kh); !bytes.Equal(got, want) {
 		t.Errorf("got tree head signed data\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
@@ -43,7 +47,7 @@ func TestTreeHeadSign(t *testing.T) {
 	} {
 		logKey := crypto.PublicKey{}
 		keyHash := crypto.HashBytes(logKey[:])
-		sth, err := table.th.Sign(table.signer, &keyHash)
+		sth, err := table.th.Sign(table.signer, &keyHash, TreeTimestamp)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -53,6 +57,7 @@ func TestTreeHeadSign(t *testing.T) {
 
 		wantSTH := &SignedTreeHead{
 			TreeHead:  *table.th,
+			Timestamp: TreeTimestamp,
 			Signature: *table.wantSig,
 		}
 		if got, want := sth, wantSTH; !reflect.DeepEqual(got, want) {
@@ -112,17 +117,17 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 	pub, signer := newKeyPair(t)
 	kh := crypto.HashBytes(pub[:])
 
-	sth, err := th.Sign(signer, &kh)
+	sth, err := th.Sign(signer, &kh, TreeTimestamp)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !sth.Verify(&pub) {
+	if !sth.VerifyLogSignature(&pub) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
 
 	sth.TreeSize += 1
-	if sth.Verify(&pub) {
+	if sth.VerifyLogSignature(&pub) {
 		t.Errorf("succeeded verifying an invalid signed tree head")
 	}
 }
@@ -183,9 +188,8 @@ func TestCosignedTreeHeadFromASCII(t *testing.T) {
 
 func validTreeHead(t *testing.T) *TreeHead {
 	return &TreeHead{
-		Timestamp: 72623859790382856,
-		TreeSize:  257,
-		RootHash:  *newHashBufferInc(t),
+		TreeSize: 257,
+		RootHash: *newHashBufferInc(t),
 	}
 }
 
@@ -219,10 +223,10 @@ func validSignedTreeHead(t *testing.T) *SignedTreeHead {
 	t.Helper()
 	return &SignedTreeHead{
 		TreeHead: TreeHead{
-			Timestamp: 1,
-			TreeSize:  2,
-			RootHash:  *newHashBufferInc(t),
+			TreeSize: 2,
+			RootHash: *newHashBufferInc(t),
 		},
+		Timestamp: 1,
 		Signature: *newSigBufferInc(t),
 	}
 }
@@ -242,10 +246,10 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 	return &CosignedTreeHead{
 		SignedTreeHead: SignedTreeHead{
 			TreeHead: TreeHead{
-				Timestamp: 1,
-				TreeSize:  2,
-				RootHash:  *newHashBufferInc(t),
+				TreeSize: 2,
+				RootHash: *newHashBufferInc(t),
 			},
+			Timestamp: 1,
 			Signature: *newSigBufferInc(t),
 		},
 		Cosignatures: []Cosignature{
