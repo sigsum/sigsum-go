@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"os"
 
@@ -40,36 +41,24 @@ func Connect() (*Connection, error) {
 
 func (c *Connection) request(msg []byte) ([]byte, error) {
 	request := serializeString(msg)
-	writeCount, err := c.conn.Write(request)
+	_, err := c.conn.Write(request)
 	if err != nil {
 		return nil, err
-	}
-	if writeCount != len(request) {
-		// TODO: How to access errno?
-		return nil, fmt.Errorf("write to agent failed, with short byte count: %d", writeCount)
 	}
 	// Read response length.
 	lenBuf := make([]byte, 4)
-	readCount, err := c.conn.Read(lenBuf)
+	_, err = io.ReadFull(c.conn, lenBuf)
 	if err != nil {
 		return nil, err
-	}
-	if readCount != len(lenBuf) {
-		// TODO: How to access errno?
-		return nil, fmt.Errorf("read from agent failed, no length field, short byte count: %d", readCount)
 	}
 	length := binary.BigEndian.Uint32(lenBuf)
 	if length == 0 || length > 1000 {
 		return nil, fmt.Errorf("read from agent gave unexpected length: %d", length)
 	}
 	buffer := make([]byte, length)
-	readCount, err = c.conn.Read(buffer)
+	_, err = io.ReadFull(c.conn, buffer)
 	if err != nil {
 		return nil, err
-	}
-	if readCount != len(buffer) {
-		// TODO: How to access errno?
-		return nil, fmt.Errorf("read from agent failed, short byte count: %d", readCount)
 	}
 	return buffer, nil
 }
