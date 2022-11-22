@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	TreeTimestamp = 72623859790382856
+	treeTimestamp = 72623859790382856
 )
 
 func TestTreeHeadToSignedData(t *testing.T) {
 	desc := "valid"
 	kh := crypto.Hash{}
-	if got, want := validTreeHead(t).toSignedData(&kh, TreeTimestamp),
+	if got, want := validTreeHead(t).toSignedData(&kh, treeTimestamp),
 		validTreeHeadSignedData(t, &kh); !bytes.Equal(got, want) {
 		t.Errorf("got tree head signed data\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
@@ -47,7 +47,7 @@ func TestTreeHeadSign(t *testing.T) {
 	} {
 		logKey := crypto.PublicKey{}
 		keyHash := crypto.HashBytes(logKey[:])
-		sth, err := table.th.Sign(table.signer, &keyHash, TreeTimestamp)
+		sth, err := table.th.Sign(table.signer, &keyHash, treeTimestamp)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -57,7 +57,7 @@ func TestTreeHeadSign(t *testing.T) {
 
 		wantSTH := &SignedTreeHead{
 			TreeHead:  *table.th,
-			Timestamp: TreeTimestamp,
+			Timestamp: treeTimestamp,
 			Signature: *table.wantSig,
 		}
 		if got, want := sth, wantSTH; !reflect.DeepEqual(got, want) {
@@ -117,7 +117,7 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 	pub, signer := newKeyPair(t)
 	kh := crypto.HashBytes(pub[:])
 
-	sth, err := th.Sign(signer, &kh, TreeTimestamp)
+	sth, err := th.Sign(signer, &kh, treeTimestamp)
 	if err != nil {
 		t.Fatal(err)
 	}
