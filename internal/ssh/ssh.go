@@ -1,5 +1,21 @@
-// The ssh package implements utilities for ssh wire format and
-// signatures.
+// The ssh package implements utilities for working with SSH formats.
+//
+// The way values are serialized in SSH is documented in
+// https://www.rfc-editor.org/rfc/rfc4251#section-5.
+//
+// Use of ED25519 keys is specified in https://www.rfc-editor.org/rfc/rfc8709
+//
+// There are also a few openssh-specific formats (outside of the IETF standards).
+//
+// The SSH signature format adopted by sigsum is documented at
+// https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.sshsig.
+//
+// The ssh-agent protocol is documented at
+// https://datatracker.ietf.org/doc/html/draft-miller-ssh-agent.
+//
+// The private key format used by openssh is documented at
+// https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key
+
 package ssh
 
 import (
