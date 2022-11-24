@@ -19,7 +19,7 @@ const (
 )
 
 type Connection struct {
-	conn net.Conn
+	conn io.ReadWriter
 }
 
 type Signer struct {
