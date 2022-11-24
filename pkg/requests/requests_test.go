@@ -103,9 +103,9 @@ func TestLeavesFromURL(t *testing.T) {
 		wantErr bool
 	}{
 		{"invalid: not enough parameters", "some-url", Leaves{}, true},
-		{"invalid: start size has a leading sign", "some-url/+1/2", Leaves{}, true},
-		{"invalid: start size is empty", "some-url//2", Leaves{}, true},
-		{"invalid: end size is empty", "some-url/1/", Leaves{}, true},
+		{"invalid: start index has a leading sign", "some-url/+1/2", Leaves{}, true},
+		{"invalid: start index is empty", "some-url//2", Leaves{}, true},
+		{"invalid: end index is empty", "some-url/1/", Leaves{}, true},
 		{"valid", "some-url/1/2", Leaves{1, 2}, false},
 	} {
 		var req Leaves
@@ -239,17 +239,9 @@ func validLeafASCII(t *testing.T) string {
 func validLeaves(t *testing.T) *Leaves {
 	t.Helper()
 	return &Leaves{
-		StartSize: 1,
-		EndSize:   4,
+		StartIndex: 1,
+		EndIndex:   4,
 	}
-}
-
-func validLeavesASCII(t *testing.T) string {
-	t.Helper()
-	return fmt.Sprintf("%s=%d\n%s=%d\n",
-		"start_size", 1,
-		"end_size", 4,
-	)
 }
 
 func validInclusionProof(t *testing.T) *InclusionProof {
