@@ -18,8 +18,8 @@ type Leaf struct {
 }
 
 type Leaves struct {
-	StartSize uint64
-	EndSize   uint64
+	StartIndex uint64
+	EndIndex   uint64
 }
 
 type InclusionProof struct {
@@ -50,7 +50,7 @@ func (req *Leaf) ToASCII(w io.Writer) error {
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
 func (req *Leaves) ToURL(url string) string {
-	return url + fmt.Sprintf("%d/%d", req.StartSize, req.EndSize)
+	return url + fmt.Sprintf("%d/%d", req.StartIndex, req.EndIndex)
 }
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
@@ -91,12 +91,12 @@ func (req *Leaves) FromURL(url string) (err error) {
 	if len(split) < 2 {
 		return fmt.Errorf("not enough input")
 	}
-	startSize := split[len(split)-2]
-	if req.StartSize, err = strconv.ParseUint(startSize, 10, 64); err != nil {
+	startIndex := split[len(split)-2]
+	if req.StartIndex, err = strconv.ParseUint(startIndex, 10, 64); err != nil {
 		return err
 	}
-	endSize := split[len(split)-1]
-	if req.EndSize, err = strconv.ParseUint(endSize, 10, 64); err != nil {
+	endIndex := split[len(split)-1]
+	if req.EndIndex, err = strconv.ParseUint(endIndex, 10, 64); err != nil {
 		return err
 	}
 	return nil
