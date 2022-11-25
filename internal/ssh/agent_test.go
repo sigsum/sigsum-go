@@ -56,9 +56,9 @@ func TestRequest(t *testing.T) {
 		expWireRequest []byte // nil for write errors
 		wireResponse   []byte
 	}{
-		{"empty", []byte(""), nil, h("00000000"), h("00000000")},
-		{"empty body", []byte(""), []byte{5}, h("00000000"), h("0000000105")},
-		{"eof length", h(""), nil, h("00000000"), h("000000")},
+		{"empty", []byte{}, nil, h("00000000"), h("00000000")},
+		{"empty body", []byte{}, []byte{5}, h("00000000"), h("0000000105")},
+		{"eof length", []byte{}, nil, h("00000000"), h("000000")},
 		{"non-empty", []byte("abc"), []byte("defg"), h("00000003616263"), h("0000000464656667")},
 		{"eof data", []byte("abc"), nil, h("00000003616263"), h("0000004064656667")},
 		{"write error", []byte("abc"), nil, nil, h("0000000464656667")},
@@ -98,7 +98,7 @@ func TestSignEd25519(t *testing.T) {
 	msg := []byte("abc")
 	signature, err := signer.Sign(msg)
 	if err != nil {
-		panic(fmt.Errorf("signing failed: %v", err))
+		t.Fatalf("signing failed: %v", err)
 	}
 
 	response := serializeString(bytes.Join([][]byte{
