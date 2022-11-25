@@ -4,5 +4,6 @@ all:
 
 check:
 	go test ./...
+	cd tests && $(MAKE) check
 
 .PHONY: all check
