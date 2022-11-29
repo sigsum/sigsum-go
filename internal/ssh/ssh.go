@@ -77,6 +77,9 @@ func skipPrefix(buffer []byte, prefix []byte) []byte {
 	}
 	return buffer[len(prefix):]
 }
+func skipPrefixString(buffer []byte, prefix []byte) []byte {
+	return skipPrefix(buffer, serializeString(prefix))
+}
 
 func parseSignature(blob []byte) (crypto.Signature, error) {
 	signature := skipPrefix(blob, bytes.Join([][]byte{
@@ -123,4 +126,50 @@ func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
 	var ret crypto.PublicKey
 	copy(ret[:], pub)
 	return ret, nil
+}
+
+func FormatPublicEd25519(pub *crypto.PublicKey) string {
+	return "ssh-ed25519 " +
+		base64.StdEncoding.EncodeToString(serializePublicEd25519(pub)) +
+		" sigsum key\n"
+}
+
+func SerializeSignatureFile(publicKey *crypto.PublicKey, namespace string, signature *crypto.Signature) []byte {
+	return bytes.Join([][]byte{
+		[]byte("SSHSIG"),
+		serializeUint32(1), // version 1
+		serializeString(serializePublicEd25519(publicKey)),
+		serializeString([]byte(namespace)),
+		serializeUint32(0), // Empty reserved string
+		serializeString([]byte("sha256")),
+		serializeUint32(83),
+		serializeString([]byte("ssh-ed25519")),
+		serializeString(signature[:]),
+	}, nil)
+}
+
+func ParseSignatureFile(blob []byte, publicKey *crypto.PublicKey, namespace string) (crypto.Signature, error) {
+	blob = skipPrefix(blob, bytes.Join([][]byte{
+		[]byte("SSHSIG"),
+		serializeUint32(1), // version 1
+	}, nil))
+	if blob == nil {
+		return crypto.Signature{}, fmt.Errorf("invalid signature prefix")
+	}
+	blob = skipPrefixString(blob, serializePublicEd25519(publicKey))
+	if blob == nil {
+		return crypto.Signature{}, fmt.Errorf("signature public key not as expected")
+	}
+	blob = skipPrefixString(blob, []byte(namespace))
+	if blob == nil {
+		return crypto.Signature{}, fmt.Errorf("signature namespace not as expected")
+	}
+	blob = skipPrefix(blob, bytes.Join([][]byte{
+		serializeUint32(0), // Empty reserved string
+		serializeString([]byte("sha256")),
+	}, nil))
+	if blob == nil {
+		return crypto.Signature{}, fmt.Errorf("signature hash not as expected")
+	}
+	return parseSignature(blob)
 }
