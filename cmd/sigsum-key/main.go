@@ -45,7 +45,7 @@ func main() {
 
   sigsum-key verify -k KEY -s SIGNATURE [-n NAMESPACE] < MSG
     KEY and SIGNATURE are file names.
-    NAMESPACE is a string, default being "tree_head:v0@sigsum.org"
+    NAMESPACE is a string, default being "tree-head:v0@sigsum.org"
 
   sigsum-key sign --ssh -k KEY [-n NAMESPACE] [-o SIGNATURE] < MSG
     KEY and SIGNATURE are file names.
