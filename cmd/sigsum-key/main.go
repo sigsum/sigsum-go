@@ -2,19 +2,16 @@ package main
 
 import (
 	"encoding/hex"
-	"encoding/pem"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
+	"strings"
+
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
-	"strings"
 )
-
-const pemSignatureTag = "SSH SIGNATURE"
 
 type GenSettings struct {
 	outputFile string
@@ -197,7 +194,6 @@ func writeSignatureFile(outputFile string, sshFormat bool,
 	file := os.Stdout
 	var err error
 	if len(outputFile) > 0 {
-		var err error
 		file, err = os.OpenFile(outputFile,
 			os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
@@ -206,7 +202,7 @@ func writeSignatureFile(outputFile string, sshFormat bool,
 		defer file.Close()
 	}
 	if sshFormat {
-		err = writeSignature(file, public, namespace, signature)
+		err = ssh.WriteSignatureFile(file, public, namespace, signature)
 	} else {
 		_, err = fmt.Fprintf(file, "%x\n", signature[:])
 	}
@@ -245,26 +241,12 @@ func readSignatureFile(fileName string,
 	if err != nil {
 		log.Fatalf("reading file %q failed: %v", fileName, err)
 	}
-	if block, err := pem.Decode(contents); err != nil && block != nil {
-		if block.Type != pemSignatureTag {
-			log.Fatalf("unexpected PEM tag: %q", block.Type)
-		}
-		signature, err := ssh.ParseSignatureFile(block.Bytes, pub, namespace)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return signature
+	signature, err := ssh.ParseSignatureFile(contents, pub, namespace)
+	if err == ssh.NoPEMError {
+		signature, err = crypto.SignatureFromHex(strings.TrimSpace(string(contents)))
 	}
-	signature, err := crypto.SignatureFromHex(strings.TrimSpace(string(contents)))
 	if err != nil {
 		log.Fatal(err)
 	}
 	return signature
-}
-
-func writeSignature(w io.Writer, publicKey *crypto.PublicKey, namespace string, signature *crypto.Signature) error {
-	return pem.Encode(w, &pem.Block{
-		Type:  pemSignatureTag,
-		Bytes: ssh.SerializeSignatureFile(publicKey, namespace, signature),
-	})
 }
