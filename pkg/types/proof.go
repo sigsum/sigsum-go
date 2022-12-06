@@ -10,7 +10,7 @@ import (
 )
 
 type InclusionProof struct {
-	TreeSize  uint64
+	Size  uint64
 	LeafIndex uint64
 	Path      []crypto.Hash
 }
@@ -61,15 +61,15 @@ func (pr *InclusionProof) ToASCII(w io.Writer) error {
 	return hashesToASCII(w, pr.Path)
 }
 
-func (pr *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
-	pr.TreeSize = treeSize
+func (pr *InclusionProof) FromASCII(r io.Reader, size uint64) error {
+	pr.Size = size
 	p := ascii.NewParser(r)
 	var err error
 	pr.LeafIndex, err = p.GetInt("leaf_index")
 	if err != nil {
 		return err
 	}
-	if pr.LeafIndex >= treeSize {
+	if pr.LeafIndex >= size {
 		return fmt.Errorf("leaf_index out of range")
 	}
 	pr.Path, err = hashesFromASCII(&p)
@@ -77,7 +77,7 @@ func (pr *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
 }
 
 func (pr *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
-	return merkle.VerifyInclusion(leaf, pr.LeafIndex, pr.TreeSize, root, pr.Path)
+	return merkle.VerifyInclusion(leaf, pr.LeafIndex, pr.Size, root, pr.Path)
 }
 
 func (pr *ConsistencyProof) ToASCII(w io.Writer) error {

@@ -8,12 +8,12 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-func Main(args []string, optLeafHash, optRootHash string, optTreeSize uint64) error {
+func Main(args []string, optLeafHash, optRootHash string, optSize uint64) error {
 	if len(args) != 0 {
 		return fmt.Errorf("trailing arguments: %v", args)
 	}
 	var proof types.InclusionProof
-	if err := proof.FromASCII(os.Stdin, optTreeSize); err != nil {
+	if err := proof.FromASCII(os.Stdin, optSize); err != nil {
 		return fmt.Errorf("parse proof: %w", err)
 	}
 	leafHash, err := crypto.HashFromHex(optLeafHash)

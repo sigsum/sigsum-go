@@ -23,7 +23,7 @@ type Leaves struct {
 }
 
 type InclusionProof struct {
-	TreeSize uint64
+	Size uint64
 	LeafHash crypto.Hash
 }
 
@@ -55,7 +55,7 @@ func (req *Leaves) ToURL(url string) string {
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
 func (req *InclusionProof) ToURL(url string) string {
-	return url + fmt.Sprintf("%d/%s", req.TreeSize, hex.EncodeToString(req.LeafHash[:]))
+	return url + fmt.Sprintf("%d/%s", req.Size, hex.EncodeToString(req.LeafHash[:]))
 }
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
@@ -109,7 +109,7 @@ func (req *InclusionProof) FromURL(url string) (err error) {
 		return fmt.Errorf("not enough input")
 	}
 	treeSize := split[len(split)-2]
-	if req.TreeSize, err = strconv.ParseUint(treeSize, 10, 64); err != nil {
+	if req.Size, err = strconv.ParseUint(treeSize, 10, 64); err != nil {
 		return err
 	}
 	req.LeafHash, err = crypto.HashFromHex(split[len(split)-1])

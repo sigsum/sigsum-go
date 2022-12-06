@@ -36,7 +36,7 @@ Usage:
 
 var (
 	optPrivateKey, optPublicKey, optKeyHash, optLeafHash, optRootHash, optSignature string
-	optShardHint, optTreeSize                                                       uint64
+	optShardHint, optSize                                                       uint64
 )
 
 func Main(args []string) error {
@@ -55,7 +55,7 @@ func Main(args []string) error {
 		case "hash":
 			err = hash.Main(opt.Args(), optKeyHash, optSignature, optShardHint)
 		case "inclusion":
-			err = inclusion.Main(opt.Args(), optLeafHash, optRootHash, optTreeSize)
+			err = inclusion.Main(opt.Args(), optLeafHash, optRootHash, optSize)
 		default:
 			err = fmt.Errorf("invalid command %q, try \"help\"", opt.Name())
 		}
@@ -84,7 +84,7 @@ func setOptions(fs *flag.FlagSet) {
 		options.AddString(fs, &optSignature, "s", "signature", options.DefaultString)
 	case "inclusion":
 		options.AddString(fs, &optLeafHash, "l", "leaf-hash", options.DefaultString)
-		options.AddUint64(fs, &optTreeSize, "n", "tree-size", options.DefaultUint64)
+		options.AddUint64(fs, &optSize, "n", "size", options.DefaultUint64)
 		options.AddString(fs, &optRootHash, "r", "root-hash", options.DefaultString)
 	}
 }
@@ -105,7 +105,7 @@ func checkOptions(cmd string) error {
 		err = options.CheckString("signature", optSignature, err)
 	case "inclusion":
 		err = options.CheckString("leaf hash", optLeafHash, err)
-		err = options.CheckUint64("tree size", optTreeSize, err)
+		err = options.CheckUint64("size", optSize, err)
 		err = options.CheckString("root hash", optRootHash, err)
 	}
 

@@ -248,7 +248,7 @@ func validInclusionProof(t *testing.T) *InclusionProof {
 	t.Helper()
 	return &InclusionProof{
 		LeafHash: *newHashBufferInc(t),
-		TreeSize: 4,
+		Size: 4,
 	}
 }
 
