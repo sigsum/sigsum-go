@@ -64,7 +64,7 @@ func (cli *client) GetUnsignedTreeHead(ctx context.Context) (th types.TreeHead, 
 }
 
 func (cli *client) GetToCosignTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
-	body, _, err := cli.get(ctx, types.EndpointGetTreeHeadToCosign.Path(cli.LogURL))
+	body, _, err := cli.get(ctx, types.EndpointGetNextTreeHead.Path(cli.LogURL))
 	if err != nil {
 		return sth, fmt.Errorf("get: %w", err)
 	}
@@ -79,7 +79,7 @@ func (cli *client) GetToCosignTreeHead(ctx context.Context) (sth types.SignedTre
 }
 
 func (cli *client) GetCosignedTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
-	body, _, err := cli.get(ctx, types.EndpointGetTreeHeadCosigned.Path(cli.LogURL))
+	body, _, err := cli.get(ctx, types.EndpointGetTreeHead.Path(cli.LogURL))
 	if err != nil {
 		return cth, fmt.Errorf("get: %w", err)
 	}

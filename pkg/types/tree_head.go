@@ -63,7 +63,7 @@ func (th *TreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature,
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
-	if err := ascii.WriteInt(w, "tree_size", th.TreeSize); err != nil {
+	if err := ascii.WriteInt(w, "size", th.TreeSize); err != nil {
 		return err
 	}
 	return ascii.WriteHash(w, "root_hash", &th.RootHash)
@@ -72,7 +72,7 @@ func (th *TreeHead) ToASCII(w io.Writer) error {
 // Doesn't require EOF, so it can be used also with (co)signatures.
 func (th *TreeHead) fromASCII(p *ascii.Parser) error {
 	var err error
-	th.TreeSize, err = p.GetInt("tree_size")
+	th.TreeSize, err = p.GetInt("size")
 	if err != nil {
 		return err
 	}

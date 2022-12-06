@@ -256,7 +256,7 @@ func validInclusionProofASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%x\n%s=%d\n",
 		"leaf_hash", newHashBufferInc(t)[:],
-		"tree_size", 4,
+		"tree", 4,
 	)
 }
 

@@ -235,7 +235,7 @@ func validSignedTreeHeadASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%d\n%s=%x\n%s=%x\n",
 		"timestamp", 1,
-		"tree_size", 2,
+		"size", 2,
 		"root_hash", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
 	)
@@ -266,7 +266,7 @@ func validCosignedTreeHeadASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%d\n%s=%x\n%s=%x\n%s=%x %x\n%s=%x %x\n",
 		"timestamp", 1,
-		"tree_size", 2,
+		"size", 2,
 		"root_hash", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
 		"cosignature", crypto.Hash{}, crypto.Signature{},

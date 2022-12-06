@@ -7,8 +7,8 @@ type Endpoint string
 const (
 	EndpointAddLeaf             = Endpoint("add-leaf")
 	EndpointAddCosignature      = Endpoint("add-cosignature")
-	EndpointGetTreeHeadToCosign = Endpoint("get-tree-head-to-cosign")
-	EndpointGetTreeHeadCosigned = Endpoint("get-tree-head-cosigned")
+	EndpointGetNextTreeHead     = Endpoint("get-next-tree-head")
+	EndpointGetTreeHead         = Endpoint("get-tree-head")
 	EndpointGetInclusionProof   = Endpoint("get-inclusion-proof/")
 	EndpointGetConsistencyProof = Endpoint("get-consistency-proof/")
 	EndpointGetLeaves           = Endpoint("get-leaves/")
