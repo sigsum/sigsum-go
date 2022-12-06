@@ -51,7 +51,7 @@ type ed25519Signer struct {
 	secret ed25519.PrivateKey
 }
 
-func NewEd25519Signer(key *PrivateKey) Signer {
+func NewEd25519Signer(key *PrivateKey) *ed25519Signer {
 	return &ed25519Signer{secret: ed25519.NewKeyFromSeed((*key)[:])}
 }
 
@@ -73,7 +73,12 @@ func (s *ed25519Signer) Public() (ret PublicKey) {
 	return
 }
 
-func NewKeyPair() (PublicKey, Signer, error) {
+func (s *ed25519Signer) Private() (ret PrivateKey) {
+	copy(ret[:], s.secret.Seed())
+	return
+}
+
+func NewKeyPair() (PublicKey, *ed25519Signer, error) {
 	var secret PrivateKey
 	n, err := rand.Read(secret[:])
 	if err != nil {

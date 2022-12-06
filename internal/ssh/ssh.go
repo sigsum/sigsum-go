@@ -77,6 +77,9 @@ func skipPrefix(buffer []byte, prefix []byte) []byte {
 	}
 	return buffer[len(prefix):]
 }
+func skipPrefixString(buffer []byte, prefix []byte) []byte {
+	return skipPrefix(buffer, serializeString(prefix))
+}
 
 func parseSignature(blob []byte) (crypto.Signature, error) {
 	signature := skipPrefix(blob, bytes.Join([][]byte{
@@ -123,4 +126,10 @@ func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
 	var ret crypto.PublicKey
 	copy(ret[:], pub)
 	return ret, nil
+}
+
+func FormatPublicEd25519(pub *crypto.PublicKey) string {
+	return "ssh-ed25519 " +
+		base64.StdEncoding.EncodeToString(serializePublicEd25519(pub)) +
+		" sigsum key\n"
 }
