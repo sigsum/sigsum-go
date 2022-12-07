@@ -9,6 +9,7 @@ import (
 
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 type Leaf struct {
@@ -46,6 +47,18 @@ func (req *Leaf) ToASCII(w io.Writer) error {
 		return err
 	}
 	return ascii.WriteLineHex(w, "public_key", req.PublicKey[:])
+}
+
+// Verifies the request signature, and creates a corresponding leaf on success.
+func (req *Leaf) Verify() (types.Leaf, error) {
+	if !types.VerifyLeafMessage(&req.PublicKey, req.Message[:], &req.Signature) {
+		return types.Leaf{}, fmt.Errorf("invalid signature")
+	}
+	return types.Leaf{
+		Checksum:  crypto.HashBytes(req.Message[:]),
+		Signature: req.Signature,
+		KeyHash:   crypto.HashBytes(req.PublicKey[:]),
+	}, nil
 }
 
 // ToURL encodes request parameters at the end of a slash-terminated URL
