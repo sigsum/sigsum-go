@@ -266,7 +266,7 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 			}
 			if resp.StatusCode != http.StatusOK {
 				resp.Body.Close()
-				log.Printf("no inclusion proof yet, will retry, will retry: %v", resp.Status)
+				log.Printf("no inclusion proof yet, will retry: %v", resp.Status)
 				time.Sleep(delay)
 				continue
 			}
