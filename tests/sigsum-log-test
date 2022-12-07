@@ -1,0 +1,26 @@
+#! /bin/sh
+
+set -e
+
+./sigsum-key gen -o test.log.key
+./sigsum-key gen -o test.submit.key
+
+# Start sigsum log server
+rm -f test.log.sth
+"./sigsum-log-primary" --key test.log.key \
+    --interval=3s --log-level=error --ephemeral-test-backend --sth-path test.log.sth &
+
+SIGSUM_PID=$!
+
+cleanup () {
+    kill ${SIGSUM_PID}
+}
+
+trap cleanup EXIT
+
+for x in $(seq 5); do
+    echo >&2 "submit $x"
+    # Must be exactly 32 bytes
+    printf "%31s\n" foo-$x \
+	| ./sigsum-log -o /dev/null -k test.submit.key --log-url http://localhost:6965 --log-key test.log.key.pub
+done
