@@ -143,7 +143,7 @@ func TestLeafFromASCII(t *testing.T) {
 	}{
 		{
 			desc:       "invalid: not a tree leaf (wrong key)",
-			serialized: bytes.NewBuffer([]byte("tree_size=0\n")),
+			serialized: bytes.NewBuffer([]byte("size=0\n")),
 			wantErr:    true,
 		},
 		{
