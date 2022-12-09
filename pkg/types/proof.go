@@ -10,7 +10,7 @@ import (
 )
 
 type InclusionProof struct {
-	TreeSize  uint64
+	Size  uint64
 	LeafIndex uint64
 	Path      []crypto.Hash
 }
@@ -21,12 +21,12 @@ type ConsistencyProof struct {
 	Path    []crypto.Hash
 }
 
-func hashesToASCII(w io.Writer, name string, hashes []crypto.Hash) error {
+func hashesToASCII(w io.Writer, hashes []crypto.Hash) error {
 	if len(hashes) == 0 {
-		return fmt.Errorf("internal error, empty %s", name)
+		return fmt.Errorf("internal error, empty path")
 	}
 	for _, hash := range hashes {
-		err := ascii.WriteHash(w, name, &hash)
+		err := ascii.WriteHash(w, "node_hash", &hash)
 		if err != nil {
 			return err
 		}
@@ -35,10 +35,10 @@ func hashesToASCII(w io.Writer, name string, hashes []crypto.Hash) error {
 }
 
 // Treats empty list as an error.
-func hashesFromASCII(p *ascii.Parser, name string) ([]crypto.Hash, error) {
+func hashesFromASCII(p *ascii.Parser) ([]crypto.Hash, error) {
 	var hashes []crypto.Hash
 	for {
-		hash, err := p.GetHash(name)
+		hash, err := p.GetHash("node_hash")
 		if err == io.EOF {
 			if len(hashes) == 0 {
 				return nil, fmt.Errorf("invalid path, empty")
@@ -53,35 +53,35 @@ func hashesFromASCII(p *ascii.Parser, name string) ([]crypto.Hash, error) {
 	}
 }
 
-// Note the tree_size is not included on the wire.
+// Note the size is not included on the wire.
 func (pr *InclusionProof) ToASCII(w io.Writer) error {
 	if err := ascii.WriteInt(w, "leaf_index", pr.LeafIndex); err != nil {
 		return err
 	}
-	return hashesToASCII(w, "inclusion_path", pr.Path)
+	return hashesToASCII(w, pr.Path)
 }
 
-func (pr *InclusionProof) FromASCII(r io.Reader, treeSize uint64) error {
-	pr.TreeSize = treeSize
+func (pr *InclusionProof) FromASCII(r io.Reader, size uint64) error {
+	pr.Size = size
 	p := ascii.NewParser(r)
 	var err error
 	pr.LeafIndex, err = p.GetInt("leaf_index")
 	if err != nil {
 		return err
 	}
-	if pr.LeafIndex >= treeSize {
+	if pr.LeafIndex >= size {
 		return fmt.Errorf("leaf_index out of range")
 	}
-	pr.Path, err = hashesFromASCII(&p, "inclusion_path")
+	pr.Path, err = hashesFromASCII(&p)
 	return err
 }
 
 func (pr *InclusionProof) Verify(leaf *crypto.Hash, root *crypto.Hash) error {
-	return merkle.VerifyInclusion(leaf, pr.LeafIndex, pr.TreeSize, root, pr.Path)
+	return merkle.VerifyInclusion(leaf, pr.LeafIndex, pr.Size, root, pr.Path)
 }
 
 func (pr *ConsistencyProof) ToASCII(w io.Writer) error {
-	return hashesToASCII(w, "consistency_path", pr.Path)
+	return hashesToASCII(w, pr.Path)
 }
 
 func (pr *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {
@@ -90,7 +90,7 @@ func (pr *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) erro
 	p := ascii.NewParser(r)
 	var err error
 
-	pr.Path, err = hashesFromASCII(&p, "consistency_path")
+	pr.Path, err = hashesFromASCII(&p)
 	return err
 }
 

@@ -126,7 +126,7 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
 
-	sth.TreeSize += 1
+	sth.Size += 1
 	if sth.VerifyLogSignature(&pub) {
 		t.Errorf("succeeded verifying an invalid signed tree head")
 	}
@@ -188,7 +188,7 @@ func TestCosignedTreeHeadFromASCII(t *testing.T) {
 
 func validTreeHead(t *testing.T) *TreeHead {
 	return &TreeHead{
-		TreeSize: 257,
+		Size: 257,
 		RootHash: *newHashBufferInc(t),
 	}
 }
@@ -223,7 +223,7 @@ func validSignedTreeHead(t *testing.T) *SignedTreeHead {
 	t.Helper()
 	return &SignedTreeHead{
 		TreeHead: TreeHead{
-			TreeSize: 2,
+			Size: 2,
 			RootHash: *newHashBufferInc(t),
 		},
 		Timestamp: 1,
@@ -235,7 +235,7 @@ func validSignedTreeHeadASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%d\n%s=%x\n%s=%x\n",
 		"timestamp", 1,
-		"tree_size", 2,
+		"size", 2,
 		"root_hash", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
 	)
@@ -246,7 +246,7 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 	return &CosignedTreeHead{
 		SignedTreeHead: SignedTreeHead{
 			TreeHead: TreeHead{
-				TreeSize: 2,
+				Size: 2,
 				RootHash: *newHashBufferInc(t),
 			},
 			Timestamp: 1,
@@ -266,7 +266,7 @@ func validCosignedTreeHeadASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%d\n%s=%x\n%s=%x\n%s=%x %x\n%s=%x %x\n",
 		"timestamp", 1,
-		"tree_size", 2,
+		"size", 2,
 		"root_hash", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
 		"cosignature", crypto.Hash{}, crypto.Signature{},

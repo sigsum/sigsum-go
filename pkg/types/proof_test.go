@@ -30,7 +30,7 @@ func TestInclusionProofFromASCII(t *testing.T) {
 	}{
 		{
 			desc:       "invalid: not an inclusion proof (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(append([]byte(validInclusionProofASCII(t)), []byte("tree_size=4")...)),
+			serialized: bytes.NewBuffer(append([]byte(validInclusionProofASCII(t)), []byte("size=4")...)),
 			wantErr:    true,
 			want:       validInclusionProof(t), // to populate input to FromASCII
 		},
@@ -41,7 +41,7 @@ func TestInclusionProofFromASCII(t *testing.T) {
 		},
 	} {
 		var proof InclusionProof
-		err := proof.FromASCII(table.serialized, table.want.TreeSize)
+		err := proof.FromASCII(table.serialized, table.want.Size)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -102,7 +102,7 @@ func validInclusionProof(t *testing.T) *InclusionProof {
 	t.Helper()
 	return &InclusionProof{
 		LeafIndex: 1,
-		TreeSize:  4,
+		Size:  4,
 		Path: []crypto.Hash{
 			crypto.Hash{},
 			*newHashBufferInc(t),
@@ -114,8 +114,8 @@ func validInclusionProofASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n",
 		"leaf_index", 1,
-		"inclusion_path", crypto.Hash{},
-		"inclusion_path", newHashBufferInc(t)[:],
+		"node_hash", crypto.Hash{},
+		"node_hash", newHashBufferInc(t)[:],
 	)
 }
 
@@ -134,7 +134,7 @@ func validConsistencyProof(t *testing.T) *ConsistencyProof {
 func validConsistencyProofASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%x\n%s=%x\n",
-		"consistency_path", crypto.Hash{},
-		"consistency_path", newHashBufferInc(t)[:],
+		"node_hash", crypto.Hash{},
+		"node_hash", newHashBufferInc(t)[:],
 	)
 }

@@ -15,7 +15,7 @@ const (
 )
 
 type TreeHead struct {
-	TreeSize uint64
+	Size uint64
 	RootHash crypto.Hash
 }
 
@@ -38,7 +38,7 @@ type CosignedTreeHead struct {
 func (th *TreeHead) toSignedData(keyHash *crypto.Hash, timestamp uint64) []byte {
 	b := make([]byte, 80)
 	binary.BigEndian.PutUint64(b[0:8], timestamp)
-	binary.BigEndian.PutUint64(b[8:16], th.TreeSize)
+	binary.BigEndian.PutUint64(b[8:16], th.Size)
 	copy(b[16:48], th.RootHash[:])
 	copy(b[48:80], keyHash[:])
 	return ssh.SignedData(TreeHeadNamespace, b)
@@ -63,7 +63,7 @@ func (th *TreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature,
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
-	if err := ascii.WriteInt(w, "tree_size", th.TreeSize); err != nil {
+	if err := ascii.WriteInt(w, "size", th.Size); err != nil {
 		return err
 	}
 	return ascii.WriteHash(w, "root_hash", &th.RootHash)
@@ -72,7 +72,7 @@ func (th *TreeHead) ToASCII(w io.Writer) error {
 // Doesn't require EOF, so it can be used also with (co)signatures.
 func (th *TreeHead) fromASCII(p *ascii.Parser) error {
 	var err error
-	th.TreeSize, err = p.GetInt("tree_size")
+	th.Size, err = p.GetInt("size")
 	if err != nil {
 		return err
 	}
