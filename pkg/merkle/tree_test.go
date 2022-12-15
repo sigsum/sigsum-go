@@ -157,21 +157,32 @@ func TestConsistency(t *testing.T) {
 	for _, table := range []struct {
 		m    uint64
 		n    uint64
-		path []crypto.Hash
+		path []crypto.Hash // nil for expected error
 	}{
 		{3, 7, []crypto.Hash{hashes[2], hashes[3], h01, h456}},
 		{4, 7, []crypto.Hash{h456}},
 		{6, 7, []crypto.Hash{h45, hashes[6], h0123}},
+		{6, 8, nil},
+		{7, 6, nil},
+		{0, 6, nil},
 	} {
-		if proof, err := tree.ProveConsistency(table.m, table.n); err != nil || !pathEqual(proof, table.path) {
-			if err != nil {
-				t.Fatalf("ProveConsistency %d, %d failed: %v", table.m, table.n, err)
+		proof, err := tree.ProveConsistency(table.m, table.n)
+		if table.path == nil {
+			// Expect error
+			if err == nil {
+				t.Errorf("expected error, got consistency path: %x", proof)
 			}
-			t.Errorf("unexpected inclusion path m %d, n %d\n  got: %x\n want: %x\n",
-				table.m, table.n, proof, table.path)
+		} else {
+			if err != nil {
+				t.Errorf("ProveConsistency %d, %d failed: %v", table.m, table.n, err)
+			} else if !pathEqual(proof, table.path) {
+				t.Errorf("unexpected inclusion path m %d, n %d\n  got: %x\n want: %x\n",
+					table.m, table.n, proof, table.path)
+			}
 		}
 	}
 }
+
 func TestConsistencyValid(t *testing.T) {
 	hashes := newLeaves(100)
 

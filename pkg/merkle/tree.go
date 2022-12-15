@@ -193,7 +193,7 @@ func consistency(leaves []crypto.Hash, m uint64, stack []crypto.Hash, size uint6
 }
 
 func (t *Tree) ProveConsistency(m, n uint64) ([]crypto.Hash, error) {
-	if n == 0 || n > t.Size() || m >= n {
+	if m == 0 || n > t.Size() || m >= n {
 		return nil, fmt.Errorf("invalid argument m %d, n %d, tree %d", m, n, t.Size())
 	}
 	return reversePath(consistency(t.leafs[:n], m, t.stack, t.Size())), nil
