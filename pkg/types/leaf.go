@@ -68,7 +68,7 @@ func (l *Leaf) FromBinary(b []byte) error {
 }
 
 func (l *Leaf) ToASCII(w io.Writer) error {
-	return ascii.WriteLineHex(w, "leaf",
+	return ascii.WriteLine(w, "leaf",
 		l.Checksum[:], l.Signature[:], l.KeyHash[:])
 }
 

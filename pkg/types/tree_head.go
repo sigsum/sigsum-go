@@ -136,7 +136,7 @@ func (sth *SignedTreeHead) VerifyLogSignature(key *crypto.PublicKey) bool {
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.WriteLineHex(w, "cosignature", cs.KeyHash[:], cs.Signature[:])
+	return ascii.WriteLine(w, "cosignature", cs.KeyHash[:], cs.Signature[:])
 }
 
 func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
