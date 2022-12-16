@@ -139,6 +139,28 @@ func (cs *Cosignature) ToASCII(w io.Writer) error {
 	return ascii.WriteLine(w, "cosignature", cs.KeyHash[:], cs.Signature[:])
 }
 
+func (cs *Cosignature) fromASCII(p *ascii.Parser) error {
+	v, err := p.GetValues("cosignature", 2)
+	if err != nil {
+		return err
+	}
+	cs.KeyHash, err = crypto.HashFromHex(v[0])
+	if err != nil {
+		return err
+	}
+	cs.Signature, err = crypto.SignatureFromHex(v[1])
+	return err
+}
+
+func (cs *Cosignature) FromASCII(r io.Reader) error {
+	p := ascii.NewParser(r)
+	err := cs.fromASCII(&p)
+	if err != nil {
+		return err
+	}
+	return p.GetEOF()
+}
+
 func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
 	if err := cth.SignedTreeHead.ToASCII(w); err != nil {
 		return err
@@ -154,26 +176,15 @@ func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
 func cosignaturesFromASCII(p *ascii.Parser) ([]Cosignature, error) {
 	var cosignatures []Cosignature
 	for {
-		v, err := p.GetValues("cosignature", 2)
+		var cs Cosignature
+		err := cs.fromASCII(p)
 		if err == io.EOF {
 			return cosignatures, nil
 		}
 		if err != nil {
 			return nil, err
 		}
-
-		keyHash, err := crypto.HashFromHex(v[0])
-		if err != nil {
-			return nil, err
-		}
-		signature, err := crypto.SignatureFromHex(v[1])
-		if err != nil {
-			return nil, err
-		}
-		cosignatures = append(cosignatures, Cosignature{
-			KeyHash:   keyHash,
-			Signature: signature,
-		})
+		cosignatures = append(cosignatures, cs)
 	}
 }
 

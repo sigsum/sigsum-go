@@ -33,12 +33,6 @@ type ConsistencyProof struct {
 	NewSize uint64
 }
 
-// TODO: Replace with type alias (golang 1.9 feature)
-type Cosignature struct {
-	KeyHash   crypto.Hash
-	Signature crypto.Signature
-}
-
 func (req *Leaf) ToASCII(w io.Writer) error {
 	if err := ascii.WriteLine(w, "message", req.Message[:]); err != nil {
 		return err
@@ -74,10 +68,6 @@ func (req *InclusionProof) ToURL(url string) string {
 // ToURL encodes request parameters at the end of a slash-terminated URL
 func (req *ConsistencyProof) ToURL(url string) string {
 	return url + fmt.Sprintf("%d/%d", req.OldSize, req.NewSize)
-}
-
-func (req *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.WriteLine(w, "cosignature", req.KeyHash[:], req.Signature[:])
 }
 
 func (req *Leaf) FromASCII(r io.Reader) error {
@@ -144,21 +134,4 @@ func (req *ConsistencyProof) FromURL(url string) (err error) {
 		return err
 	}
 	return nil
-}
-
-func (req *Cosignature) FromASCII(r io.Reader) error {
-	p := ascii.NewParser(r)
-	v, err := p.GetValues("cosignature", 2)
-	if err != nil {
-		return err
-	}
-	req.KeyHash, err = crypto.HashFromHex(v[0])
-	if err != nil {
-		return err
-	}
-	req.Signature, err = crypto.SignatureFromHex(v[1])
-	if err != nil {
-		return err
-	}
-	return p.GetEOF()
 }

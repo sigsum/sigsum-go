@@ -49,17 +49,6 @@ func TestConsistencyProofToURL(t *testing.T) {
 	}
 }
 
-func TestCosignatureToASCII(t *testing.T) {
-	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validCosignature(t).ToASCII(buf); err != nil {
-		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
-	}
-	if got, want := string(buf.Bytes()), validCosignatureASCII(t); got != want {
-		t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
-	}
-}
-
 func TestLeafFromASCII(t *testing.T) {
 	for _, table := range []struct {
 		desc       string
@@ -183,41 +172,6 @@ func TestConsistencyProofFromURL(t *testing.T) {
 	}
 }
 
-func TestCosignatureFromASCII(t *testing.T) {
-	for _, table := range []struct {
-		desc       string
-		serialized io.Reader
-		wantErr    bool
-		want       *Cosignature
-	}{
-		{
-			desc: "invalid: not a cosignature request (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(
-				append([]byte(validCosignatureASCII(t)),
-					[]byte("key=4")...),
-			),
-			wantErr: true,
-		},
-		{
-			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validCosignatureASCII(t))),
-			want:       validCosignature(t),
-		},
-	} {
-		var req Cosignature
-		err := req.FromASCII(table.serialized)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
-		}
-		if err != nil {
-			continue
-		}
-		if got, want := &req, table.want; !reflect.DeepEqual(got, want) {
-			t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
-		}
-	}
-}
-
 func validLeaf(t *testing.T) *Leaf {
 	t.Helper()
 	return &Leaf{
@@ -242,52 +196,6 @@ func validLeaves(t *testing.T) *Leaves {
 		StartIndex: 1,
 		EndIndex:   4,
 	}
-}
-
-func validInclusionProof(t *testing.T) *InclusionProof {
-	t.Helper()
-	return &InclusionProof{
-		LeafHash: *newHashBufferInc(t),
-		Size:     4,
-	}
-}
-
-func validInclusionProofASCII(t *testing.T) string {
-	t.Helper()
-	return fmt.Sprintf("%s=%x\n%s=%d\n",
-		"leaf_hash", newHashBufferInc(t)[:],
-		"tree", 4,
-	)
-}
-
-func validConsistencyProof(t *testing.T) *ConsistencyProof {
-	t.Helper()
-	return &ConsistencyProof{
-		NewSize: 4,
-		OldSize: 1,
-	}
-}
-
-func validConsistencyProofASCII(t *testing.T) string {
-	t.Helper()
-	return fmt.Sprintf("%s=%d\n%s=%d\n",
-		"new_size", 4,
-		"old_size", 1,
-	)
-}
-
-func validCosignature(t *testing.T) *Cosignature {
-	t.Helper()
-	return &Cosignature{
-		Signature: *newSigBufferInc(t),
-		KeyHash:   *newHashBufferInc(t),
-	}
-}
-
-func validCosignatureASCII(t *testing.T) string {
-	t.Helper()
-	return fmt.Sprintf("%s=%x %x\n",
-		"cosignature", newHashBufferInc(t)[:], newSigBufferInc(t)[:])
 }
 
 func newHashBufferInc(t *testing.T) *crypto.Hash {
