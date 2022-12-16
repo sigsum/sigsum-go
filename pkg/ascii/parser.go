@@ -12,7 +12,7 @@ import (
 )
 
 // Basic value types
-func intFromDecimal(s string) (uint64, error) {
+func IntFromDecimal(s string) (uint64, error) {
 	// Use ParseUint, to not accept leading +/-.
 	i, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
@@ -73,7 +73,7 @@ func (p *Parser) GetInt(name string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return intFromDecimal(v)
+	return IntFromDecimal(v)
 }
 
 func (p *Parser) GetHash(name string) (crypto.Hash, error) {

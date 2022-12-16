@@ -18,7 +18,7 @@ func TestValidIntFromDecimal(t *testing.T) {
 		{"0123456789", 123456789},
 		{"9223372036854775807", (1 << 63) - 1},
 	} {
-		x, err := intFromDecimal(table.in)
+		x, err := IntFromDecimal(table.in)
 		if err != nil {
 			t.Errorf("error on valid input %q: %v", table.in, err)
 		}
@@ -38,7 +38,7 @@ func TestInvalidIntFromDecimal(t *testing.T) {
 		"9223372036854775808",
 		"99223372036854775808",
 	} {
-		x, err := intFromDecimal(in)
+		x, err := IntFromDecimal(in)
 		if err == nil {
 			t.Errorf("no error on invalid input %q, got %d",
 				in, x)

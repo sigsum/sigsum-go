@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	TreeHeadNamespace = "tree-head:v0@sigsum.org"
+	SignedTreeHeadNamespace   = "signed-tree-head:v0@sigsum.org"
+	CosignedTreeHeadNamespace = "cosigned-tree-head:v0@sigsum.org"
 )
 
 type TreeHead struct {
@@ -21,12 +22,12 @@ type TreeHead struct {
 
 type SignedTreeHead struct {
 	TreeHead
-	Timestamp uint64
 	Signature crypto.Signature
 }
 
 type Cosignature struct {
 	KeyHash   crypto.Hash
+	Timestamp uint64
 	Signature crypto.Signature
 }
 
@@ -35,31 +36,51 @@ type CosignedTreeHead struct {
 	Cosignatures []Cosignature
 }
 
-func (th *TreeHead) toSignedData(keyHash *crypto.Hash, timestamp uint64) []byte {
-	b := make([]byte, 80)
-	binary.BigEndian.PutUint64(b[0:8], timestamp)
-	binary.BigEndian.PutUint64(b[8:16], th.Size)
-	copy(b[16:48], th.RootHash[:])
-	copy(b[48:80], keyHash[:])
-	return ssh.SignedData(TreeHeadNamespace, b)
+func (th *TreeHead) toSignedData() []byte {
+	b := make([]byte, 40)
+	binary.BigEndian.PutUint64(b[:8], th.Size)
+	copy(b[8:40], th.RootHash[:])
+	return ssh.SignedData(SignedTreeHeadNamespace, b)
 }
 
-func (th *TreeHead) Sign(signer crypto.Signer, kh *crypto.Hash, timestamp uint64) (*SignedTreeHead, error) {
-	sig, err := signer.Sign(th.toSignedData(kh, timestamp))
+func (th *TreeHead) Sign(signer crypto.Signer) (*SignedTreeHead, error) {
+	sig, err := signer.Sign(th.toSignedData())
 	if err != nil {
 		return nil, fmt.Errorf("types: failed signing tree head")
 	}
 
 	return &SignedTreeHead{
 		TreeHead:  *th,
-		Timestamp: timestamp,
 		Signature: sig,
 	}, nil
 }
 
-func (th *TreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature,
-	kh *crypto.Hash, timestamp uint64) bool {
-	return crypto.Verify(key, th.toSignedData(kh, timestamp), signature)
+// TODO: Should the Cosign method be attached to SignedTreeHead instead?
+func (th *TreeHead) toCosignedData(logKeyHash *crypto.Hash, timestamp uint64) []byte {
+	b := make([]byte, 80)
+	binary.BigEndian.PutUint64(b[:8], th.Size)
+	copy(b[8:40], th.RootHash[:])
+	copy(b[40:72], logKeyHash[:])
+	binary.BigEndian.PutUint64(b[72:80], timestamp)
+
+	return ssh.SignedData(CosignedTreeHeadNamespace, b)
+}
+
+func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (crypto.Signature, error) {
+	return signer.Sign(th.toCosignedData(logKeyHash, timestamp))
+}
+
+func (th *TreeHead) NewCosignature(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
+	signature, err := th.Cosign(signer, logKeyHash, timestamp)
+	if err != nil {
+		return Cosignature{}, err
+	}
+	pub := signer.Public()
+	return Cosignature{
+		KeyHash:   crypto.HashBytes(pub[:]),
+		Timestamp: timestamp,
+		Signature: signature,
+	}, nil
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
@@ -90,9 +111,6 @@ func (th *TreeHead) FromASCII(r io.Reader) error {
 }
 
 func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
-	if err := ascii.WriteInt(w, "timestamp", sth.Timestamp); err != nil {
-		return err
-	}
 	if err := sth.TreeHead.ToASCII(w); err != nil {
 		return err
 	}
@@ -100,12 +118,7 @@ func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
 }
 
 func (sth *SignedTreeHead) fromASCII(p *ascii.Parser) error {
-	var err error
-	sth.Timestamp, err = p.GetInt("timestamp")
-	if err != nil {
-		return err
-	}
-	err = sth.TreeHead.fromASCII(p)
+	err := sth.TreeHead.fromASCII(p)
 	if err != nil {
 		return err
 	}
@@ -122,25 +135,20 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 	return p.GetEOF()
 }
 
-func (sth *SignedTreeHead) Sign(signer crypto.Signer, kh *crypto.Hash) (crypto.Signature, error) {
-	return signer.Sign(sth.TreeHead.toSignedData(kh, sth.Timestamp))
+func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
+	return crypto.Verify(key, sth.toSignedData(), &sth.Signature)
 }
 
-func (sth *SignedTreeHead) Verify(key *crypto.PublicKey, signature *crypto.Signature, logKeyHash *crypto.Hash) bool {
-	return sth.TreeHead.Verify(key, signature, logKeyHash, sth.Timestamp)
-}
-
-func (sth *SignedTreeHead) VerifyLogSignature(key *crypto.PublicKey) bool {
-	keyHash := crypto.HashBytes(key[:])
-	return sth.Verify(key, &sth.Signature, &keyHash)
+func (cs *Cosignature) Verify(key *crypto.PublicKey, logKeyHash *crypto.Hash, th *TreeHead) bool {
+	return crypto.Verify(key, th.toCosignedData(logKeyHash, cs.Timestamp), &cs.Signature)
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.WriteLine(w, "cosignature", cs.KeyHash[:], cs.Signature[:])
+	return ascii.WriteLine(w, "cosignature", cs.KeyHash[:], cs.Timestamp, cs.Signature[:])
 }
 
 func (cs *Cosignature) fromASCII(p *ascii.Parser) error {
-	v, err := p.GetValues("cosignature", 2)
+	v, err := p.GetValues("cosignature", 3)
 	if err != nil {
 		return err
 	}
@@ -148,7 +156,11 @@ func (cs *Cosignature) fromASCII(p *ascii.Parser) error {
 	if err != nil {
 		return err
 	}
-	cs.Signature, err = crypto.SignatureFromHex(v[1])
+	cs.Timestamp, err = ascii.IntFromDecimal(v[1])
+	if err != nil {
+		return err
+	}
+	cs.Signature, err = crypto.SignatureFromHex(v[2])
 	return err
 }
 

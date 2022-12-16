@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -27,7 +28,7 @@ func Main(args []string, optPrivateKey, optKeyHash string) error {
 	if err := input.FromASCII(os.Stdin); err != nil {
 		return fmt.Errorf("parse signed tree head: %v", err)
 	}
-	signature, err := input.Sign(priv, &keyHash)
+	signature, err := input.Cosign(priv, &keyHash, uint64(time.Now().Unix()))
 	if err != nil {
 		return fmt.Errorf("sign tree head: %v", err)
 	}
