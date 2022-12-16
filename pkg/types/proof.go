@@ -10,7 +10,7 @@ import (
 )
 
 type InclusionProof struct {
-	Size  uint64
+	Size      uint64
 	LeafIndex uint64
 	Path      []crypto.Hash
 }

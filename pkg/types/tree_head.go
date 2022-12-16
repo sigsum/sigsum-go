@@ -15,7 +15,7 @@ const (
 )
 
 type TreeHead struct {
-	Size uint64
+	Size     uint64
 	RootHash crypto.Hash
 }
 

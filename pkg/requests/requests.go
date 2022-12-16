@@ -24,7 +24,7 @@ type Leaves struct {
 }
 
 type InclusionProof struct {
-	Size uint64
+	Size     uint64
 	LeafHash crypto.Hash
 }
 

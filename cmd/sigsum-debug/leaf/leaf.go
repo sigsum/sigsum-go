@@ -36,7 +36,7 @@ Usage:
 
 var (
 	optPrivateKey, optPublicKey, optKeyHash, optLeafHash, optRootHash, optSignature string
-	optShardHint, optSize                                                       uint64
+	optShardHint, optSize                                                           uint64
 )
 
 func Main(args []string) error {

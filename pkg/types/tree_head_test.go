@@ -188,7 +188,7 @@ func TestCosignedTreeHeadFromASCII(t *testing.T) {
 
 func validTreeHead(t *testing.T) *TreeHead {
 	return &TreeHead{
-		Size: 257,
+		Size:     257,
 		RootHash: *newHashBufferInc(t),
 	}
 }
@@ -223,7 +223,7 @@ func validSignedTreeHead(t *testing.T) *SignedTreeHead {
 	t.Helper()
 	return &SignedTreeHead{
 		TreeHead: TreeHead{
-			Size: 2,
+			Size:     2,
 			RootHash: *newHashBufferInc(t),
 		},
 		Timestamp: 1,
@@ -246,7 +246,7 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 	return &CosignedTreeHead{
 		SignedTreeHead: SignedTreeHead{
 			TreeHead: TreeHead{
-				Size: 2,
+				Size:     2,
 				RootHash: *newHashBufferInc(t),
 			},
 			Timestamp: 1,

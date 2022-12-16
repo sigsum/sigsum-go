@@ -102,7 +102,7 @@ func validInclusionProof(t *testing.T) *InclusionProof {
 	t.Helper()
 	return &InclusionProof{
 		LeafIndex: 1,
-		Size:  4,
+		Size:      4,
 		Path: []crypto.Hash{
 			crypto.Hash{},
 			*newHashBufferInc(t),
