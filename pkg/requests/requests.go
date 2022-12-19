@@ -40,13 +40,13 @@ type Cosignature struct {
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
-	if err := ascii.WriteLineHex(w, "message", req.Message[:]); err != nil {
+	if err := ascii.WriteLine(w, "message", req.Message[:]); err != nil {
 		return err
 	}
-	if err := ascii.WriteLineHex(w, "signature", req.Signature[:]); err != nil {
+	if err := ascii.WriteLine(w, "signature", req.Signature[:]); err != nil {
 		return err
 	}
-	return ascii.WriteLineHex(w, "public_key", req.PublicKey[:])
+	return ascii.WriteLine(w, "public_key", req.PublicKey[:])
 }
 
 // Verifies the request signature, and creates a corresponding leaf on success.
@@ -77,7 +77,7 @@ func (req *ConsistencyProof) ToURL(url string) string {
 }
 
 func (req *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.WriteLineHex(w, "cosignature", req.KeyHash[:], req.Signature[:])
+	return ascii.WriteLine(w, "cosignature", req.KeyHash[:], req.Signature[:])
 }
 
 func (req *Leaf) FromASCII(r io.Reader) error {
