@@ -23,7 +23,7 @@ type Client interface {
 	GetLeaves(context.Context, requests.Leaves) ([]types.Leaf, error)
 
 	AddLeaf(context.Context, requests.Leaf) (bool, error)
-	AddCosignature(context.Context, requests.Cosignature) error
+	AddCosignature(context.Context, types.Cosignature) error
 
 	Initiated() bool
 }
@@ -124,7 +124,7 @@ func (cli *client) AddLeaf(ctx context.Context, req requests.Leaf) (persisted bo
 	return false, fmt.Errorf("TODO")
 }
 
-func (cli *client) AddCosignature(ctx context.Context, req requests.Cosignature) error {
+func (cli *client) AddCosignature(ctx context.Context, req types.Cosignature) error {
 	return fmt.Errorf("TODO")
 }
 

@@ -132,6 +132,52 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 	}
 }
 
+func TestCosignatureToASCII(t *testing.T) {
+	desc := "valid"
+	buf := bytes.NewBuffer(nil)
+	if err := validCosignature(t).ToASCII(buf); err != nil {
+		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
+	}
+	if got, want := string(buf.Bytes()), validCosignatureASCII(t); got != want {
+		t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
+	}
+}
+
+func TestCosignatureFromASCII(t *testing.T) {
+	for _, table := range []struct {
+		desc       string
+		serialized io.Reader
+		wantErr    bool
+		want       *Cosignature
+	}{
+		{
+			desc: "invalid: not a cosignature request (unexpected key-value pair)",
+			serialized: bytes.NewBuffer(
+				append([]byte(validCosignatureASCII(t)),
+					[]byte("key=4")...),
+			),
+			wantErr: true,
+		},
+		{
+			desc:       "valid",
+			serialized: bytes.NewBuffer([]byte(validCosignatureASCII(t))),
+			want:       validCosignature(t),
+		},
+	} {
+		var req Cosignature
+		err := req.FromASCII(table.serialized)
+		if got, want := err != nil, table.wantErr; got != want {
+			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+		}
+		if err != nil {
+			continue
+		}
+		if got, want := &req, table.want; !reflect.DeepEqual(got, want) {
+			t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
+		}
+	}
+}
+
 func TestCosignedTreeHeadToASCII(t *testing.T) {
 	desc := "valid"
 	buf := bytes.NewBuffer(nil)
@@ -193,15 +239,6 @@ func validTreeHead(t *testing.T) *TreeHead {
 	}
 }
 
-func validTreeHeadBytes(t *testing.T, keyHash *crypto.Hash) []byte {
-	return bytes.Join([][]byte{
-		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
-		[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01},
-		newHashBufferInc(t)[:],
-		keyHash[:],
-	}, nil)
-}
-
 func validTreeHeadSignedData(t *testing.T, keyHash *crypto.Hash) []byte {
 	msg := bytes.Join([][]byte{
 		[]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
@@ -239,6 +276,20 @@ func validSignedTreeHeadASCII(t *testing.T) string {
 		"root_hash", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
 	)
+}
+
+func validCosignature(t *testing.T) *Cosignature {
+	t.Helper()
+	return &Cosignature{
+		Signature: *newSigBufferInc(t),
+		KeyHash:   *newHashBufferInc(t),
+	}
+}
+
+func validCosignatureASCII(t *testing.T) string {
+	t.Helper()
+	return fmt.Sprintf("%s=%x %x\n",
+		"cosignature", newHashBufferInc(t)[:], newSigBufferInc(t)[:])
 }
 
 func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
