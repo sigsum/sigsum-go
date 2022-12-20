@@ -173,6 +173,60 @@ func TestCosignatureFromASCII(t *testing.T) {
 	}
 }
 
+func TestCosignAndVerify(t *testing.T) {
+	th := *validTreeHead(t)
+	pub, signer := newKeyPair(t)
+	keyHash := crypto.HashBytes(pub[:])
+	logKeyHash := *newHashBufferInc(t)
+
+	cosignature, err := th.NewCosignature(signer, &logKeyHash, testCosignTimestamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cosignature.Timestamp != testCosignTimestamp {
+		t.Errorf("unexpected cosignature timestamp, wanted %d, got %d",
+			testCosignTimestamp, cosignature.Timestamp)
+	}
+	if cosignature.KeyHash != keyHash {
+		t.Errorf("unexpected cosignature keyhash, wanted %x, got %x",
+			keyHash, cosignature.KeyHash)
+	}
+	if !cosignature.Verify(&pub, &logKeyHash, &th) {
+		t.Errorf("failed verifying a valid cosignature")
+	}
+
+	// Test mutation of signed items.
+	for _, f := range [](func() (string, TreeHead, Cosignature, crypto.Hash)){
+		func() (string, TreeHead, Cosignature, crypto.Hash) {
+			mTh := th
+			mTh.Size++
+			return "bad size", mTh, cosignature, logKeyHash
+		},
+		func() (string, TreeHead, Cosignature, crypto.Hash) {
+			mCs := cosignature
+			mCs.Timestamp++
+			return "bad timestamp", th, mCs, logKeyHash
+		},
+		func() (string, TreeHead, Cosignature, crypto.Hash) {
+			mKh := logKeyHash
+			mKh[3]++
+			return "bad log key hash", th, cosignature, mKh
+		},
+		func() (string, TreeHead, Cosignature, crypto.Hash) {
+			return "", th, cosignature, logKeyHash
+		},
+	} {
+		desc, mTh, mCs, mLogHash := f()
+		valid := mCs.Verify(&pub, &mLogHash, &mTh)
+		if len(desc) > 0 && valid {
+			t.Errorf("%s: succeeded verifying invalid cosignature", desc)
+		} else if len(desc) == 0 && !valid {
+			t.Errorf("internal test failure, failed to verify unmodified cosignature")
+		}
+	}
+}
+
 func TestCosignedTreeHeadToASCII(t *testing.T) {
 	desc := "valid"
 	buf := bytes.NewBuffer(nil)
