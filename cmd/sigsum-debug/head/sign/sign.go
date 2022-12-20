@@ -27,11 +27,11 @@ func Main(args []string, optPrivateKey, optKeyHash string, timestamp uint64) err
 	if err := input.FromASCII(os.Stdin); err != nil {
 		return fmt.Errorf("parse signed tree head: %v", err)
 	}
-	signature, err := input.Cosign(priv, &keyHash, timestamp)
+	cosignature, err := input.Cosign(priv, &keyHash, timestamp)
 	if err != nil {
-		return fmt.Errorf("sign tree head: %v", err)
+		return fmt.Errorf("cosign tree head: %v", err)
 	}
 
-	fmt.Printf("%s\n", hex.EncodeToString(signature[:]))
+	fmt.Printf("%s\n", hex.EncodeToString(cosignature.Signature[:]))
 	return nil
 }

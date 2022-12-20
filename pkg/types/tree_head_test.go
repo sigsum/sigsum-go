@@ -179,7 +179,7 @@ func TestCosignAndVerify(t *testing.T) {
 	keyHash := crypto.HashBytes(pub[:])
 	logKeyHash := *newHashBufferInc(t)
 
-	cosignature, err := th.NewCosignature(signer, &logKeyHash, testCosignTimestamp)
+	cosignature, err := th.Cosign(signer, &logKeyHash, testCosignTimestamp)
 	if err != nil {
 		t.Fatal(err)
 	}

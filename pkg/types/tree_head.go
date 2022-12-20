@@ -66,12 +66,8 @@ func (th *TreeHead) toCosignedData(logKeyHash *crypto.Hash, timestamp uint64) []
 	return ssh.SignedData(CosignedTreeHeadNamespace, b)
 }
 
-func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (crypto.Signature, error) {
-	return signer.Sign(th.toCosignedData(logKeyHash, timestamp))
-}
-
-func (th *TreeHead) NewCosignature(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
-	signature, err := th.Cosign(signer, logKeyHash, timestamp)
+func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
+	signature, err := signer.Sign(th.toCosignedData(logKeyHash, timestamp))
 	if err != nil {
 		return Cosignature{}, err
 	}
