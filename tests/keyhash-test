@@ -1,0 +1,13 @@
+#! /bin/sh
+
+set -e
+
+./sigsum-key gen -o test.key
+
+kh=$( ./sigsum-key hash -k test.key.pub )
+ref=$( xxd -r -p < test.key.pub | sha256sum | sed 's/ .*$//' )
+
+if [ "$kh" != "$ref" ] ; then
+    printf "unexpected keyhash\n  got: %s\n wanted: %s\n" "$kh" "$ref"
+    exit 1
+fi
