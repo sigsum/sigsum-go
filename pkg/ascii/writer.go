@@ -38,6 +38,7 @@ func WriteLine(w io.Writer, key string, first interface{}, rest ...interface{}) 
 	return err
 }
 
+// Redundant, except for beter type checking.
 func WriteInt(w io.Writer, name string, i uint64) error {
 	return WriteLine(w, name, i)
 }

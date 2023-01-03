@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/consistency"
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/sign"
@@ -19,7 +20,7 @@ Usage:
   sigsum-debug head help
     Outputs a usage message
 
-  sigsum-debug head sign -k PRIVATE_KEY -h KEY_HASH
+  sigsum-debug head sign -k PRIVATE_KEY -h KEY_HASH [-t TIMESTAMP]
     Reads an ascii signed tree head from stdin and outputs a new signature
 
   sigsum-debug head verify -k PUBLIC_KEY
@@ -32,7 +33,7 @@ Usage:
 
 var (
 	optPrivateKey, optPublicKey, optKeyHash, optOldRoot, optNewRoot string
-	optOldSize, optNewSize                                          uint64
+	optOldSize, optNewSize, optTimestamp                            uint64
 )
 
 func Main(args []string) error {
@@ -45,7 +46,7 @@ func Main(args []string) error {
 		case "help", "":
 			opt.Usage()
 		case "sign":
-			err = sign.Main(opt.Args(), optPrivateKey, optKeyHash)
+			err = sign.Main(opt.Args(), optPrivateKey, optKeyHash, optTimestamp)
 		case "verify":
 			err = verify.Main(opt.Args(), optPublicKey)
 		case "consistency":
@@ -71,6 +72,7 @@ func setOptions(fs *flag.FlagSet) {
 	case "sign":
 		options.AddString(fs, &optPrivateKey, "k", "private-key", options.DefaultString)
 		options.AddString(fs, &optKeyHash, "h", "key-hash", options.DefaultString)
+		options.AddUint64(fs, &optTimestamp, "t", "timestamp", uint64(time.Now().Unix()))
 	case "verify":
 		options.AddString(fs, &optPublicKey, "k", "public-key", options.DefaultString)
 	case "consistency":

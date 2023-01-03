@@ -10,7 +10,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-func Main(args []string, optPrivateKey, optKeyHash string) error {
+func Main(args []string, optPrivateKey, optKeyHash string, timestamp uint64) error {
 	if len(args) != 0 {
 		return fmt.Errorf("trailing arguments: %s", strings.Join(args, ", "))
 	}
@@ -27,11 +27,11 @@ func Main(args []string, optPrivateKey, optKeyHash string) error {
 	if err := input.FromASCII(os.Stdin); err != nil {
 		return fmt.Errorf("parse signed tree head: %v", err)
 	}
-	signature, err := input.Sign(priv, &keyHash)
+	cosignature, err := input.Cosign(priv, &keyHash, timestamp)
 	if err != nil {
-		return fmt.Errorf("sign tree head: %v", err)
+		return fmt.Errorf("cosign tree head: %v", err)
 	}
 
-	fmt.Printf("%s\n", hex.EncodeToString(signature[:]))
+	fmt.Printf("%s\n", hex.EncodeToString(cosignature.Signature[:]))
 	return nil
 }
