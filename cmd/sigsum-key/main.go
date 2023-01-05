@@ -31,6 +31,10 @@ type SignSettings struct {
 	sshFormat  bool
 }
 
+type HashSettings struct {
+	keyFile string
+}
+
 func main() {
 	const usage = `sigsum key sub commands:
 
@@ -51,6 +55,9 @@ func main() {
     KEY and SIGNATURE are file names.
     NAMESPACE is a string, default being "tree-leaf:v0@sigsum.org"
     If --ssh is provided, produce an ssh signature file, otherwise raw hex.
+
+  sigsum-key hash -k KEY
+    KEY is filename of a public key. Outputs hex-encoded key hash.
 `
 	if len(os.Args) < 2 {
 		log.Fatal(usage)
@@ -101,6 +108,10 @@ func main() {
 		public := signer.Public()
 		writeSignatureFile(settings.outputFile, settings.sshFormat,
 			&public, settings.namespace, &signature)
+	case "hash":
+		settings := parseHashSettings(args)
+		publicKey := readPublicKeyFile(settings.keyFile)
+		fmt.Printf("%x\n", crypto.HashBytes(publicKey[:]))
 	}
 }
 
@@ -159,6 +170,19 @@ func parseSignSettings(args []string) SignSettings {
 		namespace:  *namespace,
 		sshFormat:  *sshFormat,
 	}
+}
+
+func parseHashSettings(args []string) HashSettings {
+	flags := flag.NewFlagSet("", flag.ExitOnError)
+	keyFile := flags.String("k", "", "Key file")
+
+	flags.Parse(args)
+
+	if len(*keyFile) == 0 {
+		log.Printf("key file (-k option) missing")
+		os.Exit(1)
+	}
+	return HashSettings{*keyFile}
 }
 
 func writeToFile(fileName string, data string, mode os.FileMode) {
