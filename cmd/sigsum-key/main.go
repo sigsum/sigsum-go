@@ -36,29 +36,31 @@ type HashSettings struct {
 }
 
 func main() {
-	const usage = `sigsum key sub commands:
+	const usage = `sigsum-key sub commands:
 
   sigsum-key help 
     Display this help.
 
-  sigsum-key gen -o KEY-FILE [--ssh] Generate a new key pair.
-    Private key is stored in the given KEY-FILE, hex-encoded.
-    Corresponding public key file gets a ".pub" suffix.
-    If --ssh option is used, the public file is written in
+  sigsum-key gen -o KEY-FILE [--ssh]
+    Generate a new key pair. Private key is stored in the given
+    KEY-FILE, hex-encoded. Corresponding public key file gets a ".pub"
+    suffix. If --ssh option is used, the public file is written in
     OpenSSH format, otherwise raw hex.
 
   sigsum-key verify -k KEY -s SIGNATURE [-n NAMESPACE] < MSG
     KEY and SIGNATURE are file names.
-    NAMESPACE is a string, default being "tree-head:v0@sigsum.org"
+    NAMESPACE is a string, default being "signed-tree-head:v0@sigsum.org"
 
-  sigsum-key sign --ssh -k KEY [-n NAMESPACE] [-o SIGNATURE] < MSG
-    KEY and SIGNATURE are file names.
-    NAMESPACE is a string, default being "tree-leaf:v0@sigsum.org"
-    If --ssh is provided, produce an ssh signature file, otherwise raw hex.
+  sigsum-key sign -k KEY [-o SIGNATURE] [-n NAMESPACE] [--ssh] < MSG
+    KEY and SIGNATURE are file names (by default, signature is written
+    to stdout). NAMESPACE is a string, default being
+    "tree-leaf:v0@sigsum.org". If --ssh is provided, produce an ssh
+    signature file, otherwise raw hex.
 
   sigsum-key hash -k KEY
     KEY is filename of a public key. Outputs hex-encoded key hash.
 `
+	log.SetFlags(0)
 	if len(os.Args) < 2 {
 		log.Fatal(usage)
 	}
@@ -133,7 +135,7 @@ func parseVerifySettings(args []string) VerifySettings {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	keyFile := flags.String("k", "", "Key file")
 	signatureFile := flags.String("s", "", "Signature file")
-	namespace := flags.String("n", "tree-head:v0@sigsum.org", "Signature namespace")
+	namespace := flags.String("n", "signed-tree-head:v0@sigsum.org", "Signature namespace")
 
 	flags.Parse(args)
 
