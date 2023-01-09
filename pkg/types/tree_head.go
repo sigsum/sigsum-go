@@ -46,7 +46,7 @@ func (th *TreeHead) toSignedData() []byte {
 func (th *TreeHead) Sign(signer crypto.Signer) (*SignedTreeHead, error) {
 	sig, err := signer.Sign(th.toSignedData())
 	if err != nil {
-		return nil, fmt.Errorf("types: failed signing tree head")
+		return nil, fmt.Errorf("failed signing tree head: %w", err)
 	}
 
 	return &SignedTreeHead{
@@ -69,7 +69,7 @@ func (th *TreeHead) toCosignedData(logKeyHash *crypto.Hash, timestamp uint64) []
 func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
 	signature, err := signer.Sign(th.toCosignedData(logKeyHash, timestamp))
 	if err != nil {
-		return Cosignature{}, err
+		return Cosignature{}, fmt.Errorf("failed co-signing tree head: %w", err)
 	}
 	pub := signer.Public()
 	return Cosignature{
