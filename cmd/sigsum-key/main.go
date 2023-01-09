@@ -43,9 +43,9 @@ func main() {
 
   sigsum-key gen -o KEY-FILE [--ssh]
     Generate a new key pair. Private key is stored in the given
-    KEY-FILE, hex-encoded. Corresponding public key file gets a ".pub"
-    suffix. If --ssh option is used, the public file is written in
-    OpenSSH format, otherwise raw hex.
+    KEY-FILE, format is "priv:" + hex-encoding. Corresponding public
+    key file gets a ".pub" suffix. If --ssh option is used, the public
+    file is written in OpenSSH format, otherwise raw hex.
 
   sigsum-key verify -k KEY -s SIGNATURE [-n NAMESPACE] < MSG
     KEY and SIGNATURE are file names.
@@ -202,7 +202,7 @@ func writeToFile(fileName string, data string, mode os.FileMode) {
 
 func writeKeyFile(outputFile string, sshFormat bool,
 	pub *crypto.PublicKey, priv *crypto.PrivateKey) {
-	writeToFile(outputFile, hex.EncodeToString(priv[:]), 0600)
+	writeToFile(outputFile, "priv: "+hex.EncodeToString(priv[:]), 0600)
 
 	var serializedPub string
 	if sshFormat {

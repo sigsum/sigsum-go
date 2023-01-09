@@ -9,7 +9,7 @@ import (
 )
 
 // Supports two formats:
-//   * Raw-hex-encoded public key (RFC 8032)
+//   * Raw hex-encoded public key (RFC 8032)
 //   * Openssh public key (single-line format)
 func ParsePublicKey(ascii string) (crypto.PublicKey, error) {
 	ascii = strings.TrimSpace(ascii)
@@ -20,24 +20,32 @@ func ParsePublicKey(ascii string) (crypto.PublicKey, error) {
 }
 
 // Supports two formats:
-//   * Raw-hex-encoded private key (RFC 8032)
-//   * Openssh public key, in which case ssh-agent is used to
-//     access the corresponding private key.
+//   * priv:-prefix + raw hex-encoded private key (RFC 8032)
+//   * Raw hex-encoded public key (RFC 8032)
+//   * Openssh public key.
+//
+// For the cases of public keys, ssh-agent is used to access the
+// corresponding private key.
 func ParsePrivateKey(ascii string) (crypto.Signer, error) {
-	ascii = strings.TrimSpace(ascii)
-	// Accepts public keys only in openssh format, since with raw
-	// hex-encoded keys, we can't distinguish between public and
-	// private keys.
-	if strings.HasPrefix(ascii, "ssh-ed25519 ") {
-		key, err := ssh.ParsePublicEd25519(ascii)
-		if err != nil {
-			return nil, err
-		}
-		c, err := ssh.Connect()
-		if err != nil {
-			return nil, fmt.Errorf("only public key available, and no ssh-agent: %v", err)
-		}
-		return c.NewSigner(&key)
+	if strings.HasPrefix(ascii, "priv:") {
+		return crypto.SignerFromHex(strings.TrimSpace(ascii[5:]))
 	}
-	return crypto.SignerFromHex(ascii)
+
+	// Parse public key, and use ssh-agent.
+	var key crypto.PublicKey
+	var err error
+	if strings.HasPrefix(ascii, "ssh-ed25519 ") {
+		key, err = ssh.ParsePublicEd25519(ascii)
+	} else {
+		key, err = crypto.PublicKeyFromHex(strings.TrimSpace(ascii))
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := ssh.Connect()
+	if err != nil {
+		return nil, fmt.Errorf("only public key available, and no ssh-agent: %v", err)
+	}
+	return c.NewSigner(&key)
 }
