@@ -180,7 +180,7 @@ func (s *verifySettings) parse(args []string) {
 	flags.Parse(args)
 
 	if len(s.logKeyFile) == 0 {
-		log.Fatalf("log public key file (---log option) missing")
+		log.Fatalf("log public key file (--log option) missing")
 	}
 }
 
