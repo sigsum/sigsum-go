@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	Label          = "_sigsum_v0"
-	HeaderName = "Sigsum-Token"
+	Label           = "_sigsum_v0"
+	HeaderName      = "Sigsum-Token"
 	namespace       = "submit-token:v0@sigsum.org"
 	maxNumberOfKeys = 10
 )
@@ -31,7 +31,7 @@ func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token string) 
 	if !crypto.Verify(key, ssh.SignedData(namespace, logKey[:]), &signature) {
 		return fmt.Errorf("invalid token signature")
 	}
-	return nil		
+	return nil
 }
 
 // Verifier can verify that a domain name is aware of a public key.

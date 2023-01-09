@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -15,23 +15,23 @@ import (
 )
 
 type createSettings struct {
-	keyFile string
+	keyFile    string
 	outputFile string
 	logKeyFile string
-	domain string
+	domain     string
 }
 
 type recordSettings struct {
-	keyFile string
+	keyFile    string
 	outputFile string
 }
 
 type verifySettings struct {
-	keyFile string
+	keyFile    string
 	logKeyFile string
-	domain string	
-	quiet bool
-}	
+	domain     string
+	quiet      bool
+}
 
 func main() {
 	const usage = `sigsum-token sub commands:
@@ -66,7 +66,8 @@ func main() {
 		log.Print(usage)
 		os.Exit(0)
 	case "create":
-		settings := parseCreateSettings(args)
+		var settings createSettings
+		settings.parse(args)
 		signer := readPrivateKeyFile(settings.keyFile)
 		logKey := readPublicKeyFile(settings.logKeyFile)
 		signature, err := token.MakeToken(signer, &logKey)
@@ -77,19 +78,21 @@ func main() {
 			if len(settings.domain) > 0 {
 				_, err := fmt.Fprintf(w, "sigsum-token: %s %x\n", settings.domain, signature)
 				return err
-			} 
+			}
 			_, err := fmt.Fprintf(w, "%x\n", signature)
 			return err
 		})
 	case "record":
-		settings := parseRecordSettings(args)
+		var settings recordSettings
+		settings.parse(args)
 		logKey := readPublicKeyFile(settings.keyFile)
 		withOutput(settings.outputFile, func(w io.Writer) error {
 			_, err := fmt.Fprintf(w, "%s IN TXT \"%x\"\n", token.Label, logKey)
 			return err
 		})
-	case "verify": 
-		settings := parseVerifySettings(args)
+	case "verify":
+		var settings verifySettings
+		settings.parse(args)
 		if settings.quiet {
 			log.SetOutput(nil)
 		}
@@ -124,75 +127,60 @@ func main() {
 		}
 		if domain != nil {
 			if err := token.NewDnsVerifier(&logKey).Verify(
-				context.Background(), *domain, signatureHex) ; err != nil {
+				context.Background(), *domain, signatureHex); err != nil {
 				log.Fatalf("Verifying with domain %q failed: %v", *domain, err)
 			}
 		}
- 		if len(settings.keyFile) > 0 {
+		if len(settings.keyFile) > 0 {
 			key := readPublicKeyFile(settings.keyFile)
-			if err := token.VerifyToken(&key, &logKey, signatureHex) ; err != nil {
+			if err := token.VerifyToken(&key, &logKey, signatureHex); err != nil {
 				log.Fatalf("Verifying using given key failed: %v", err)
 			}
 		}
 	}
 }
 
-func parseCreateSettings(args []string) createSettings {
+func (s *createSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	keyFile := flags.String("k", "", "Private key file")
-	outputFile := flags.String("o", "", "Output file")
-	logKeyFile := flags.String("log", "", "Log public key file")
-	domain := flags.String("domain", "", "Domain")
+
+	flags.StringVar(&s.keyFile, "k", "", "Private key file")
+	flags.StringVar(&s.outputFile, "o", "", "Output file")
+	flags.StringVar(&s.logKeyFile, "log", "", "Log public key file")
+	flags.StringVar(&s.domain, "domain", "", "Domain")
 
 	flags.Parse(args)
 
-	if len(*keyFile) == 0 {
+	if len(s.keyFile) == 0 {
 		log.Fatalf("key file (-k option) missing")
 	}
-	if len(*logKeyFile) == 0 {
-		log.Fatalf("log public key file (---log option) missing")
-	}
-	return createSettings{
-		keyFile: *keyFile,
-		outputFile: *outputFile,
-		logKeyFile: *logKeyFile,
-		domain: *domain,
+	if len(s.logKeyFile) == 0 {
+		log.Fatalf("log public key file (--log option) missing")
 	}
 }
 
-func parseRecordSettings(args []string) recordSettings {
+func (s *recordSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	keyFile := flags.String("k", "", "Private key file")
-	outputFile := flags.String("o", "", "Output file")
+	flags.StringVar(&s.keyFile, "k", "", "Private key file")
+	flags.StringVar(&s.outputFile, "o", "", "Output file")
 
 	flags.Parse(args)
 
-	if len(*keyFile) == 0 {
+	if len(s.keyFile) == 0 {
 		log.Fatalf("key file (-k option) missing")
-	}
-	return recordSettings{
-		keyFile: *keyFile,
-		outputFile: *outputFile,
 	}
 }
 
-func parseVerifySettings(args []string) verifySettings {
+func (s *verifySettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	keyFile := flags.String("k", "", "Private key file")
-	logKeyFile := flags.String("log", "", "Log public key file")
-	domain := flags.String("domain", "", "Domain")
-	quiet := flags.Bool("q", false, "Quiet mode")
+	flags.StringVar(&s.keyFile, "k", "", "Private key file")
+	flags.StringVar(&s.logKeyFile, "log", "", "Log public key file")
+	flags.StringVar(&s.domain, "domain", "", "Domain")
+	flags.BoolVar(&s.quiet, "q", false, "Quiet mode")
 
 	flags.Parse(args)
 
-	if len(*logKeyFile) == 0 {
+	if len(s.logKeyFile) == 0 {
 		log.Fatalf("log public key file (---log option) missing")
-	}
-	return verifySettings{
-		keyFile: *keyFile,
-		logKeyFile: *logKeyFile,
-		domain: *domain,
-		quiet: *quiet,
 	}
 }
 
