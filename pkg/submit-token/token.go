@@ -11,13 +11,27 @@ import (
 )
 
 const (
-	prefix          = "_sigsum_v0."
+	Label           = "_sigsum_v0"
+	HeaderName      = "Sigsum-Token"
 	namespace       = "submit-token:v0@sigsum.org"
 	maxNumberOfKeys = 10
 )
 
+// TODO: Return hex string, for consistency with VerifyToken ?
 func MakeToken(signer crypto.Signer, logKey *crypto.PublicKey) (crypto.Signature, error) {
 	return signer.Sign(ssh.SignedData(namespace, logKey[:]))
+}
+
+// Verify a token using a given key, with no DNS loookup.
+func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token string) error {
+	signature, err := crypto.SignatureFromHex(token)
+	if err != nil {
+		return fmt.Errorf("failed decoding hex signature: %v", err)
+	}
+	if !crypto.Verify(key, ssh.SignedData(namespace, logKey[:]), &signature) {
+		return fmt.Errorf("invalid token signature")
+	}
+	return nil
 }
 
 // Verifier can verify that a domain name is aware of a public key.
@@ -47,7 +61,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) er
 	if err != nil {
 		return fmt.Errorf("failed decoding hex signature: %v", err)
 	}
-	rsps, err := dv.lookupTXT(ctx, prefix+name)
+	rsps, err := dv.lookupTXT(ctx, Label+"."+name)
 	if err != nil {
 		return fmt.Errorf("token: dns look-up failed: %v", err)
 	}
