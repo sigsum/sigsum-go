@@ -1,0 +1,19 @@
+#! /bin/sh
+
+set -e
+
+# Skip test if we don't have connectivity to the DNS system.
+host test.sigsum.org || exit 77
+
+./sigsum-key gen -o test.key
+./sigsum-key gen -o test.log.key
+
+# Corresponding public key is registered on test.sigsum.org.
+printf '%064x\n' 1 > test.sigsum.key
+
+./sigsum-token create -k test.sigsum.key --log test.log.key.pub --domain test.sigsum.org -o test.header
+./sigsum-token verify --log test.log.key.pub < test.header
+# Check that validation fails when log key is changed.
+if ./sigsum-token verify --log test.key.pub < test.header 2>/dev/null; then
+    exit 1
+fi
