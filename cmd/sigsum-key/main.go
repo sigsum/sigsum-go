@@ -15,7 +15,6 @@ import (
 
 type GenSettings struct {
 	outputFile string
-	sshFormat  bool
 }
 
 type VerifySettings struct {
@@ -31,7 +30,7 @@ type SignSettings struct {
 	sshFormat  bool
 }
 
-type HashSettings struct {
+type ExportSettings struct {
 	keyFile string
 }
 
@@ -41,11 +40,10 @@ func main() {
   sigsum-key help 
     Display this help.
 
-  sigsum-key gen -o KEY-FILE [--ssh]
+  sigsum-key gen -o KEY-FILE
     Generate a new key pair. Private key is stored in the given
     KEY-FILE, hex-encoded. Corresponding public key file gets a ".pub"
-    suffix. If --ssh option is used, the public file is written in
-    OpenSSH format, otherwise raw hex.
+    suffix, and is written in OpenSSH format.
 
   sigsum-key verify -k KEY -s SIGNATURE [-n NAMESPACE] < MSG
     KEY and SIGNATURE are file names.
@@ -59,6 +57,9 @@ func main() {
 
   sigsum-key hash -k KEY
     KEY is filename of a public key. Outputs hex-encoded key hash.
+
+  sigsum-key hex -k KEY
+    KEY is filename of a public key. Outputs hex-encoded raw key.
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -79,8 +80,7 @@ func main() {
 			log.Fatalf("generating key failed: %v\n", err)
 		}
 		priv := signer.Private()
-		writeKeyFile(settings.outputFile, settings.sshFormat,
-			&pub, &priv)
+		writeKeyFile(settings.outputFile, &pub, &priv)
 	case "verify":
 		settings := parseVerifySettings(args)
 		publicKey := readPublicKeyFile(settings.keyFile)
@@ -111,16 +111,19 @@ func main() {
 		writeSignatureFile(settings.outputFile, settings.sshFormat,
 			&public, settings.namespace, &signature)
 	case "hash":
-		settings := parseHashSettings(args)
+		settings := parseExportSettings(args)
 		publicKey := readPublicKeyFile(settings.keyFile)
 		fmt.Printf("%x\n", crypto.HashBytes(publicKey[:]))
+	case "hex":
+		settings := parseExportSettings(args)
+		publicKey := readPublicKeyFile(settings.keyFile)
+		fmt.Printf("%x\n", publicKey[:])
 	}
 }
 
 func parseGenSettings(args []string) GenSettings {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	outputFile := flags.String("o", "", "Output file")
-	sshFormat := flags.Bool("ssh", false, "Use OpenSSH format for public key")
 
 	flags.Parse(args)
 
@@ -128,7 +131,7 @@ func parseGenSettings(args []string) GenSettings {
 		log.Printf("output file (-o option) missing")
 		os.Exit(1)
 	}
-	return GenSettings{*outputFile, *sshFormat}
+	return GenSettings{*outputFile}
 }
 
 func parseVerifySettings(args []string) VerifySettings {
@@ -174,7 +177,7 @@ func parseSignSettings(args []string) SignSettings {
 	}
 }
 
-func parseHashSettings(args []string) HashSettings {
+func parseExportSettings(args []string) ExportSettings {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	keyFile := flags.String("k", "", "Key file")
 
@@ -184,7 +187,7 @@ func parseHashSettings(args []string) HashSettings {
 		log.Printf("key file (-k option) missing")
 		os.Exit(1)
 	}
-	return HashSettings{*keyFile}
+	return ExportSettings{*keyFile}
 }
 
 func writeToFile(fileName string, data string, mode os.FileMode) {
@@ -200,19 +203,12 @@ func writeToFile(fileName string, data string, mode os.FileMode) {
 	}
 }
 
-func writeKeyFile(outputFile string, sshFormat bool,
+func writeKeyFile(outputFile string,
 	pub *crypto.PublicKey, priv *crypto.PrivateKey) {
 	writeToFile(outputFile, hex.EncodeToString(priv[:]), 0600)
-
-	var serializedPub string
-	if sshFormat {
-		serializedPub = ssh.FormatPublicEd25519(pub)
-	} else {
-		serializedPub = hex.EncodeToString(pub[:])
-	}
 	// Openssh insists that also public key files have
 	// restrictive permissions.
-	writeToFile(outputFile+".pub", serializedPub, 0600)
+	writeToFile(outputFile+".pub", ssh.FormatPublicEd25519(pub), 0600)
 }
 
 func writeSignatureFile(outputFile string, sshFormat bool,
