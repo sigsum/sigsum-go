@@ -52,11 +52,11 @@ func TestTreeHeadSign(t *testing.T) {
 			continue
 		}
 
-		wantSTH := &SignedTreeHead{
+		wantSTH := SignedTreeHead{
 			TreeHead:  *table.th,
 			Signature: *table.wantSig,
 		}
-		if got, want := sth, wantSTH; !reflect.DeepEqual(got, want) {
+		if got, want := sth, wantSTH; sth != wantSTH {
 			t.Errorf("got sth\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
 		}
 	}
