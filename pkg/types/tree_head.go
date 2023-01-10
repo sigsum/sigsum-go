@@ -43,13 +43,13 @@ func (th *TreeHead) toSignedData() []byte {
 	return ssh.SignedData(SignedTreeHeadNamespace, b)
 }
 
-func (th *TreeHead) Sign(signer crypto.Signer) (*SignedTreeHead, error) {
+func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
 	sig, err := signer.Sign(th.toSignedData())
 	if err != nil {
-		return nil, fmt.Errorf("failed signing tree head: %w", err)
+		return SignedTreeHead{}, fmt.Errorf("failed signing tree head: %w", err)
 	}
 
-	return &SignedTreeHead{
+	return SignedTreeHead{
 		TreeHead:  *th,
 		Signature: sig,
 	}, nil
