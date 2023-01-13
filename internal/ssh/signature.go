@@ -29,30 +29,20 @@ func WriteSignatureFile(w io.Writer, publicKey *crypto.PublicKey, namespace stri
 	return pem.Encode(w, &pem.Block{Type: pemSignatureTag, Bytes: blob})
 }
 
-func parseSignatureFile(blob []byte, publicKey *crypto.PublicKey, namespace string) (crypto.Signature, error) {
-	blob = skipPrefix(blob, bytes.Join([][]byte{
-		[]byte("SSHSIG"),
-		serializeUint32(1), // version 1
-	}, nil))
-	if blob == nil {
-		return crypto.Signature{}, fmt.Errorf("invalid signature prefix")
+func parseSignature(blob []byte) (crypto.Signature, error) {
+	signature := skipPrefix(blob, bytes.Join([][]byte{
+		serializeUint32(83), // length of signature
+		serializeString([]byte("ssh-ed25519")),
+		serializeUint32(crypto.SignatureSize)}, nil))
+	if signature == nil {
+		return crypto.Signature{}, fmt.Errorf("invalid signature blob")
 	}
-	blob = skipPrefixString(blob, serializePublicEd25519(publicKey))
-	if blob == nil {
-		return crypto.Signature{}, fmt.Errorf("signature public key not as expected")
+	if len(signature) != crypto.SignatureSize {
+		return crypto.Signature{}, fmt.Errorf("bad signature length: %d", len(signature))
 	}
-	blob = skipPrefixString(blob, []byte(namespace))
-	if blob == nil {
-		return crypto.Signature{}, fmt.Errorf("signature namespace not as expected")
-	}
-	blob = skipPrefix(blob, bytes.Join([][]byte{
-		serializeUint32(0), // Empty reserved string
-		serializeString([]byte("sha256")),
-	}, nil))
-	if blob == nil {
-		return crypto.Signature{}, fmt.Errorf("signature hash not as expected")
-	}
-	return parseSignature(blob)
+	var ret crypto.Signature
+	copy(ret[:], signature)
+	return ret, nil
 }
 
 func ParseSignatureFile(ascii []byte, pub *crypto.PublicKey, namespace string) (crypto.Signature, error) {
