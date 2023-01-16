@@ -8,15 +8,9 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
-// Supports two formats:
-//   * Raw-hex-encoded public key (RFC 8032)
-//   * Openssh public key (single-line format)
+// Expects an Openssh public key (single-line format)
 func ParsePublicKey(ascii string) (crypto.PublicKey, error) {
-	ascii = strings.TrimSpace(ascii)
-	if strings.HasPrefix(ascii, "ssh-ed25519 ") {
-		return ssh.ParsePublicEd25519(ascii)
-	}
-	return crypto.PublicKeyFromHex(ascii)
+	return ssh.ParsePublicEd25519(ascii)
 }
 
 // Supports two formats:

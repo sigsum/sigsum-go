@@ -2,7 +2,7 @@
 
 set -e
 
-./sigsum-key gen --ssh -o test.key
+./sigsum-key gen -o test.key
 
 echo foo > test.msg
 rm -f test.msg.sig
