@@ -47,15 +47,15 @@ func Verify(pub *PublicKey, msg []byte, sig *Signature) bool {
 	return ed25519.Verify(ed25519.PublicKey(pub[:]), msg, sig[:])
 }
 
-type ed25519Signer struct {
+type Ed25519Signer struct {
 	secret ed25519.PrivateKey
 }
 
-func NewEd25519Signer(key *PrivateKey) *ed25519Signer {
-	return &ed25519Signer{secret: ed25519.NewKeyFromSeed((*key)[:])}
+func NewEd25519Signer(key *PrivateKey) *Ed25519Signer {
+	return &Ed25519Signer{secret: ed25519.NewKeyFromSeed((*key)[:])}
 }
 
-func (s *ed25519Signer) Sign(msg []byte) (Signature, error) {
+func (s *Ed25519Signer) Sign(msg []byte) (Signature, error) {
 	sig, err := s.secret.Sign(nil, msg, crypto.Hash(0))
 	if err != nil {
 		return Signature{}, err
@@ -68,17 +68,17 @@ func (s *ed25519Signer) Sign(msg []byte) (Signature, error) {
 	return ret, nil
 }
 
-func (s *ed25519Signer) Public() (ret PublicKey) {
+func (s *Ed25519Signer) Public() (ret PublicKey) {
 	copy(ret[:], s.secret.Public().(ed25519.PublicKey))
 	return
 }
 
-func (s *ed25519Signer) Private() (ret PrivateKey) {
+func (s *Ed25519Signer) Private() (ret PrivateKey) {
 	copy(ret[:], s.secret.Seed())
 	return
 }
 
-func NewKeyPair() (PublicKey, *ed25519Signer, error) {
+func NewKeyPair() (PublicKey, *Ed25519Signer, error) {
 	var secret PrivateKey
 	n, err := rand.Read(secret[:])
 	if err != nil {
