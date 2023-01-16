@@ -2,8 +2,7 @@
 
 set -e
 
-rm -f test.key test.key.pub
-ssh-keygen -q -N '' -t ed25519 -f test.key
+./sigsum-key gen -o test.key
 
 echo foo > test.msg
 rm -f test.msg.sig
