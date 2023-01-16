@@ -119,7 +119,7 @@ func SignatureFromHex(s string) (sig Signature, err error) {
 	return
 }
 
-func SignerFromHex(s string) (Signer, error) {
+func SignerFromHex(s string) (*Ed25519Signer, error) {
 	var secret PrivateKey
 	err := decodeHex(secret[:], s)
 	if err != nil {

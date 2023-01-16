@@ -212,21 +212,21 @@ func withOutput(outputFile string, mode os.FileMode, f func(io.Writer) error) {
 func writeKeyFiles(outputFile string, pub *crypto.PublicKey, signer *crypto.Ed25519Signer) {
 	withOutput(outputFile, 0600, func(f io.Writer) error {
 		return ssh.WritePrivateKeyFile(f, signer)
-})
+	})
 	if len(outputFile) > 0 {
-	// Openssh insists that also public key files have
-	// restrictive permissions.
-	withOutput(outputFile+".pub", 0600,
-		func (f io.Writer) error {
-			_, err := io.WriteString(f, ssh.FormatPublicEd25519(pub))
-			return err
-		})
-}
+		// Openssh insists that also public key files have
+		// restrictive permissions.
+		withOutput(outputFile+".pub", 0600,
+			func(f io.Writer) error {
+				_, err := io.WriteString(f, ssh.FormatPublicEd25519(pub))
+				return err
+			})
+	}
 }
 
 func writeSignatureFile(outputFile string, sshFormat bool,
 	public *crypto.PublicKey, namespace string, signature *crypto.Signature) {
-	withOutput(outputFile, 0644, func (f io.Writer) error {
+	withOutput(outputFile, 0644, func(f io.Writer) error {
 		if sshFormat {
 			return ssh.WriteSignatureFile(f, public, namespace, signature)
 		} else {

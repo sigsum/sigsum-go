@@ -78,8 +78,8 @@ func WritePrivateKeyFile(w io.Writer, signer *crypto.Ed25519Signer) error {
 	return writePrivateKeyFile(w, signer, nonce)
 }
 
-func ParsePrivateKeyFile(ascii []byte) (crypto.PublicKey, crypto.Signer, error) {
-	parseBlob := func(blob []byte) (crypto.PublicKey, crypto.Signer, error) {
+func ParsePrivateKeyFile(ascii []byte) (crypto.PublicKey, *crypto.Ed25519Signer, error) {
+	parseBlob := func(blob []byte) (crypto.PublicKey, *crypto.Ed25519Signer, error) {
 		blob = skipPrefix(blob, opensshPrivateKeyPrefix)
 		if blob == nil {
 			return crypto.PublicKey{}, nil, fmt.Errorf("invalid or encrypted private key")
@@ -115,7 +115,7 @@ func ParsePrivateKeyFile(ascii []byte) (crypto.PublicKey, crypto.Signer, error) 
 		if len(keys) != 64 {
 			return crypto.PublicKey{}, nil, fmt.Errorf("unexpected private key size: %d", len(keys))
 		}
-		if !bytes.Equal(pub[:],keys[32:]) {
+		if !bytes.Equal(pub[:], keys[32:]) {
 			return crypto.PublicKey{}, nil, fmt.Errorf("inconsistent public key")
 		}
 		var privateKey crypto.PrivateKey
