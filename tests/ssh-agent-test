@@ -2,9 +2,8 @@
 
 set -e
 
-rm -f test.key test.key.pub
+./sigsum-key gen -o test.key
 
-ssh-keygen -q -N '' -t ed25519 -f test.key
 ssh-agent sh <<EOF
 set -e
 # Add private key to agent, then delete.
