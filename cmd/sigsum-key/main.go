@@ -229,10 +229,9 @@ func writeSignatureFile(outputFile string, sshFormat bool,
 	withOutput(outputFile, 0644, func(f io.Writer) error {
 		if sshFormat {
 			return ssh.WriteSignatureFile(f, public, namespace, signature)
-		} else {
-			_, err := fmt.Fprintf(f, "%x\n", signature[:])
-			return err
 		}
+		_, err := fmt.Fprintf(f, "%x\n", signature[:])
+		return err
 	})
 }
 
