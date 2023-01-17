@@ -67,6 +67,26 @@ func skipPrefix(buffer []byte, prefix []byte) []byte {
 	}
 	return buffer[len(prefix):]
 }
+
+// Skips an ssh-encoded string, including length field.
 func skipPrefixString(buffer []byte, prefix []byte) []byte {
 	return skipPrefix(buffer, serializeString(prefix))
+}
+
+func parseUint32(buffer []byte) (uint32, []byte) {
+	if buffer == nil || len(buffer) < 4 {
+		return 0, nil
+	}
+	return binary.BigEndian.Uint32(buffer[:4]), buffer[4:]
+}
+
+func parseString(buffer []byte) ([]byte, []byte) {
+	length, buffer := parseUint32(buffer)
+	if buffer == nil {
+		return nil, nil
+	}
+	if int64(len(buffer)) < int64(length) {
+		return nil, nil
+	}
+	return buffer[:int(length)], buffer[int(length):]
 }

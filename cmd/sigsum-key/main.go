@@ -1,9 +1,9 @@
 package main
 
 import (
-	"encoding/hex"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -79,8 +79,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("generating key failed: %v\n", err)
 		}
-		priv := signer.Private()
-		writeKeyFile(settings.outputFile, &pub, &priv)
+		writeKeyFiles(settings.outputFile, &pub, signer)
 	case "verify":
 		settings := parseVerifySettings(args)
 		publicKey := readPublicKeyFile(settings.keyFile)
@@ -190,47 +189,50 @@ func parseExportSettings(args []string) ExportSettings {
 	return ExportSettings{*keyFile}
 }
 
-func writeToFile(fileName string, data string, mode os.FileMode) {
-	file, err := os.OpenFile(fileName,
-		os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
-	if err != nil {
-		log.Fatalf("failed to open file '%v': %v", fileName, err)
-	}
-	defer file.Close()
-	_, err = fmt.Fprint(file, data)
-	if err != nil {
-		log.Fatalf("write failed to file '%v': %v", fileName, err)
-	}
-}
-
-func writeKeyFile(outputFile string,
-	pub *crypto.PublicKey, priv *crypto.PrivateKey) {
-	writeToFile(outputFile, hex.EncodeToString(priv[:]), 0600)
-	// Openssh insists that also public key files have
-	// restrictive permissions.
-	writeToFile(outputFile+".pub", ssh.FormatPublicEd25519(pub), 0600)
-}
-
-func writeSignatureFile(outputFile string, sshFormat bool,
-	public *crypto.PublicKey, namespace string, signature *crypto.Signature) {
+// If outputFile is non-empty: open file, pass to f, and automatically
+// close it after f returns. Otherwise, just pass os.Stdout to f. Also
+// exit program on error from f.
+func withOutput(outputFile string, mode os.FileMode, f func(io.Writer) error) {
 	file := os.Stdout
-	var err error
 	if len(outputFile) > 0 {
+		var err error
 		file, err = os.OpenFile(outputFile,
-			os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+			os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
 		if err != nil {
 			log.Fatalf("failed to open file '%v': %v", outputFile, err)
 		}
 		defer file.Close()
 	}
-	if sshFormat {
-		err = ssh.WriteSignatureFile(file, public, namespace, signature)
-	} else {
-		_, err = fmt.Fprintf(file, "%x\n", signature[:])
-	}
+	err := f(file)
 	if err != nil {
-		log.Fatalf("writing signature output failed: %v", err)
+		log.Fatalf("writing output failed: %v", err)
 	}
+}
+
+func writeKeyFiles(outputFile string, pub *crypto.PublicKey, signer *crypto.Ed25519Signer) {
+	withOutput(outputFile, 0600, func(f io.Writer) error {
+		return ssh.WritePrivateKeyFile(f, signer)
+	})
+	if len(outputFile) > 0 {
+		// Openssh insists that also public key files have
+		// restrictive permissions.
+		withOutput(outputFile+".pub", 0600,
+			func(f io.Writer) error {
+				_, err := io.WriteString(f, ssh.FormatPublicEd25519(pub))
+				return err
+			})
+	}
+}
+
+func writeSignatureFile(outputFile string, sshFormat bool,
+	public *crypto.PublicKey, namespace string, signature *crypto.Signature) {
+	withOutput(outputFile, 0644, func(f io.Writer) error {
+		if sshFormat {
+			return ssh.WriteSignatureFile(f, public, namespace, signature)
+		}
+		_, err := fmt.Fprintf(f, "%x\n", signature[:])
+		return err
+	})
 }
 
 func readPublicKeyFile(fileName string) crypto.PublicKey {
