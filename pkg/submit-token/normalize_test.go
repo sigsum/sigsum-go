@@ -13,6 +13,7 @@ func TestNormalize(t *testing.T) {
 		{"rÄKa.se", "räka.se"},              // Unicode to lower
 		{"Ra\u0308ka.se", "räka.se"},        // Combining char
 		{"\u212bngström.se", "ångström.se"}, // Compatibility char
+		{"FAß.de", "faß.de"},                // IDNA2008 (not IDNA2003)
 	} {
 		out, err := NormalizeDomainName(table[0])
 		if err != nil {
