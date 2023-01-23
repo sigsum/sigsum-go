@@ -24,5 +24,10 @@ func NormalizeDomainName(domain string) (string, error) {
 		return "", fmt.Errorf("a-label domain %q was decoded to un-normalized unicode %q",
 			a, u)
 	}
+	if strings.ToLower(u) != u {
+		return "", fmt.Errorf("a-label domain %q was decoded to not all-lowercase unicode %q",
+			a, u)
+	}
+
 	return u, nil
 }
