@@ -1,12 +1,12 @@
 package sign
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -14,7 +14,7 @@ func Main(args []string, optPrivateKey, optKeyHash string, timestamp uint64) err
 	if len(args) != 0 {
 		return fmt.Errorf("trailing arguments: %s", strings.Join(args, ", "))
 	}
-	priv, err := crypto.SignerFromHex(optPrivateKey)
+	priv, err := readPrivateKeyFile(optPrivateKey)
 	if err != nil {
 		return fmt.Errorf("parse private key: %v", err)
 	}
@@ -32,6 +32,18 @@ func Main(args []string, optPrivateKey, optKeyHash string, timestamp uint64) err
 		return fmt.Errorf("cosign tree head: %v", err)
 	}
 
-	fmt.Printf("%s\n", hex.EncodeToString(cosignature.Signature[:]))
+	fmt.Printf("%x\n", cosignature.Signature)
 	return nil
+}
+
+func readPrivateKeyFile(fileName string) (crypto.Signer, error) {
+	contents, err := os.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	signer, err := key.ParsePrivateKey(string(contents))
+	if err != nil {
+		return nil, fmt.Errorf("parsing file %q failed: %v", fileName, err)
+	}
+	return signer, nil
 }
