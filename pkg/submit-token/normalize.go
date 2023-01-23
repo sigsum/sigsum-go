@@ -20,7 +20,7 @@ func NormalizeDomainName(domain string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed converting domain %q to u-label form: %v", a, err)
 	}
-	if u != norm.NFKC.String(u) {
+	if !norm.NFKC.IsNormalString(u) {
 		return "", fmt.Errorf("a-label domain %q was decoded to un-normalized unicode %q",
 			a, u)
 	}
