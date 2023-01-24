@@ -29,6 +29,7 @@ func TestNormalize(t *testing.T) {
 func TestNormalizeReject(t *testing.T) {
 	for _, table := range [][2]string{
 		{"xn--72g.com", "un-normalized unicode"}, // Compatibility char
+		{"xn--RKA-2ha.se", "not all-lowercase"},  // Uppercase characters
 	} {
 		out, err := NormalizeDomainName(table[0])
 		if err == nil {
