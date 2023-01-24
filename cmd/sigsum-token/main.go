@@ -48,7 +48,7 @@ func main() {
     Verifies a submit token. The input on stdin is either a raw hex
     token or a HTTP header. For a raw token, one of -k or --domain is required. For
     a HTTP header --key and --domain are optional, but validation
-    fails if they are inconsistent with what{s looked up from the HTTP
+    fails if they are inconsistent with what's looked up from the HTTP
     header. The -q (quiet) option suppresses output on validation
     errors, with result only reflected in the exit code.
 
@@ -115,7 +115,8 @@ func main() {
 				log.Fatalf("Invalid Sigsum-Token value: %q", headerValue)
 			}
 			domain = &parts[0]
-			if len(settings.domain) > 0 && !strings.EqualFold(*domain, settings.domain) {
+			// Exact match required, no normalization.
+			if len(settings.domain) > 0 && *domain != settings.domain {
 				log.Fatalf("Unexpected domain: %q", *domain)
 			}
 			signatureHex = strings.TrimSuffix(parts[1], "\n")
