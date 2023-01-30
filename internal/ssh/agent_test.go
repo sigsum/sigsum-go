@@ -104,7 +104,7 @@ func TestSignEd25519(t *testing.T) {
 	response := serializeString(bytes.Join([][]byte{
 		[]byte{sshAgentSignResponse},
 		serializeString(bytes.Join([][]byte{
-			serializeString([]byte("ssh-ed25519")),
+			serializeString("ssh-ed25519"),
 			serializeString(signature[:]),
 		}, nil)),
 	}, nil))

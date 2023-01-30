@@ -19,11 +19,11 @@ func WriteSignatureFile(w io.Writer, publicKey *crypto.PublicKey, namespace stri
 		[]byte("SSHSIG"),
 		serializeUint32(1), // version 1
 		serializeString(serializePublicEd25519(publicKey)),
-		serializeString([]byte(namespace)),
+		serializeString(namespace),
 		serializeUint32(0), // Empty reserved string
-		serializeString([]byte("sha256")),
+		serializeString("sha256"),
 		serializeUint32(83),
-		serializeString([]byte("ssh-ed25519")),
+		serializeString("ssh-ed25519"),
 		serializeString(signature[:]),
 	}, nil)
 	return pem.Encode(w, &pem.Block{Type: pemSignatureTag, Bytes: blob})
@@ -32,7 +32,7 @@ func WriteSignatureFile(w io.Writer, publicKey *crypto.PublicKey, namespace stri
 func parseSignature(blob []byte) (crypto.Signature, error) {
 	signature := skipPrefix(blob, bytes.Join([][]byte{
 		serializeUint32(83), // length of signature
-		serializeString([]byte("ssh-ed25519")),
+		serializeString("ssh-ed25519"),
 		serializeUint32(crypto.SignatureSize)}, nil))
 	if signature == nil {
 		return crypto.Signature{}, fmt.Errorf("invalid signature blob")
@@ -58,13 +58,13 @@ func ParseSignatureFile(ascii []byte, pub *crypto.PublicKey, namespace string) (
 		if blob == nil {
 			return crypto.Signature{}, fmt.Errorf("signature public key not as expected")
 		}
-		blob = skipPrefixString(blob, []byte(namespace))
+		blob = skipPrefixString(blob, namespace)
 		if blob == nil {
 			return crypto.Signature{}, fmt.Errorf("signature namespace not as expected")
 		}
 		blob = skipPrefix(blob, bytes.Join([][]byte{
 			serializeUint32(0), // Empty reserved string
-			serializeString([]byte("sha256")),
+			serializeString("sha256"),
 		}, nil))
 		if blob == nil {
 			return crypto.Signature{}, fmt.Errorf("signature hash not as expected")

@@ -21,7 +21,7 @@ const pemPrivateKeyTag = "OPENSSH PRIVATE KEY"
 var opensshPrivateKeyPrefix = bytes.Join([][]byte{
 	[]byte("openssh-key-v1"), []byte{0},
 	// cipher "none", kdf "none"
-	serializeString([]byte("none")), serializeString([]byte("none")),
+	serializeString("none"), serializeString("none"),
 	serializeUint32(0), serializeUint32(1), // empty kdf, and #keys = 1
 }, nil)
 
