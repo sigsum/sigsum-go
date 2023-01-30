@@ -22,13 +22,12 @@ import (
 	"bytes"
 	"encoding/binary"
 	"log"
+	"math"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
-const (
-	int32Max = (1 << 31) - 1
-)
+type bytesOrString interface{ []byte | string }
 
 func serializeUint32(x uint32) []byte {
 	buffer := make([]byte, 4)
@@ -36,8 +35,8 @@ func serializeUint32(x uint32) []byte {
 	return buffer
 }
 
-func serializeString(s []byte) []byte {
-	if len(s) > int32Max {
+func serializeString[T bytesOrString](s T) []byte {
+	if len(s) > math.MaxInt32 {
 		log.Panicf("string too large for ssh, length %d", len(s))
 	}
 	buffer := make([]byte, 4+len(s))
@@ -49,9 +48,9 @@ func serializeString(s []byte) []byte {
 func SignedDataFromHash(namespace string, hash *crypto.Hash) []byte {
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
-		serializeString([]byte(namespace)),
-		serializeString([]byte{}), // Empty reserved string
-		serializeString([]byte("sha256")),
+		serializeString(namespace),
+		serializeString(""), // Empty reserved string
+		serializeString("sha256"),
 		serializeString(hash[:])}, nil)
 }
 
@@ -69,7 +68,7 @@ func skipPrefix(buffer []byte, prefix []byte) []byte {
 }
 
 // Skips an ssh-encoded string, including length field.
-func skipPrefixString(buffer []byte, prefix []byte) []byte {
+func skipPrefixString[T bytesOrString](buffer []byte, prefix T) []byte {
 	return skipPrefix(buffer, serializeString(prefix))
 }
 

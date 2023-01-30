@@ -17,7 +17,7 @@ func TestSerializeString(t *testing.T) {
 			bytes.Join([][]byte{{0, 0, 0, 15, 0xc3, 0xb6},
 				[]byte(" foo is a bar")}, nil)},
 	} {
-		if got, want := serializeString([]byte(tbl.in)), tbl.want; !bytes.Equal(got, want) {
+		if got, want := serializeString(tbl.in), tbl.want; !bytes.Equal(got, want) {
 			t.Errorf("%q: got %x but wanted %x", tbl.desc, got, want)
 		}
 	}

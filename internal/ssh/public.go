@@ -11,14 +11,14 @@ import (
 
 func serializePublicEd25519(pub *crypto.PublicKey) []byte {
 	return bytes.Join([][]byte{
-		serializeString([]byte("ssh-ed25519")),
+		serializeString("ssh-ed25519"),
 		serializeString(pub[:])},
 		nil)
 }
 
 func parsePublicEd25519(blob []byte) (crypto.PublicKey, error) {
 	pub := skipPrefix(blob, bytes.Join([][]byte{
-		serializeString([]byte("ssh-ed25519")),
+		serializeString("ssh-ed25519"),
 		serializeUint32(crypto.PublicKeySize),
 	}, nil))
 
