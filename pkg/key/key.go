@@ -14,10 +14,10 @@ func ParsePublicKey(ascii string) (crypto.PublicKey, error) {
 }
 
 // Supports two formats:
-//   * Openssh private key
-//   * Openssh public key, in which case ssh-agent is used to
+//   - Openssh private key
+//   - Openssh public key, in which case ssh-agent is used to
 //     access the corresponding private key.
-//   * (Deprecated) Raw hex-encoded private key (RFC 8032)
+//   - (Deprecated) Raw hex-encoded private key (RFC 8032)
 func ParsePrivateKey(ascii string) (crypto.Signer, error) {
 	ascii = strings.TrimSpace(ascii)
 	// Accepts public keys only in openssh format, since with raw
