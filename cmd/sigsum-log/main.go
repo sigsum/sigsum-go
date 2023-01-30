@@ -214,7 +214,7 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 	}
 	// Leaf submitted, now get a signed tree head + inclusion proof.
 	for {
-		getTreeHeadUrl := types.EndpointGetTreeHeadCosigned.Path(logUrl)
+		getTreeHeadUrl := types.EndpointGetTreeHead.Path(logUrl)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, getTreeHeadUrl, nil)
 		if err != nil {
 			return "", fmt.Errorf("creating the get tree request faild: %v", err)
@@ -234,43 +234,52 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 		if err != nil {
 			return "", fmt.Errorf("failed to parse tree head: %v", err)
 		}
-		if !cth.SignedTreeHead.VerifyLogSignature(logKey) {
+		if !cth.Verify(logKey) {
 			return "", fmt.Errorf("log's tree head signature is invalid: %v", err)
 		}
 
 		// See if we can have an inclusion proof for this tree size.
-		if cth.TreeSize == 0 {
+		if cth.Size == 0 {
 			// Certainly not included yet.
 			time.Sleep(delay)
 			continue
 		}
 		var proof types.InclusionProof
 		// Special case for the very first leaf.
-		if cth.TreeSize == 1 {
+		if cth.Size == 1 {
 			if cth.RootHash != leafHash {
 				// Certainly not included yet.
 				time.Sleep(delay)
 				continue
 			}
-			proof.TreeSize = 1
+			proof.Size = 1
 		} else {
-			getInclusionProofUrl := fmt.Sprintf("%s/%d/%x",
-				types.EndpointGetInclusionProof.Path(logUrl), cth.TreeSize, leafHash)
+			getInclusionProofUrl := fmt.Sprintf("%s%d/%x",
+				types.EndpointGetInclusionProof.Path(logUrl), cth.Size, leafHash)
 			req, err = http.NewRequestWithContext(ctx, http.MethodGet, getInclusionProofUrl, nil)
 			if err != nil {
-				return "", fmt.Errorf("creating the get-inclusion-proof request faild: %v", err)
+				return "", fmt.Errorf("creating the get-inclusion-proof request failed: %v", err)
 			}
 			resp, err = client.Do(req)
 			if err != nil {
 				return "", fmt.Errorf("failed to get inclusion proof: %v", err)
 			}
-			if resp.StatusCode != http.StatusOK {
-				resp.Body.Close()
-				log.Printf("no inclusion proof yet, will retry: %v", resp.Status)
+			if resp.StatusCode == http.StatusNotFound {
+				log.Printf("no inclusion proof yet (url %q), will retry: %v", req.URL, resp.Status)
 				time.Sleep(delay)
 				continue
 			}
-			err = proof.FromASCII(resp.Body, cth.TreeSize)
+			if resp.StatusCode != http.StatusOK {
+				errorBody, err := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				if err != nil {
+					return "", fmt.Errorf("getting inclusion proof failed: %v, no server response: %v",
+						resp.Status, err)
+				}
+				return "", fmt.Errorf("getting inclusion proof failed: %v, server said: %q",
+					resp.Status, errorBody)
+			}
+			err = proof.FromASCII(resp.Body, cth.Size)
 			resp.Body.Close()
 			if err != nil {
 				return "", fmt.Errorf("failed to parse inclusion proof: %v", err)
@@ -278,7 +287,7 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 		}
 
 		// Check validity.
-		if err = merkle.VerifyInclusion(&leafHash, proof.LeafIndex, cth.TreeSize, &cth.RootHash, proof.Path); err != nil {
+		if err = merkle.VerifyInclusion(&leafHash, proof.LeafIndex, cth.Size, &cth.RootHash, proof.Path); err != nil {
 			return "", fmt.Errorf("inclusion proof invalid: %v", err)
 		}
 
@@ -291,7 +300,7 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 
 		cth.ToASCII(&buf)
 
-		if cth.TreeSize > 1 {
+		if cth.Size > 1 {
 			fmt.Fprintf(&buf, "\n")
 			proof.ToASCII(&buf)
 		}

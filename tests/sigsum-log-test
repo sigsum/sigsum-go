@@ -2,12 +2,13 @@
 
 set -e
 
-./sigsum-key gen -o test.log.key
-./sigsum-key gen -o test.submit.key
+./bin/sigsum-key gen -o test.log.key
+./bin/sigsum-key gen -o test.submit.key
 
 # Start sigsum log server
 rm -f test.log.sth
-"./sigsum-log-primary" --key test.log.key \
+echo "startup=empty" > test.log.sth.startup
+./bin/sigsum-log-primary --key test.log.key \
     --interval=3s --log-level=error --ephemeral-test-backend --sth-path test.log.sth &
 
 SIGSUM_PID=$!
@@ -22,5 +23,5 @@ for x in $(seq 5); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
     printf "%31s\n" foo-$x \
-	| ./sigsum-log -o /dev/null -k test.submit.key --log-url http://localhost:6965 --log-key test.log.key.pub
+	| ./bin/sigsum-log -o /dev/null -k test.submit.key --log-url http://localhost:6965 --log-key test.log.key.pub
 done
