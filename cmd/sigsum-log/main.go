@@ -12,7 +12,6 @@ import (
 
 	"bytes"
 	"net/url"
-	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/merkle"
@@ -52,12 +51,17 @@ func main() {
 
     If no output file is provided with the -o option, output is sent to stdout.
 `
+	log.SetFlags(0)
 	// TODO: Add option to use the hash of the input file as the message.
 	// TODO: Witness config/policy.
-	settings := parseSettings(os.Args[1:], usage)
+	var settings Settings
+	settings.parse(os.Args[1:], usage)
 	var leaf requests.Leaf
 	if len(settings.keyFile) > 0 {
-		signer := readPrivateKeyFile(settings.keyFile)
+		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
 		publicKey := signer.Public()
 
 		// TODO: Optionally create message by hashing stdin.
@@ -98,7 +102,10 @@ func main() {
 		}
 	}
 	if len(settings.logUrl) > 0 {
-		publicKey := readPublicKeyFile(settings.logKey)
+		publicKey, err := key.ReadPublicKeyFile(settings.logKey)
+		if err != nil {
+			log.Fatal(err)
+		}
 		proof, err := submitLeaf(settings.logUrl, &publicKey, &leaf)
 		if err != nil {
 			log.Fatalf("submitting leaf failed: %v", err)
@@ -117,49 +124,19 @@ func main() {
 	}
 }
 
-func parseSettings(args []string, usage string) Settings {
+func (s *Settings) parse(args []string, usage string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	flags.Usage = func() { fmt.Print(usage) }
 
-	keyFile := flags.String("k", "", "Key file")
-	logUrl := flags.String("log-url", "", "Log base url")
-	logKey := flags.String("log-key", "", "Public key file for log")
-	outputFile := flags.String("o", "", "Output file")
+	flags.StringVar(&s.keyFile, "k", "", "Key file")
+	flags.StringVar(&s.logUrl, "log-url", "", "Log base url")
+	flags.StringVar(&s.logKey, "log-key", "", "Public key file for log")
+	flags.StringVar(&s.outputFile, "o", "", "Output file")
 
 	flags.Parse(args)
-	if len(*logUrl) > 0 && len(*logKey) == 0 {
+	if len(s.logUrl) > 0 && len(s.logKey) == 0 {
 		log.Fatalf("--log-url option requires log's public key (--log-key option)")
 	}
-	return Settings{
-		keyFile:    *keyFile,
-		logUrl:     *logUrl,
-		logKey:     *logKey,
-		outputFile: *outputFile,
-	}
-}
-
-func readPublicKeyFile(fileName string) crypto.PublicKey {
-	contents, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatalf("reading file %q failed: %v", fileName, err)
-	}
-	key, err := key.ParsePublicKey(string(contents))
-	if err != nil {
-		log.Fatalf("parsing file %q failed: %v", fileName, err)
-	}
-	return key
-}
-
-func readPrivateKeyFile(fileName string) crypto.Signer {
-	contents, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatalf("reading file %q failed: %v", fileName, err)
-	}
-	signer, err := key.ParsePrivateKey(string(contents))
-	if err != nil {
-		log.Fatalf("parsing file %q failed: %v", fileName, err)
-	}
-	return signer
 }
 
 func readMessage(r io.Reader) (ret crypto.Hash) {
@@ -306,51 +283,6 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 		}
 		return string(buf.Bytes()), nil
 	}
-}
-
-func checkProofHeader(header []byte, logKey *crypto.PublicKey) {
-	p := ascii.NewParser(bytes.NewBuffer(header))
-	if version, err := p.GetInt("version"); err != nil || version != 0 {
-		if err != nil {
-			log.Fatalf("invalid version line: %v", err)
-		}
-		log.Fatalf("unexpected version %d, wanted 0", version)
-	}
-	if hash, err := p.GetHash("log"); err != nil || hash != crypto.HashBytes(logKey[:]) {
-		if err != nil {
-			log.Fatalf("invalid log line: %v", err)
-		}
-		log.Fatalf("proof doesn't match log's public key")
-	}
-	if err := p.GetEOF(); err != nil {
-		log.Fatalf("invalid proof header: %v", err)
-	}
-
-}
-
-// On success, returns the leaf hash.
-func checkProofLeaf(leaf []byte, msg []byte, submitKey *crypto.PublicKey) crypto.Hash {
-	p := ascii.NewParser(bytes.NewBuffer(leaf))
-	values, err := p.GetValues("leaf", 2)
-	if err != nil {
-		log.Fatalf("invalid leaf line: %v", err)
-	}
-	keyHash, err := crypto.HashFromHex(values[0])
-	if err != nil || keyHash != crypto.HashBytes(submitKey[:]) {
-		log.Fatalf("unexpected leaf key hash: %q", values[0])
-	}
-	signature, err := crypto.SignatureFromHex(values[1])
-	if err != nil {
-		log.Fatalf("failed to perse signature: %v", err)
-	}
-	if !types.VerifyLeafMessage(submitKey, msg, &signature) {
-		log.Fatalf("leaf signature not valid")
-	}
-	return merkle.HashLeafNode((&types.Leaf{
-		Checksum:  crypto.HashBytes(msg[:]),
-		KeyHash:   keyHash,
-		Signature: signature,
-	}).ToBinary())
 }
 
 // TODO: There should be some library utility for this.

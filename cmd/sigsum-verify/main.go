@@ -31,10 +31,17 @@ func main() {
     Verifies a sigsum proof, as produced by sigsum-log. Proof file specified on command line,
     data being verified read from stdin.
 `
-
-	settings := parseSettings(os.Args[1:], usage)
-	submitKey := readPublicKeyFile(settings.submitKey)
-	logKey := readPublicKeyFile(settings.logKey)
+	log.SetFlags(0)
+	var settings Settings
+	settings.parse(os.Args[1:], usage)
+	submitKey, err := key.ReadPublicKeyFile(settings.submitKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	logKey, err := key.ReadPublicKeyFile(settings.logKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// TODO: Optionally create message by hashing stdin.
 	msg := readMessage(os.Stdin)
@@ -83,40 +90,24 @@ func main() {
 	}
 }
 
-func parseSettings(args []string, usage string) Settings {
+func (s *Settings) parse(args []string, usage string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	flags.Usage = func() { fmt.Print(usage) }
 
-	submitKey := flags.String("submit-key", "", "Public key file")
-	logKey := flags.String("log-key", "", "Public key file for log")
+	flags.StringVar(&s.submitKey, "submit-key", "", "Public key file")
+	flags.StringVar(&s.logKey, "log-key", "", "Public key file for log")
 
 	flags.Parse(args)
 	if flags.NArg() != 1 {
 		log.Fatalf("no proof given on command line")
 	}
-	if len(*submitKey) == 0 {
+	s.proofFile = flags.Arg(0)
+	if len(s.submitKey) == 0 {
 		log.Fatalf("--submit-key argument is required")
 	}
-	if len(*logKey) == 0 {
+	if len(s.logKey) == 0 {
 		log.Fatalf("--log-key argument is required")
 	}
-	return Settings{
-		proofFile: flags.Arg(0),
-		submitKey: *submitKey,
-		logKey:    *logKey,
-	}
-}
-
-func readPublicKeyFile(fileName string) crypto.PublicKey {
-	contents, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatalf("reading file %q failed: %v", fileName, err)
-	}
-	key, err := key.ParsePublicKey(string(contents))
-	if err != nil {
-		log.Fatalf("parsing file %q failed: %v", fileName, err)
-	}
-	return key
 }
 
 func readMessage(r io.Reader) (ret crypto.Hash) {
