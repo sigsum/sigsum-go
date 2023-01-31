@@ -3,8 +3,9 @@ package client
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -26,6 +27,11 @@ type Client interface {
 	AddCosignature(context.Context, types.Cosignature) error
 }
 
+var (
+	HttpNotFound = errors.New("404 Not Found")
+	HttpAccepted = errors.New("202 Accepted")
+)
+
 type Config struct {
 	UserAgent string
 	LogURL    string
@@ -45,12 +51,8 @@ type client struct {
 	http.Client
 }
 
-func (cli *client) Initiated() bool {
-	return cli.LogURL != ""
-}
-
 func (cli *client) GetUnsignedTreeHead(ctx context.Context) (th types.TreeHead, err error) {
-	body, _, err := cli.get(ctx, types.EndpointGetTreeHeadUnsigned.Path(cli.LogURL))
+	body, err := cli.get(ctx, types.EndpointGetTreeHeadUnsigned.Path(cli.LogURL))
 	if err != nil {
 		return th, fmt.Errorf("get: %w", err)
 	}
@@ -62,7 +64,7 @@ func (cli *client) GetUnsignedTreeHead(ctx context.Context) (th types.TreeHead, 
 }
 
 func (cli *client) GetNextTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
-	body, _, err := cli.get(ctx, types.EndpointGetNextTreeHead.Path(cli.LogURL))
+	body, err := cli.get(ctx, types.EndpointGetNextTreeHead.Path(cli.LogURL))
 	if err != nil {
 		return sth, fmt.Errorf("get: %w", err)
 	}
@@ -77,7 +79,7 @@ func (cli *client) GetNextTreeHead(ctx context.Context) (sth types.SignedTreeHea
 }
 
 func (cli *client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
-	body, _, err := cli.get(ctx, types.EndpointGetTreeHead.Path(cli.LogURL))
+	body, err := cli.get(ctx, types.EndpointGetTreeHead.Path(cli.LogURL))
 	if err != nil {
 		return cth, fmt.Errorf("get: %w", err)
 	}
@@ -91,12 +93,20 @@ func (cli *client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead,
 	return cth, nil
 }
 
-func (cli *client) GetInclusionProof(ctx context.Context, req requests.InclusionProof) (proof types.InclusionProof, err error) {
-	return proof, fmt.Errorf("TODO")
+func (cli *client) GetInclusionProof(ctx context.Context, req requests.InclusionProof) (types.InclusionProof, error) {
+	body, err := cli.get(ctx, req.ToURL(types.EndpointGetInclusionProof.Path(cli.LogURL)))
+	if err != nil {
+		return types.InclusionProof{}, err
+	}
+	var proof types.InclusionProof
+	if err := proof.FromASCII(bytes.NewBuffer(body), req.Size); err != nil {
+		return proof, fmt.Errorf("parse: %w", err)
+	}
+	return proof, err
 }
 
 func (cli *client) GetConsistencyProof(ctx context.Context, req requests.ConsistencyProof) (proof types.ConsistencyProof, err error) {
-	body, _, err := cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.LogURL)))
+	body, err := cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.LogURL)))
 	if err != nil {
 		return proof, fmt.Errorf("get: %w", err)
 	}
@@ -107,7 +117,7 @@ func (cli *client) GetConsistencyProof(ctx context.Context, req requests.Consist
 }
 
 func (cli *client) GetLeaves(ctx context.Context, req requests.Leaves) ([]types.Leaf, error) {
-	body, _, err := cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.LogURL)))
+	body, err := cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.LogURL)))
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}
@@ -118,37 +128,46 @@ func (cli *client) GetLeaves(ctx context.Context, req requests.Leaves) ([]types.
 	return leaves, nil
 }
 
-func (cli *client) AddLeaf(ctx context.Context, req requests.Leaf) (persisted bool, err error) {
-	return false, fmt.Errorf("TODO")
+func (cli *client) AddLeaf(ctx context.Context, req requests.Leaf) (bool, error) {
+	buf := bytes.Buffer{}
+	req.ToASCII(&buf)
+	_, err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.LogURL), &buf)
+	if err != nil {
+		if err == HttpAccepted {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (cli *client) AddCosignature(ctx context.Context, req types.Cosignature) error {
 	return fmt.Errorf("TODO")
 }
 
-func (cli *client) get(ctx context.Context, url string) ([]byte, int, error) {
+func (cli *client) get(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, -1, err
+		return nil, err
 	}
-	return cli.do(ctx, req)
+	return cli.do(req)
 }
 
-func (cli *client) post(ctx context.Context, url string, body []byte) ([]byte, int, error) {
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+func (cli *client) post(ctx context.Context, url string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
-		return nil, -1, err
+		return nil, err
 	}
-	return cli.do(ctx, req)
+	return cli.do(req)
 }
 
-func (cli *client) do(ctx context.Context, req *http.Request) ([]byte, int, error) {
+func (cli *client) do(req *http.Request) ([]byte, error) {
 	// TODO: redirects, see go doc http.Client.CheckRedirect
-	// TODO: use ctx or remove it -- the context is already set on req so it seems unneccesary
 	req.Header.Set("User-Agent", cli.UserAgent)
 
 	var rsp *http.Response
 	var err error
+	// TODO: Why retry here?
 	for wait := 1; wait < 10; wait *= 2 {
 		log.Debug("trying %v", req.URL)
 		if rsp, err = cli.Client.Do(req); err == nil {
@@ -159,15 +178,23 @@ func (cli *client) do(ctx context.Context, req *http.Request) ([]byte, int, erro
 		time.Sleep(sleep)
 	}
 	if err != nil {
-		return nil, -1, fmt.Errorf("send request: %w", err)
+		return nil, fmt.Errorf("send request: %w", err)
 	}
 	defer rsp.Body.Close()
-	b, err := ioutil.ReadAll(rsp.Body)
+	b, err := io.ReadAll(rsp.Body)
 	if err != nil {
-		return nil, rsp.StatusCode, fmt.Errorf("read response: %w", err)
+		return nil, fmt.Errorf("status code %d, no server response: %w",
+			rsp.StatusCode, err)
 	}
-	if low, high := 200, 299; rsp.StatusCode < low || rsp.StatusCode > high {
-		err = fmt.Errorf("not 2XX status code: %d", rsp.StatusCode)
+	switch rsp.StatusCode {
+	case http.StatusNotFound:
+		return nil, HttpNotFound
+	case http.StatusAccepted:
+		return nil, HttpAccepted
+	case http.StatusOK:
+		return b, nil
+	default:
+		return nil, fmt.Errorf("status code %d, server: %q",
+			rsp.StatusCode, b)
 	}
-	return b, rsp.StatusCode, err
 }
