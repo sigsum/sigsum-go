@@ -74,15 +74,20 @@ func main() {
 		log.Print(usage)
 		os.Exit(0)
 	case "gen":
-		settings := parseGenSettings(args)
+		var settings GenSettings
+		settings.parse(args)
 		pub, signer, err := crypto.NewKeyPair()
 		if err != nil {
 			log.Fatalf("generating key failed: %v\n", err)
 		}
 		writeKeyFiles(settings.outputFile, &pub, signer)
 	case "verify":
-		settings := parseVerifySettings(args)
-		publicKey := readPublicKeyFile(settings.keyFile)
+		var settings VerifySettings
+		settings.parse(args)
+		publicKey, err := key.ReadPublicKeyFile(settings.keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
 		signature := readSignatureFile(settings.signatureFile,
 			&publicKey, settings.namespace)
 		hash, err := crypto.HashFile(os.Stdin)
@@ -96,8 +101,12 @@ func main() {
 			log.Fatalf("signature is not valid\n")
 		}
 	case "sign":
-		settings := parseSignSettings(args)
-		signer := readPrivateKeyFile(settings.keyFile)
+		var settings SignSettings
+		settings.parse(args)
+		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
 		hash, err := crypto.HashFile(os.Stdin)
 		if err != nil {
 			log.Fatalf("failed to read stdin: %v\n", err)
@@ -110,83 +119,78 @@ func main() {
 		writeSignatureFile(settings.outputFile, settings.sshFormat,
 			&public, settings.namespace, &signature)
 	case "hash":
-		settings := parseExportSettings(args)
-		publicKey := readPublicKeyFile(settings.keyFile)
+		var settings ExportSettings
+		settings.parse(args)
+		publicKey, err := key.ReadPublicKeyFile(settings.keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
 		fmt.Printf("%x\n", crypto.HashBytes(publicKey[:]))
 	case "hex":
-		settings := parseExportSettings(args)
-		publicKey := readPublicKeyFile(settings.keyFile)
+		var settings ExportSettings
+		settings.parse(args)
+		publicKey, err := key.ReadPublicKeyFile(settings.keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
 		fmt.Printf("%x\n", publicKey[:])
 	}
 }
 
-func parseGenSettings(args []string) GenSettings {
+func (s *GenSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	outputFile := flags.String("o", "", "Output file")
+	flags.StringVar(&s.outputFile, "o", "", "Output file")
 
 	flags.Parse(args)
 
-	if len(*outputFile) == 0 {
+	if len(s.outputFile) == 0 {
 		log.Printf("output file (-o option) missing")
 		os.Exit(1)
 	}
-	return GenSettings{*outputFile}
 }
 
-func parseVerifySettings(args []string) VerifySettings {
+func (s *VerifySettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	keyFile := flags.String("k", "", "Key file")
-	signatureFile := flags.String("s", "", "Signature file")
-	namespace := flags.String("n", "signed-tree-head:v0@sigsum.org", "Signature namespace")
+	flags.StringVar(&s.keyFile, "k", "", "Key file")
+	flags.StringVar(&s.signatureFile, "s", "", "Signature file")
+	flags.StringVar(&s.namespace, "n", "signed-tree-head:v0@sigsum.org", "Signature namespace")
 
 	flags.Parse(args)
 
-	if len(*keyFile) == 0 {
+	if len(s.keyFile) == 0 {
 		log.Printf("key file (-k option) missing")
 		os.Exit(1)
 	}
-	if len(*signatureFile) == 0 {
+	if len(s.signatureFile) == 0 {
 		log.Printf("signature file (-s option) missing")
 		os.Exit(1)
 	}
-	return VerifySettings{
-		keyFile:       *keyFile,
-		signatureFile: *signatureFile,
-		namespace:     *namespace,
-	}
 }
 
-func parseSignSettings(args []string) SignSettings {
+func (s *SignSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	keyFile := flags.String("k", "", "Key file")
-	outputFile := flags.String("o", "", "Signature output file")
-	namespace := flags.String("n", "tree-leaf:v0@sigsum.org", "Signature namespace")
-	sshFormat := flags.Bool("ssh", false, "Use OpenSSH format for public key")
+	flags.StringVar(&s.keyFile, "k", "", "Key file")
+	flags.StringVar(&s.outputFile, "o", "", "Signature output file")
+	flags.StringVar(&s.namespace, "n", "tree-leaf:v0@sigsum.org", "Signature namespace")
+	flags.BoolVar(&s.sshFormat, "ssh", false, "Use OpenSSH format for public key")
 
 	flags.Parse(args)
 
-	if len(*keyFile) == 0 {
+	if len(s.keyFile) == 0 {
 		log.Fatalf("key file (-k option) missing")
 	}
-	return SignSettings{
-		keyFile:    *keyFile,
-		outputFile: *outputFile,
-		namespace:  *namespace,
-		sshFormat:  *sshFormat,
-	}
 }
 
-func parseExportSettings(args []string) ExportSettings {
+func (s *ExportSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	keyFile := flags.String("k", "", "Key file")
+	flags.StringVar(&s.keyFile, "k", "", "Key file")
 
 	flags.Parse(args)
 
-	if len(*keyFile) == 0 {
+	if len(s.keyFile) == 0 {
 		log.Printf("key file (-k option) missing")
 		os.Exit(1)
 	}
-	return ExportSettings{*keyFile}
 }
 
 // If outputFile is non-empty: open file, pass to f, and automatically
@@ -233,30 +237,6 @@ func writeSignatureFile(outputFile string, sshFormat bool,
 		_, err := fmt.Fprintf(f, "%x\n", signature[:])
 		return err
 	})
-}
-
-func readPublicKeyFile(fileName string) crypto.PublicKey {
-	contents, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatalf("reading file %q failed: %v", fileName, err)
-	}
-	key, err := key.ParsePublicKey(string(contents))
-	if err != nil {
-		log.Fatalf("parsing file %q failed: %v", fileName, err)
-	}
-	return key
-}
-
-func readPrivateKeyFile(fileName string) crypto.Signer {
-	contents, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatalf("reading file %q failed: %v", fileName, err)
-	}
-	signer, err := key.ParsePrivateKey(string(contents))
-	if err != nil {
-		log.Fatalf("parsing file %q failed: %v", fileName, err)
-	}
-	return signer
 }
 
 func readSignatureFile(fileName string,
