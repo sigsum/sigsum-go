@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/submit-token"
 )
@@ -68,8 +67,15 @@ func main() {
 	case "create":
 		var settings createSettings
 		settings.parse(args)
-		signer := readPrivateKeyFile(settings.keyFile)
-		logKey := readPublicKeyFile(settings.logKeyFile)
+		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logKey, err := key.ReadPublicKeyFile(settings.logKeyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		signature, err := token.MakeToken(signer, &logKey)
 		if err != nil {
 			log.Fatalf("signing failed: %v", err)
@@ -85,7 +91,10 @@ func main() {
 	case "record":
 		var settings recordSettings
 		settings.parse(args)
-		logKey := readPublicKeyFile(settings.keyFile)
+		logKey, err := key.ReadPublicKeyFile(settings.keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
 		withOutput(settings.outputFile, func(w io.Writer) error {
 			_, err := fmt.Fprintf(w, "%s IN TXT \"%x\"\n", token.Label, logKey)
 			return err
@@ -96,7 +105,10 @@ func main() {
 		if settings.quiet {
 			log.SetOutput(nil)
 		}
-		logKey := readPublicKeyFile(settings.logKeyFile)
+		logKey, err := key.ReadPublicKeyFile(settings.logKeyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
 		contents, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			log.Fatalf("Reading input failed: %v", err)
@@ -132,7 +144,10 @@ func main() {
 			}
 		}
 		if len(settings.keyFile) > 0 {
-			key := readPublicKeyFile(settings.keyFile)
+			key, err := key.ReadPublicKeyFile(settings.keyFile)
+			if err != nil {
+				log.Fatal(err)
+			}
 			if err := token.VerifyToken(&key, &logKey, signatureHex); err != nil {
 				log.Fatalf("Verifying using given key failed: %v", err)
 			}
@@ -182,30 +197,6 @@ func (s *verifySettings) parse(args []string) {
 	if len(s.logKeyFile) == 0 {
 		log.Fatalf("log public key file (--log option) missing")
 	}
-}
-
-func readPrivateKeyFile(fileName string) crypto.Signer {
-	contents, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatalf("reading file %q failed: %v", fileName, err)
-	}
-	signer, err := key.ParsePrivateKey(string(contents))
-	if err != nil {
-		log.Fatalf("parsing file %q failed: %v", fileName, err)
-	}
-	return signer
-}
-
-func readPublicKeyFile(fileName string) crypto.PublicKey {
-	contents, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatalf("reading file %q failed: %v", fileName, err)
-	}
-	key, err := key.ParsePublicKey(string(contents))
-	if err != nil {
-		log.Fatalf("parsing file %q failed: %v", fileName, err)
-	}
-	return key
 }
 
 // If outputFile is non-empty: open file, pass to f, and automatically

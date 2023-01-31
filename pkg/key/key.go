@@ -2,6 +2,7 @@ package key
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"sigsum.org/sigsum-go/internal/ssh"
@@ -40,4 +41,30 @@ func ParsePrivateKey(ascii string) (crypto.Signer, error) {
 		signer, err = crypto.SignerFromHex(ascii)
 	}
 	return signer, err
+}
+
+func ReadPublicKeyFile(fileName string) (crypto.PublicKey, error) {
+	contents, err := os.ReadFile(fileName)
+	if err != nil {
+		return crypto.PublicKey{}, err
+	}
+	key, err := ParsePublicKey(string(contents))
+	if err != nil {
+		return crypto.PublicKey{}, fmt.Errorf("parsing public key file %q failed: %v",
+			fileName, err)
+	}
+	return key, nil
+}
+
+func ReadPrivateKeyFile(fileName string) (crypto.Signer, error) {
+	contents, err := os.ReadFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	signer, err := ParsePrivateKey(string(contents))
+	if err != nil {
+		return nil, fmt.Errorf("parsing private key file %q failed: %v",
+			fileName, err)
+	}
+	return signer, nil
 }
