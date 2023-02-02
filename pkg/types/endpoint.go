@@ -1,7 +1,5 @@
 package types
 
-import "strings"
-
 type Endpoint string
 
 const (
@@ -16,8 +14,13 @@ const (
 	EndpointGetTreeHeadUnsigned = Endpoint("get-tree-head-unsigned")
 )
 
-// Path joins a number of components to form a full endpoint path.  For example,
-// EndpointAddLeaf.Path("example.com", "sigsum") -> example.com/sigsum/add-leaf.
-func (e Endpoint) Path(components ...string) string {
-	return strings.Join(append(components, string(e)), "/")
+// Path adds endpoint name to a service prefix.  If prefix is empty, nothing is added.
+// For example,
+// EndpointAddLeaf.Path("example.com/sigsum") -> "example.com/sigsum/add-leaf".
+// EndpointAddLeaf.Path("") -> "add-leaf".
+func (e Endpoint) Path(prefix string) string {
+	if len(prefix) == 0 {
+		return string(e)
+	}
+	return prefix + "/" + string(e)
 }
