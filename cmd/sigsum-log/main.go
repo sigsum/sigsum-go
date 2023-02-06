@@ -20,6 +20,7 @@ import (
 )
 
 type Settings struct {
+	rawHash    bool
 	keyFile    string
 	logUrl     string
 	logKey     string
@@ -33,11 +34,13 @@ func main() {
       -k PRIVATE-KEY
       --log-url LOG-URL
       --log-key LOG-KEY
+      --raw-hash
       -o OUTPUT-FILE
     Creates and/or submits an add-leaf request.
 
     If -k PRIVATE-KEY is provided, a new leaf is created based on the
-    INPUT message (note that it's size must be exactly 32 octets).
+    SHA256 hash of the input (or if --raw-hash is given, input is the
+    hash value, of size exactly 32 octets).
 
     If -k option is missing, the INPUT should instead be the body of a
     leaf request, which is parsed and verified.
@@ -64,8 +67,7 @@ func main() {
 		}
 		publicKey := signer.Public()
 
-		// TODO: Optionally create message by hashing stdin.
-		msg := readMessage(os.Stdin)
+		msg := readMessage(os.Stdin, settings.rawHash)
 
 		signature, err := types.SignLeafMessage(signer, msg[:])
 		if err != nil {
@@ -128,6 +130,7 @@ func (s *Settings) parse(args []string, usage string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	flags.Usage = func() { fmt.Print(usage) }
 
+	flags.BoolVar(&s.rawHash, "raw-hash", false, "Use raw hash input")
 	flags.StringVar(&s.keyFile, "k", "", "Key file")
 	flags.StringVar(&s.logUrl, "log-url", "", "Log base url")
 	flags.StringVar(&s.logKey, "log-key", "", "Public key file for log")
@@ -139,17 +142,27 @@ func (s *Settings) parse(args []string, usage string) {
 	}
 }
 
-func readMessage(r io.Reader) (ret crypto.Hash) {
-	// One extra byte, to detect EOF.
-	msg := make([]byte, 33)
-	if readCount, err := io.ReadFull(os.Stdin, msg); err != io.ErrUnexpectedEOF || readCount != 32 {
-		if err != nil && err != io.ErrUnexpectedEOF {
-			log.Fatalf("reading message from stdin failed: %v", err)
+func readMessage(r io.Reader, rawHash bool) (ret crypto.Hash) {
+	readHash := func(r io.Reader)(ret crypto.Hash) {
+		// One extra byte, to detect EOF.
+		msg := make([]byte, 33)
+		if readCount, err := io.ReadFull(os.Stdin, msg); err != io.ErrUnexpectedEOF || readCount != 32 {
+			if err != nil && err != io.ErrUnexpectedEOF {
+				log.Fatalf("reading message from stdin failed: %v", err)
+			}
+			log.Fatalf("sigsum message must be exactly 32 bytes, got %d", readCount)
 		}
-		log.Fatalf("sigsum message must be exactly 32 bytes, got %d", readCount)
+		copy(ret[:], msg)
+		return
 	}
-	copy(ret[:], msg)
-	return
+	if rawHash {
+		return readHash(r)
+	}
+	msg, err := crypto.HashFile(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return msg
 }
 
 func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (string, error) {
@@ -169,7 +182,7 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, addLeafUrl, &buf)
 		if err != nil {
-			return "", fmt.Errorf("creating the add-leaf request faild: %v", err)
+			return "", fmt.Errorf("creating the add-leaf request failed: %v", err)
 		}
 		resp, err := client.Do(req)
 		if err != nil {
