@@ -65,7 +65,7 @@ func TestGetRootHash(t *testing.T) {
 
 	tree := NewTree()
 	for i, want := range []crypto.Hash{
-		crypto.Hash{},
+		mustHashFromHex(t, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
 		hashes[0],
 		h01,
 		HashInteriorNode(&h01, &hashes[2]),
@@ -209,6 +209,14 @@ func TestConsistencyValid(t *testing.T) {
 			}
 		}
 	}
+}
+
+func mustHashFromHex(t *testing.T, hex string) crypto.Hash {
+	h, err := crypto.HashFromHex(hex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h
 }
 
 func newLeaves(n int) []crypto.Hash {
