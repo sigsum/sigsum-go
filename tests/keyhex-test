@@ -1,0 +1,19 @@
+#! /bin/sh
+
+set -e
+
+# The pub key at _sigsum_v0.test.sigsum.org.
+HEXKEY=4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29
+PUBKEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEy1q/atefv1q7zK/MJp2FzSZR7UuIW1hp8kGu3wpbop"
+
+./bin/sigsum-key hex-to-pub > test.key.pub ${HEXKEY}
+
+[ "$(cut -d' ' -f1,2 < test.key.pub )" = "${PUBKEY}" ] || (
+   echo >&2 "sigsum-key hex-to-pub failed"
+   exit 1
+)
+
+[ $(./bin/sigsum-key hex -k test.key.pub) = ${HEXKEY} ] || (
+   echo >&2 "sigsum-key hex failed"
+   exit 1
+)
