@@ -2,11 +2,11 @@
 
 set -e
 
-./sigsum-key gen -o test.key
+./bin/sigsum-key gen -o test.key
 
-kh=$(./sigsum-key hash -k test.key.pub)
+kh=$(./bin/sigsum-key hash -k test.key.pub)
 # basenc requires uppercase hex
-ref=$(./sigsum-key hex -k test.key.pub | tr a-f A-F  | basenc -d --base16 | sha256sum | sed 's/ .*$//')
+ref=$(./bin/sigsum-key hex -k test.key.pub | tr a-f A-F  | basenc -d --base16 | sha256sum | sed 's/ .*$//')
 
 if [ "$kh" != "$ref" ] ; then
     printf "unexpected keyhash\n  got: %s\n wanted: %s\n" "$kh" "$ref"

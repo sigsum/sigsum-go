@@ -2,7 +2,7 @@
 
 set -e
 
-./sigsum-key gen -o test.key
+./bin/sigsum-key gen -o test.key
 
-./sigsum-token record -k test.key.pub -o test.record.txt
+./bin/sigsum-token record -k test.key.pub -o test.record.txt
 grep >/dev/null '^_sigsum_v0 IN TXT "[0-9a-z]\{64\}"$' test.record.txt

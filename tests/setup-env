@@ -1,4 +1,3 @@
 #! /bin/sh
 
-go build -o sigsum-key ../cmd/sigsum-key/main.go 
-go build -o sigsum-token ../cmd/sigsum-token/main.go
+GOBIN=$(pwd)/bin go install ../cmd/...

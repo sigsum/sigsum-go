@@ -6,3 +6,8 @@ all:
 
 check:
 	./run-tests $(TESTS)
+
+clean:
+	rm -rf bin test.*
+
+.PHONY: all check clean
