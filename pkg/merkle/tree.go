@@ -64,7 +64,7 @@ func hashStack(stack []crypto.Hash) crypto.Hash {
 func (t *Tree) GetRootHash() crypto.Hash {
 	if len(t.stack) == 0 {
 		// Special case, all-zero hash
-		return crypto.Hash{}
+		return crypto.HashBytes([]byte{})
 	}
 	return hashStack(t.stack)
 }
