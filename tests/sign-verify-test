@@ -2,17 +2,17 @@
 
 set -e
 
-./sigsum-key gen -o test.key
+./bin/sigsum-key gen -o test.key
 
 echo foo > test.msg
 rm -f test.msg.sig
 
-./sigsum-key sign -n sigsum-test -k test.key -o test.msg.sig < test.msg
-./sigsum-key verify -n sigsum-test -k test.key.pub -s test.msg.sig < test.msg
+./bin/sigsum-key sign -n sigsum-test -k test.key -o test.msg.sig < test.msg
+./bin/sigsum-key verify -n sigsum-test -k test.key.pub -s test.msg.sig < test.msg
 
 # Check that modified message makes verification fail.
 if (cat test.msg && echo) \
-    | ./sigsum-key verify -n sigsum-test -k test.key.pub -s test.msg.sig 2>/dev/null ; then
+    | ./bin/sigsum-key verify -n sigsum-test -k test.key.pub -s test.msg.sig 2>/dev/null ; then
     false
 else
     true

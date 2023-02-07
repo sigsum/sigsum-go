@@ -6,4 +6,7 @@ check:
 	go test ./...
 	cd tests && $(MAKE) check
 
-.PHONY: all check
+clean:
+	cd tests && $(MAKE) clean
+
+.PHONY: all check clean
