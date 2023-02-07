@@ -142,8 +142,8 @@ func (s *Settings) parse(args []string, usage string) {
 	}
 }
 
-func readMessage(r io.Reader, rawHash bool) (ret crypto.Hash) {
-	readHash := func(r io.Reader)(ret crypto.Hash) {
+func readMessage(r io.Reader, rawHash bool) crypto.Hash {
+	readHash := func(r io.Reader) (ret crypto.Hash) {
 		// One extra byte, to detect EOF.
 		msg := make([]byte, 33)
 		if readCount, err := io.ReadFull(os.Stdin, msg); err != io.ErrUnexpectedEOF || readCount != 32 {

@@ -29,7 +29,7 @@ done
 for x in $(seq 5); do
     echo >&2 "verify $x"
     printf "%31s\n" foo-$x \
-	| ./bin/sigsum-verify --submit-key test.submit.key.pub --log-key test.log.key.pub "test.$x.proof"
+	| ./bin/sigsum-verify --raw-hash --submit-key test.submit.key.pub --log-key test.log.key.pub "test.$x.proof"
 done
 
 # Check that the message is taken into account in validation.
