@@ -60,6 +60,9 @@ func main() {
 
   sigsum-key hex -k KEY
     KEY is filename of a public key. Outputs hex-encoded raw key.
+
+  sigsum-key hex-to-pub KEY
+    Converts raw hex public key (provided on the command line) to OpenSSH format.
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -134,6 +137,16 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("%x\n", publicKey[:])
+	case "hex-to-pub":
+		if len(args) != 1 {
+			log.Fatalf("hex key argument missing")
+		}
+		pub, err := crypto.PublicKeyFromHex(args[0])
+		if err != nil {
+			log.Fatalf("invalid key: %v", err)
+		}
+
+		fmt.Print(ssh.FormatPublicEd25519(&pub))
 	}
 }
 
