@@ -16,16 +16,14 @@ import (
 
 type Client interface {
 	GetUnsignedTreeHead(context.Context) (types.TreeHead, error)
-	GetToCosignTreeHead(context.Context) (types.SignedTreeHead, error)
-	GetCosignedTreeHead(context.Context) (types.CosignedTreeHead, error)
+	GetNextTreeHead(context.Context) (types.SignedTreeHead, error)
+	GetTreeHead(context.Context) (types.CosignedTreeHead, error)
 	GetInclusionProof(context.Context, requests.InclusionProof) (types.InclusionProof, error)
 	GetConsistencyProof(context.Context, requests.ConsistencyProof) (types.ConsistencyProof, error)
 	GetLeaves(context.Context, requests.Leaves) ([]types.Leaf, error)
 
 	AddLeaf(context.Context, requests.Leaf) (bool, error)
 	AddCosignature(context.Context, types.Cosignature) error
-
-	Initiated() bool
 }
 
 type Config struct {
@@ -63,7 +61,7 @@ func (cli *client) GetUnsignedTreeHead(ctx context.Context) (th types.TreeHead, 
 	return th, nil
 }
 
-func (cli *client) GetToCosignTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
+func (cli *client) GetNextTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
 	body, _, err := cli.get(ctx, types.EndpointGetNextTreeHead.Path(cli.LogURL))
 	if err != nil {
 		return sth, fmt.Errorf("get: %w", err)
@@ -78,7 +76,7 @@ func (cli *client) GetToCosignTreeHead(ctx context.Context) (sth types.SignedTre
 	return sth, nil
 }
 
-func (cli *client) GetCosignedTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
+func (cli *client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
 	body, _, err := cli.get(ctx, types.EndpointGetTreeHead.Path(cli.LogURL))
 	if err != nil {
 		return cth, fmt.Errorf("get: %w", err)
@@ -86,7 +84,7 @@ func (cli *client) GetCosignedTreeHead(ctx context.Context) (cth types.CosignedT
 	if err := cth.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return cth, fmt.Errorf("parse: %w", err)
 	}
-	if ok := cth.SignedTreeHead.Verify(&cli.LogPub); !ok {
+	if ok := cth.Verify(&cli.LogPub); !ok {
 		return cth, fmt.Errorf("invalid log signature")
 	}
 	// TODO: verify cosignatures based on policy
