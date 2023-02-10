@@ -8,7 +8,6 @@ import (
 
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/consistency"
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/sign"
-	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/verify"
 	"sigsum.org/sigsum-go/internal/options"
 )
 
@@ -22,9 +21,6 @@ Usage:
 
   sigsum-debug head sign -k PRIVATE_KEY -h KEY_HASH [-t TIMESTAMP]
     Reads an ascii signed tree head from stdin and outputs a new signature
-
-  sigsum-debug head verify -k PUBLIC_KEY
-    Reads an ascii signed tree head from stdin and verifies it
 
   sigsum-debug head consistency -n OLD_SIZE -N NEW_SIZE -r OLD_ROOT -R NEW_ROOT
     Reads an ascii consistency proof from stdin and verifies it
@@ -47,8 +43,6 @@ func Main(args []string) error {
 			opt.Usage()
 		case "sign":
 			err = sign.Main(opt.Args(), optPrivateKey, optKeyHash, optTimestamp)
-		case "verify":
-			err = verify.Main(opt.Args(), optPublicKey)
 		case "consistency":
 			err = consistency.Main(opt.Args(), optOldSize, optNewSize, optOldRoot, optNewRoot)
 		default:
