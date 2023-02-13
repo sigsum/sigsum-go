@@ -131,9 +131,8 @@ func (cli *client) GetLeaves(ctx context.Context, req requests.Leaves) ([]types.
 func (cli *client) AddLeaf(ctx context.Context, req requests.Leaf) (bool, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
-	_, err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.LogURL), &buf)
-	if err != nil {
-		if err == HttpAccepted {
+	if _, err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.LogURL), &buf); err != nil {
+		if errors.Is(err, HttpAccepted) {
 			return false, nil
 		}
 		return false, err
