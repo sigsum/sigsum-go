@@ -11,3 +11,8 @@ make-all:
 make-check:
   stage: test
   script: make check
+
+# Succeeds if no changes are suggested by gofmt -d .
+gofmt:
+  stage: test
+  script: if gofmt -d . | grep . ; then false ; else true ; fi
