@@ -80,7 +80,7 @@ func TestLeafVerify(t *testing.T) {
 }
 
 func TestLeafToBinary(t *testing.T) {
-	desc := "valid: shard hint 72623859790382856, buffers 0x00,0x01,..."
+	desc := "valid: buffers 0x00,0x01,..."
 	if got, want := validLeaf(t).ToBinary(), validLeafBytes(t); !bytes.Equal(got, want) {
 		t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
@@ -104,7 +104,7 @@ func TestLeafFromBinary(t *testing.T) {
 			wantErr:    true,
 		},
 		{
-			desc:       "valid: shard hint 72623859790382856, buffers 0x00,0x01,...",
+			desc:       "valid: buffers 0x00,0x01,...",
 			serialized: validLeafBytes(t),
 			want:       validLeaf(t),
 		},

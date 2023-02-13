@@ -11,7 +11,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-func Main(args []string, optKeyHash, optSignature string, optShardHint uint64) error {
+func Main(args []string, optKeyHash, optSignature string) error {
 	if len(args) != 0 {
 		return fmt.Errorf("trailing arguments: %s", strings.Join(args, ", "))
 	}
