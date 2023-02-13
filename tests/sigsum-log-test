@@ -23,7 +23,7 @@ for x in $(seq 5); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
     printf "%31s\n" foo-$x \
-	| ./bin/sigsum-log --raw-hash -o test.$x.proof -k test.submit.key --log-url http://localhost:6965 --log-key test.log.key.pub
+	| ./bin/sigsum-log --diagnostics=warning --raw-hash -o test.$x.proof -k test.submit.key --log-url http://localhost:6965 --log-key test.log.key.pub
 done
 
 for x in $(seq 5); do
