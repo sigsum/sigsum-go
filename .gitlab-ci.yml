@@ -3,6 +3,7 @@ image: docker.io/library/golang:1.19
 stages:
 - build
 - test
+- build-log
 
 make-all:
   stage: build
@@ -16,3 +17,10 @@ make-check:
 gofmt:
   stage: test
   script: if gofmt -d . | grep . ; then false ; else true ; fi
+
+build-log-go:
+  stage: build-log
+  allow_failure: true
+  script:
+  - git clone https://git.glasklar.is/sigsum/core/log-go.git &&
+    cd log-go && go work init && go work use . .. && go build ./...
