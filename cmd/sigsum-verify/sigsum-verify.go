@@ -47,7 +47,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// TODO: Optionally create message by hashing stdin.
 	msg := readMessage(os.Stdin, settings.rawHash)
 
 	// TODO: Could use a variant of ascii.Parser that treats empty line as EOF.

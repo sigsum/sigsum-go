@@ -58,7 +58,6 @@ func main() {
 
     If no output file is provided with the -o option, output is sent to stdout.
 `
-	// TODO: Add option to use the hash of the input file as the message.
 	// TODO: Witness config/policy.
 	var settings Settings
 	settings.parse(os.Args[1:], usage)
@@ -81,11 +80,7 @@ func main() {
 		if err != nil {
 			log.Fatal("signing failed: %v", err)
 		}
-		leaf = requests.Leaf{Signature: signature, PublicKey: publicKey}
-		// TODO: Some impedance mismatch;
-		// SignLeafMessage wants message as a []byte,
-		// but requests.Leaf.Message is a crypto.Hash.
-		copy(leaf.Message[:], msg[:])
+		leaf = requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey}
 
 		if len(settings.logUrl) == 0 {
 			file := os.Stdout
