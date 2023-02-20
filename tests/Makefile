@@ -2,7 +2,8 @@ TESTS = ssh-agent-test \
 	sign-verify-test sign-agent-test \
 	sign-ssh-interop-test verify-ssh-interop-test \
 	keyhash-test keyhex-test \
-	token-record-test token-create-raw-test token-create-header-test
+	token-record-test token-create-raw-test token-create-header-test \
+	sigsum-log-test
 all:
 
 check:
