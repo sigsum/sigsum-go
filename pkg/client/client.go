@@ -1,3 +1,8 @@
+// The client package implements a low-level client for sigsum's http
+// api. It is aware of the log's public key, and verifies the log's
+// own tree head signatures, but verifying appropriate witness
+// cosignatures (depending on policy) is out of scope.
+
 package client
 
 import (
@@ -7,10 +12,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/log"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -36,7 +39,6 @@ type Config struct {
 	UserAgent string
 	LogURL    string
 	LogPub    crypto.PublicKey
-	// TODO: witness public keys + policy
 }
 
 func New(cfg Config) Client {
@@ -54,7 +56,7 @@ type client struct {
 func (cli *client) GetUnsignedTreeHead(ctx context.Context) (th types.TreeHead, err error) {
 	body, err := cli.get(ctx, types.EndpointGetTreeHeadUnsigned.Path(cli.LogURL))
 	if err != nil {
-		return th, fmt.Errorf("get: %w", err)
+		return th, err
 	}
 	if err := th.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return th, fmt.Errorf("parse: %w", err)
@@ -66,7 +68,7 @@ func (cli *client) GetUnsignedTreeHead(ctx context.Context) (th types.TreeHead, 
 func (cli *client) GetNextTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
 	body, err := cli.get(ctx, types.EndpointGetNextTreeHead.Path(cli.LogURL))
 	if err != nil {
-		return sth, fmt.Errorf("get: %w", err)
+		return sth, err
 	}
 	if err := sth.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return sth, fmt.Errorf("parse: %w", err)
@@ -81,7 +83,7 @@ func (cli *client) GetNextTreeHead(ctx context.Context) (sth types.SignedTreeHea
 func (cli *client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
 	body, err := cli.get(ctx, types.EndpointGetTreeHead.Path(cli.LogURL))
 	if err != nil {
-		return cth, fmt.Errorf("get: %w", err)
+		return cth, err
 	}
 	if err := cth.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return cth, fmt.Errorf("parse: %w", err)
@@ -89,7 +91,7 @@ func (cli *client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead,
 	if ok := cth.Verify(&cli.LogPub); !ok {
 		return cth, fmt.Errorf("invalid log signature")
 	}
-	// TODO: verify cosignatures based on policy
+
 	return cth, nil
 }
 
@@ -108,7 +110,7 @@ func (cli *client) GetInclusionProof(ctx context.Context, req requests.Inclusion
 func (cli *client) GetConsistencyProof(ctx context.Context, req requests.ConsistencyProof) (proof types.ConsistencyProof, err error) {
 	body, err := cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.LogURL)))
 	if err != nil {
-		return proof, fmt.Errorf("get: %w", err)
+		return proof, err
 	}
 	if err := proof.FromASCII(bytes.NewBuffer(body), req.OldSize, req.NewSize); err != nil {
 		return proof, fmt.Errorf("parse: %w", err)
@@ -119,7 +121,7 @@ func (cli *client) GetConsistencyProof(ctx context.Context, req requests.Consist
 func (cli *client) GetLeaves(ctx context.Context, req requests.Leaves) ([]types.Leaf, error) {
 	body, err := cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.LogURL)))
 	if err != nil {
-		return nil, fmt.Errorf("get: %w", err)
+		return nil, err
 	}
 	leaves, err := types.LeavesFromASCII(bytes.NewBuffer(body))
 	if err != nil {
@@ -164,22 +166,12 @@ func (cli *client) do(req *http.Request) ([]byte, error) {
 	// TODO: redirects, see go doc http.Client.CheckRedirect
 	req.Header.Set("User-Agent", cli.UserAgent)
 
-	var rsp *http.Response
-	var err error
-	// TODO: Why retry here?
-	for wait := 1; wait < 10; wait *= 2 {
-		log.Debug("trying %v", req.URL)
-		if rsp, err = cli.Client.Do(req); err == nil {
-			break
-		}
-		sleep := time.Duration(wait) * time.Second
-		log.Debug("retrying in %v", sleep)
-		time.Sleep(sleep)
-	}
+	rsp, err := cli.Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
 	defer rsp.Body.Close()
+
 	b, err := io.ReadAll(rsp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("status code %d, no server response: %w",

@@ -19,6 +19,9 @@ cleanup () {
 
 trap cleanup EXIT
 
+# Give log server some time to get ready.
+sleep 2
+
 for x in $(seq 5); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
