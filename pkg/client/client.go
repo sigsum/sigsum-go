@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -37,7 +36,6 @@ var (
 type Config struct {
 	UserAgent string
 	LogURL    string
-	LogPub    crypto.PublicKey
 }
 
 func New(cfg Config) Client {
@@ -60,9 +58,6 @@ func (cli *client) GetNextTreeHead(ctx context.Context) (sth types.SignedTreeHea
 	if err := sth.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return sth, fmt.Errorf("parse: %w", err)
 	}
-	if ok := sth.Verify(&cli.LogPub); !ok {
-		return sth, fmt.Errorf("invalid log signature")
-	}
 
 	return sth, nil
 }
@@ -74,9 +69,6 @@ func (cli *client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead,
 	}
 	if err := cth.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return cth, fmt.Errorf("parse: %w", err)
-	}
-	if ok := cth.Verify(&cli.LogPub); !ok {
-		return cth, fmt.Errorf("invalid log signature")
 	}
 
 	return cth, nil
