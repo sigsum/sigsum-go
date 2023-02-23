@@ -164,7 +164,8 @@ func TestConsistency(t *testing.T) {
 		{6, 7, []crypto.Hash{h45, hashes[6], h0123}},
 		{6, 8, nil},
 		{7, 6, nil},
-		{0, 6, nil},
+		{0, 6, []crypto.Hash{}},
+		{6, 6, []crypto.Hash{}},
 	} {
 		proof, err := tree.ProveConsistency(table.m, table.n)
 		if table.path == nil {
@@ -200,13 +201,9 @@ func TestConsistencyValid(t *testing.T) {
 
 	for m := 0; m < len(rootHashes); m++ {
 		for n := m; n < len(rootHashes); n++ {
-			var proof []crypto.Hash
-			if m > 0 && n > m {
-				var err error
-				proof, err = tree.ProveConsistency(uint64(m), uint64(n))
-				if err != nil {
-					t.Fatalf("ProveConsistency %d, %d failed: %v", m, n, err)
-				}
+			proof, err := tree.ProveConsistency(uint64(m), uint64(n))
+			if err != nil {
+				t.Fatalf("ProveConsistency %d, %d failed: %v", m, n, err)
 			}
 			if err := VerifyConsistency(
 				uint64(m), uint64(n),
