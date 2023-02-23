@@ -19,7 +19,6 @@ import (
 )
 
 type Client interface {
-	GetUnsignedTreeHead(context.Context) (types.TreeHead, error)
 	GetNextTreeHead(context.Context) (types.SignedTreeHead, error)
 	GetTreeHead(context.Context) (types.CosignedTreeHead, error)
 	GetInclusionProof(context.Context, requests.InclusionProof) (types.InclusionProof, error)
@@ -51,18 +50,6 @@ func New(cfg Config) Client {
 type client struct {
 	Config
 	http.Client
-}
-
-func (cli *client) GetUnsignedTreeHead(ctx context.Context) (th types.TreeHead, err error) {
-	body, err := cli.get(ctx, types.EndpointGetTreeHeadUnsigned.Path(cli.LogURL))
-	if err != nil {
-		return th, err
-	}
-	if err := th.FromASCII(bytes.NewBuffer(body)); err != nil {
-		return th, fmt.Errorf("parse: %w", err)
-	}
-
-	return th, nil
 }
 
 func (cli *client) GetNextTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {

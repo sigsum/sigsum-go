@@ -10,8 +10,6 @@ const (
 	EndpointGetInclusionProof   = Endpoint("get-inclusion-proof/")
 	EndpointGetConsistencyProof = Endpoint("get-consistency-proof/")
 	EndpointGetLeaves           = Endpoint("get-leaves/")
-
-	EndpointGetTreeHeadUnsigned = Endpoint("get-tree-head-unsigned")
 )
 
 // Path adds endpoint name to a service prefix.  If prefix is empty, nothing is added.
