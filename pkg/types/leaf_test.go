@@ -159,7 +159,7 @@ func TestLeafFromASCII(t *testing.T) {
 	} {
 		var leaf Leaf
 		p := ascii.NewParser(table.serialized)
-		err := leaf.fromASCII(&p)
+		err := leaf.Parse(&p)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}

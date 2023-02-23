@@ -86,7 +86,7 @@ func LeavesToASCII(w io.Writer, leaves []Leaf) error {
 	return nil
 }
 
-func (l *Leaf) fromASCII(p *ascii.Parser) error {
+func (l *Leaf) Parse(p *ascii.Parser) error {
 	v, err := p.GetValues("leaf", 3)
 	if err != nil {
 		return err
@@ -111,7 +111,7 @@ func LeavesFromASCII(r io.Reader) ([]Leaf, error) {
 	p := ascii.NewParser(r)
 	for {
 		var leaf Leaf
-		err := leaf.fromASCII(&p)
+		err := leaf.Parse(&p)
 		if err == io.EOF {
 			if len(leaves) == 0 {
 				return nil, fmt.Errorf("no leaves")
