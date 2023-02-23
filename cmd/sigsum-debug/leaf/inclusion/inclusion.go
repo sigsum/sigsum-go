@@ -13,7 +13,7 @@ func Main(args []string, optLeafHash, optRootHash string, optSize uint64) error 
 		return fmt.Errorf("trailing arguments: %v", args)
 	}
 	var proof types.InclusionProof
-	if err := proof.FromASCII(os.Stdin, optSize); err != nil {
+	if err := proof.FromASCII(os.Stdin); err != nil {
 		return fmt.Errorf("parse proof: %w", err)
 	}
 	leafHash, err := crypto.HashFromHex(optLeafHash)
@@ -24,7 +24,8 @@ func Main(args []string, optLeafHash, optRootHash string, optSize uint64) error 
 	if err != nil {
 		return fmt.Errorf("parse root hash: %w", err)
 	}
-	if err := proof.Verify(&leafHash, &rootHash); err != nil {
+	th := types.TreeHead{Size: optSize, RootHash: rootHash}
+	if err := proof.Verify(&leafHash, &th); err != nil {
 		return fmt.Errorf("verify: %w", err)
 	}
 	return nil
