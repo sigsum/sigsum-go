@@ -64,7 +64,7 @@ func hashStack(stack []crypto.Hash) crypto.Hash {
 func (t *Tree) GetRootHash() crypto.Hash {
 	if len(t.stack) == 0 {
 		// Special case, all-zero hash
-		return crypto.HashBytes([]byte{})
+		return HashEmptyTree()
 	}
 	return hashStack(t.stack)
 }
@@ -193,8 +193,11 @@ func consistency(leaves []crypto.Hash, m uint64, stack []crypto.Hash, size uint6
 }
 
 func (t *Tree) ProveConsistency(m, n uint64) ([]crypto.Hash, error) {
-	if m == 0 || n > t.Size() || m >= n {
+	if n > t.Size() || m > n {
 		return nil, fmt.Errorf("invalid argument m %d, n %d, tree %d", m, n, t.Size())
+	}
+	if m == 0 || m == n {
+		return []crypto.Hash{}, nil
 	}
 	return reversePath(consistency(t.leafs[:n], m, t.stack, t.Size())), nil
 }

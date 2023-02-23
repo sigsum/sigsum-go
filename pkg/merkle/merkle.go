@@ -31,3 +31,7 @@ func HashLeafNode(leaf []byte) crypto.Hash {
 func HashInteriorNode(left, right *crypto.Hash) crypto.Hash {
 	return crypto.HashBytes(formatInternalNode(left, right))
 }
+
+func HashEmptyTree() crypto.Hash {
+	return crypto.HashBytes([]byte{})
+}

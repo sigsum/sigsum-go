@@ -16,9 +16,7 @@ type InclusionProof struct {
 }
 
 type ConsistencyProof struct {
-	NewSize uint64
-	OldSize uint64
-	Path    []crypto.Hash
+	Path []crypto.Hash
 }
 
 func hashesToASCII(w io.Writer, hashes []crypto.Hash) error {
@@ -84,9 +82,7 @@ func (pr *ConsistencyProof) ToASCII(w io.Writer) error {
 	return hashesToASCII(w, pr.Path)
 }
 
-func (pr *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) error {
-	pr.OldSize = oldSize
-	pr.NewSize = newSize
+func (pr *ConsistencyProof) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
 	var err error
 
@@ -94,6 +90,7 @@ func (pr *ConsistencyProof) FromASCII(r io.Reader, oldSize, newSize uint64) erro
 	return err
 }
 
-func (pr *ConsistencyProof) Verify(oldRoot, newRoot *crypto.Hash) error {
-	return merkle.VerifyConsistency(pr.OldSize, pr.NewSize, oldRoot, newRoot, pr.Path)
+func (pr *ConsistencyProof) Verify(oldTree, newTree *TreeHead) error {
+	return merkle.VerifyConsistency(
+		oldTree.Size, newTree.Size, &oldTree.RootHash, &newTree.RootHash, pr.Path)
 }

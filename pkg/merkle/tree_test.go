@@ -164,7 +164,8 @@ func TestConsistency(t *testing.T) {
 		{6, 7, []crypto.Hash{h45, hashes[6], h0123}},
 		{6, 8, nil},
 		{7, 6, nil},
-		{0, 6, nil},
+		{0, 6, []crypto.Hash{}},
+		{6, 6, []crypto.Hash{}},
 	} {
 		proof, err := tree.ProveConsistency(table.m, table.n)
 		if table.path == nil {
@@ -184,26 +185,29 @@ func TestConsistency(t *testing.T) {
 }
 
 func TestConsistencyValid(t *testing.T) {
-	hashes := newLeaves(100)
+	leaves := newLeaves(100)
 
-	rootHashes := []crypto.Hash{}
 	tree := NewTree()
-	for _, h := range hashes {
+	// rootHash[n] is the root hash at size n.
+	rootHashes := []crypto.Hash{}
+	rootHashes = append(rootHashes, tree.GetRootHash())
+
+	for _, h := range leaves {
 		if !tree.AddLeafHash(&h) {
 			t.Fatalf("AddLeafHash failed at size %d", tree.Size())
 		}
 		rootHashes = append(rootHashes, tree.GetRootHash())
 	}
 
-	for m := 1; m < len(hashes); m++ {
-		for n := m + 1; n <= len(hashes); n++ {
+	for m := 0; m < len(rootHashes); m++ {
+		for n := m; n < len(rootHashes); n++ {
 			proof, err := tree.ProveConsistency(uint64(m), uint64(n))
 			if err != nil {
 				t.Fatalf("ProveConsistency %d, %d failed: %v", m, n, err)
 			}
 			if err := VerifyConsistency(
 				uint64(m), uint64(n),
-				&rootHashes[m-1], &rootHashes[n-1], proof); err != nil {
+				&rootHashes[m], &rootHashes[n], proof); err != nil {
 				t.Errorf("consistency proof not valid, m %d, n %d: %v\n  proof: %x\n",
 					m, n, err, proof)
 			}
