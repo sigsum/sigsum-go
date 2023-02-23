@@ -1,7 +1,6 @@
 // The client package implements a low-level client for sigsum's http
-// api. It is aware of the log's public key, and verifies the log's
-// own tree head signatures, but verifying appropriate witness
-// cosignatures (depending on policy) is out of scope.
+// api. Verifying appropriate signatures and cosignatures (depending
+// on policy) is out of scope.
 
 package client
 
