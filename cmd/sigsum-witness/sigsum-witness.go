@@ -100,7 +100,7 @@ type TreeHeadRequest struct {
 	KeyHash  crypto.Hash
 	TreeHead types.SignedTreeHead
 	OldSize  uint64
-	Path     []crypto.Hash
+	Proof    types.ConsistencyProof
 }
 
 func (req *TreeHeadRequest) FromASCII(r io.Reader) error {
@@ -125,8 +125,7 @@ func (req *TreeHeadRequest) FromASCII(r io.Reader) error {
 	if req.OldSize == 0 || req.OldSize == req.TreeHead.Size {
 		return p.GetEOF()
 	}
-	req.Path, err = types.HashesFromASCII(&p)
-	return err
+	return req.Proof.Parse(&p)
 }
 
 type witness struct {
@@ -173,7 +172,7 @@ func (s *witness) AddTreeHead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cs, status, err := s.state.Update(&req.TreeHead, req.OldSize, req.Path,
+	cs, status, err := s.state.Update(&req.TreeHead, req.OldSize, &req.Proof,
 		func() (types.Cosignature, error) {
 			return req.TreeHead.Cosign(s.signer, &logKeyHash, uint64(time.Now().Unix()))
 		})
@@ -260,7 +259,7 @@ func (s *state) Store(cth *types.CosignedTreeHead) error {
 }
 
 // On success, returns stored cosignature. On failure, returns HTTP status code and error.
-func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, path []crypto.Hash,
+func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, proof *types.ConsistencyProof,
 	cosign func() (types.Cosignature, error)) (types.Cosignature, int, error) {
 
 	s.m.Lock()
@@ -270,8 +269,7 @@ func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, path []crypto.
 		return types.Cosignature{}, http.StatusConflict, fmt.Errorf("incorrect old_size")
 	}
 
-	pr := types.ConsistencyProof{OldSize: oldSize, NewSize: sth.Size, Path: path}
-	if err := pr.Verify(&s.th.RootHash, &sth.RootHash); err != nil {
+	if err := proof.Verify(&s.th, &sth.TreeHead); err != nil {
 		return types.Cosignature{}, 444, fmt.Errorf("not consistent")
 	}
 
