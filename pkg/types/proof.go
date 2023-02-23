@@ -28,6 +28,12 @@ func hashesToASCII(w io.Writer, hashes []crypto.Hash) error {
 	return nil
 }
 
+// TODO: Exported for use by code parsing witness requests; that code
+// should probably move into this package.
+func HashesFromASCII(p *ascii.Parser) ([]crypto.Hash, error) {
+	return hashesFromASCII(p)
+}
+
 // Treats empty list as an error.
 func hashesFromASCII(p *ascii.Parser) ([]crypto.Hash, error) {
 	var hashes []crypto.Hash
