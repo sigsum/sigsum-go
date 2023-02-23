@@ -86,8 +86,9 @@ func (th *TreeHead) ToASCII(w io.Writer) error {
 	return ascii.WriteHash(w, "root_hash", &th.RootHash)
 }
 
-// Doesn't require EOF, so it can be used also with (co)signatures.
-func (th *TreeHead) fromASCII(p *ascii.Parser) error {
+// Doesn't require EOF, so it can be used for parsing a tree head
+// embedded in a larger struct.
+func (th *TreeHead) Parse(p *ascii.Parser) error {
 	var err error
 	th.Size, err = p.GetInt("size")
 	if err != nil {
@@ -99,7 +100,7 @@ func (th *TreeHead) fromASCII(p *ascii.Parser) error {
 
 func (th *TreeHead) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
-	err := th.fromASCII(&p)
+	err := th.Parse(&p)
 	if err != nil {
 		return err
 	}
@@ -113,8 +114,8 @@ func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
 	return ascii.WriteSignature(w, "signature", &sth.Signature)
 }
 
-func (sth *SignedTreeHead) fromASCII(p *ascii.Parser) error {
-	err := sth.TreeHead.fromASCII(p)
+func (sth *SignedTreeHead) Parse(p *ascii.Parser) error {
+	err := sth.TreeHead.Parse(p)
 	if err != nil {
 		return err
 	}
@@ -124,7 +125,7 @@ func (sth *SignedTreeHead) fromASCII(p *ascii.Parser) error {
 
 func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
-	err := sth.fromASCII(&p)
+	err := sth.Parse(&p)
 	if err != nil {
 		return err
 	}
@@ -143,7 +144,7 @@ func (cs *Cosignature) ToASCII(w io.Writer) error {
 	return ascii.WriteLine(w, "cosignature", cs.KeyHash[:], cs.Timestamp, cs.Signature[:])
 }
 
-func (cs *Cosignature) fromASCII(p *ascii.Parser) error {
+func (cs *Cosignature) Parse(p *ascii.Parser) error {
 	v, err := p.GetValues("cosignature", 3)
 	if err != nil {
 		return err
@@ -162,7 +163,7 @@ func (cs *Cosignature) fromASCII(p *ascii.Parser) error {
 
 func (cs *Cosignature) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
-	err := cs.fromASCII(&p)
+	err := cs.Parse(&p)
 	if err != nil {
 		return err
 	}
@@ -181,11 +182,11 @@ func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
 	return nil
 }
 
-func cosignaturesFromASCII(p *ascii.Parser) ([]Cosignature, error) {
+func ParseCosignatures(p *ascii.Parser) ([]Cosignature, error) {
 	var cosignatures []Cosignature
 	for {
 		var cs Cosignature
-		err := cs.fromASCII(p)
+		err := cs.Parse(p)
 		if err == io.EOF {
 			return cosignatures, nil
 		}
@@ -198,10 +199,10 @@ func cosignaturesFromASCII(p *ascii.Parser) ([]Cosignature, error) {
 
 func (cth *CosignedTreeHead) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
-	err := cth.SignedTreeHead.fromASCII(&p)
+	err := cth.SignedTreeHead.Parse(&p)
 	if err != nil {
 		return err
 	}
-	cth.Cosignatures, err = cosignaturesFromASCII(&p)
+	cth.Cosignatures, err = ParseCosignatures(&p)
 	return err
 }
