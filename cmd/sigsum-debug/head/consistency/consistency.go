@@ -13,7 +13,7 @@ func Main(args []string, optOldSize, optNewSize uint64, optOldRoot, optNewRoot s
 		return fmt.Errorf("trailing arguments: %v", args)
 	}
 	var proof types.ConsistencyProof
-	if err := proof.FromASCII(os.Stdin, optOldSize, optNewSize); err != nil {
+	if err := proof.FromASCII(os.Stdin); err != nil {
 		return fmt.Errorf("parse proof: %w", err)
 	}
 	oldRoot, err := crypto.HashFromHex(optOldRoot)
@@ -24,7 +24,14 @@ func Main(args []string, optOldSize, optNewSize uint64, optOldRoot, optNewRoot s
 	if err != nil {
 		return fmt.Errorf("parse new root: %w", err)
 	}
-	if err := proof.Verify(&oldRoot, &newRoot); err != nil {
+	if err := proof.Verify(&types.TreeHead{
+		Size:     optOldSize,
+		RootHash: oldRoot,
+	},
+		&types.TreeHead{
+			Size:     optNewSize,
+			RootHash: newRoot,
+		}); err != nil {
 		return fmt.Errorf("verify: %w", err)
 	}
 	return nil

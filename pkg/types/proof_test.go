@@ -85,7 +85,7 @@ func TestConsistencyProofFromASCII(t *testing.T) {
 		},
 	} {
 		var proof ConsistencyProof
-		err := proof.FromASCII(table.serialized, table.want.OldSize, table.want.NewSize)
+		err := proof.FromASCII(table.serialized)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -122,8 +122,6 @@ func validInclusionProofASCII(t *testing.T) string {
 func validConsistencyProof(t *testing.T) *ConsistencyProof {
 	t.Helper()
 	return &ConsistencyProof{
-		NewSize: 1,
-		OldSize: 4,
 		Path: []crypto.Hash{
 			crypto.Hash{},
 			*newHashBufferInc(t),

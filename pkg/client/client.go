@@ -112,7 +112,7 @@ func (cli *client) GetConsistencyProof(ctx context.Context, req requests.Consist
 	if err != nil {
 		return proof, err
 	}
-	if err := proof.FromASCII(bytes.NewBuffer(body), req.OldSize, req.NewSize); err != nil {
+	if err := proof.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return proof, fmt.Errorf("parse: %w", err)
 	}
 	return proof, nil

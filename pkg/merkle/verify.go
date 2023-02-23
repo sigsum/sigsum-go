@@ -9,6 +9,30 @@ import (
 // VerifyConsistency verifies that a Merkle tree is consistent.  The algorithm
 // used is in RFC 9162, §2.1.4.2.  It is the same proof technique as RFC 6962.
 func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, path []crypto.Hash) error {
+	// Step 0 (not in RFC 6962): support the easy cases of an empty proof
+	if oldSize == newSize {
+		// Consistent if and only if roots are equal.
+		// Require empty path.
+		if len(path) > 0 {
+			return fmt.Errorf("non-empty consistency path for trees of equal size")
+		}
+		if *oldRoot != *newRoot {
+			return fmt.Errorf("consistency check failed: same size, but roots differ")
+		}
+		return nil
+	}
+	if oldSize == 0 {
+		// Anything is consistent with the empty tree.
+		// Require empty path.
+		if len(path) > 0 {
+			return fmt.Errorf("non-empty consistency path for empty old tree")
+		}
+		if *oldRoot != HashEmptyTree() {
+			return fmt.Errorf("unexpected root hash for the empty tree")
+		}
+		return nil
+	}
+
 	// Step 1
 	if len(path) == 0 {
 		return fmt.Errorf("proof input is malformed: no path")
