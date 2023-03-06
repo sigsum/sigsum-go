@@ -169,9 +169,12 @@ func readMessage(r io.Reader, rawHash bool) crypto.Hash {
 	return msg
 }
 
-func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (string, error) {
-	// We need the leaf hash.
-	leafHash := leafHash(leaf)
+func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (string, error) {
+	leaf, err := req.Verify()
+	if err != nil {
+		return "", err
+	}
+	leafHash := leaf.ToHash()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -185,8 +188,7 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 	delay := 2 * time.Second
 
 	for {
-		// Note that the client package retries on failure.
-		persisted, err := c.AddLeaf(ctx, *leaf)
+		persisted, err := c.AddLeaf(ctx, *req)
 
 		if err != nil {
 			log.Fatal("%v", err)
@@ -244,7 +246,7 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 
 		fmt.Fprintf(&buf, "version=0\nlog=%x\n\n", crypto.HashBytes(logKey[:]))
 
-		fmt.Fprintf(&buf, "leaf=%x %x\n\n", crypto.HashBytes(leaf.PublicKey[:]), leaf.Signature)
+		fmt.Fprintf(&buf, "leaf=%x %x\n\n", leaf.KeyHash, leaf.Signature)
 
 		cth.ToASCII(&buf)
 
@@ -254,13 +256,4 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, leaf *requests.Leaf) (s
 		}
 		return string(buf.Bytes()), nil
 	}
-}
-
-// TODO: There should be some library utility for this.
-func leafHash(leaf *requests.Leaf) crypto.Hash {
-	return merkle.HashLeafNode((&types.Leaf{
-		Checksum:  crypto.HashBytes(leaf.Message[:]),
-		KeyHash:   crypto.HashBytes(leaf.PublicKey[:]),
-		Signature: leaf.Signature,
-	}).ToBinary())
 }

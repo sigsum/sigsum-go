@@ -1,13 +1,11 @@
 package hash
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -33,8 +31,7 @@ func Main(args []string, optKeyHash, optSignature string) error {
 		Signature: sig,
 		KeyHash:   keyHash,
 	}
-	leafHash := merkle.HashLeafNode(leaf.ToBinary())
 
-	fmt.Printf("%s\n", hex.EncodeToString(leafHash[:]))
+	fmt.Printf("%x\n", leaf.ToHash())
 	return nil
 }
