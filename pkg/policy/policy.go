@@ -9,14 +9,10 @@ import (
 
 type entity struct {
 	pubKey crypto.PublicKey
-	// Add url, to itneract with entity?
+	// Add URL, to interact with entity?
 }
 
-type LogPolicy struct {
-	logs map[crypto.Hash]entity
-}
-
-// The method gets a map of witnesses for which a cosignature was
+// The method gets a set of witnesses for which a cosignature was
 // verified, and returns whether or not they are sufficient.
 type Quorum interface {
 	IsQuorum(map[crypto.Hash]struct{}) bool
@@ -79,6 +75,9 @@ func (q *quorumKofN) IsQuorum(verified map[crypto.Hash]struct{}) bool {
 }
 
 func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
+	if k > len(witnesses) {
+		return nil, fmt.Errorf("invalid policy k (%d) > n (%d)\n", k, len(witnesses))
+	}
 	p := Policy{
 		logs:      make(map[crypto.Hash]entity),
 		witnesses: make(map[crypto.Hash]entity),
