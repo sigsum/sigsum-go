@@ -8,6 +8,7 @@ import (
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 const (
@@ -34,6 +35,10 @@ type Cosignature struct {
 type CosignedTreeHead struct {
 	SignedTreeHead
 	Cosignatures []Cosignature
+}
+
+func NewEmptyTreeHead() TreeHead {
+	return TreeHead{Size: 0, RootHash: merkle.HashEmptyTree()}
 }
 
 func (th *TreeHead) toSignedData() []byte {
