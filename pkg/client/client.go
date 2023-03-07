@@ -88,7 +88,7 @@ func (cli *client) GetInclusionProof(ctx context.Context, req requests.Inclusion
 		return types.InclusionProof{}, err
 	}
 	var proof types.InclusionProof
-	if err := proof.FromASCII(bytes.NewBuffer(body), req.Size); err != nil {
+	if err := proof.FromASCII(bytes.NewBuffer(body)); err != nil {
 		return proof, fmt.Errorf("parse: %w", err)
 	}
 	return proof, err

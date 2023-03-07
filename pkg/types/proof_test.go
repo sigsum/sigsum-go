@@ -41,7 +41,7 @@ func TestInclusionProofFromASCII(t *testing.T) {
 		},
 	} {
 		var proof InclusionProof
-		err := proof.FromASCII(table.serialized, table.want.Size)
+		err := proof.FromASCII(table.serialized)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -102,7 +102,6 @@ func validInclusionProof(t *testing.T) *InclusionProof {
 	t.Helper()
 	return &InclusionProof{
 		LeafIndex: 1,
-		Size:      4,
 		Path: []crypto.Hash{
 			crypto.Hash{},
 			*newHashBufferInc(t),

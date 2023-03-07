@@ -85,10 +85,10 @@ func main() {
 		log.Fatalf("invalid proof, got %d parts, need 4", len(proofParts))
 	}
 	var inclusion types.InclusionProof
-	if err := inclusion.FromASCII(bytes.NewBuffer(proofParts[3]), cth.Size); err != nil {
+	if err := inclusion.FromASCII(bytes.NewBuffer(proofParts[3])); err != nil {
 		log.Fatalf("failed to parse inclusion proof: %v", err)
 	}
-	if err := merkle.VerifyInclusion(&leafHash, inclusion.LeafIndex, cth.Size, &cth.RootHash, inclusion.Path); err != nil {
+	if err := inclusion.Verify(&leafHash, &cth.TreeHead); err != nil {
 		log.Fatalf("inclusion proof invalid: %v", err)
 	}
 }

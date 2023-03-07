@@ -219,7 +219,6 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 				time.Sleep(delay)
 				continue
 			}
-			proof.Size = 1
 		} else {
 			proof, err = c.GetInclusionProof(ctx,
 				requests.InclusionProof{
@@ -237,7 +236,7 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 		}
 
 		// Check validity.
-		if err = merkle.VerifyInclusion(&leafHash, proof.LeafIndex, cth.Size, &cth.RootHash, proof.Path); err != nil {
+		if err = proof.Verify(&leafHash, &cth.TreeHead); err != nil {
 			return "", fmt.Errorf("inclusion proof invalid: %v", err)
 		}
 
