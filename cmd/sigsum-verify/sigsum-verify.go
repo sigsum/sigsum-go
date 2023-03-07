@@ -175,9 +175,10 @@ func checkProofLeaf(leaf []byte, msg []byte, submitKey *crypto.PublicKey) crypto
 	if !types.VerifyLeafMessage(submitKey, msg, &signature) {
 		log.Fatalf("leaf signature not valid")
 	}
-	return merkle.HashLeafNode((&types.Leaf{
+
+	return (&types.Leaf{
 		Checksum:  crypto.HashBytes(msg[:]),
 		KeyHash:   keyHash,
 		Signature: signature,
-	}).ToBinary())
+	}).ToHash()
 }

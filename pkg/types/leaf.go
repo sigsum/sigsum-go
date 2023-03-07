@@ -7,6 +7,7 @@ import (
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 const (
@@ -54,6 +55,10 @@ func (l *Leaf) ToBinary() []byte {
 	copy(b[32:96], l.Signature[:])
 	copy(b[96:], l.KeyHash[:])
 	return b
+}
+
+func (l *Leaf) ToHash() crypto.Hash {
+	return merkle.HashLeafNode(l.ToBinary())
 }
 
 func (l *Leaf) FromBinary(b []byte) error {
