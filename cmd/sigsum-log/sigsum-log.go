@@ -182,7 +182,6 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 	c := client.New(client.Config{
 		UserAgent: "sigsum-log",
 		LogURL:    logUrl,
-		LogPub:    *logKey,
 	})
 
 	delay := 2 * time.Second
@@ -200,10 +199,12 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 	}
 	// Leaf submitted, now get a signed tree head + inclusion proof.
 	for {
-		// GetTreeHead fails if log signature is invalid.
 		cth, err := c.GetTreeHead(ctx)
 		if err != nil {
 			log.Fatal("get-tree-head failed: %v", err)
+		}
+		if !cth.Verify(logKey) {
+			log.Fatal("invalid log signature on tree head")
 		}
 		// See if we can have an inclusion proof for this tree size.
 		if cth.Size == 0 {
