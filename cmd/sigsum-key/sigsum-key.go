@@ -1,12 +1,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+
+	getopt "github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -46,13 +47,13 @@ func main() {
     KEY-FILE, hex-encoded. Corresponding public key file gets a ".pub"
     suffix, and is written in OpenSSH format.
 
-  sigsum-key verify -k KEY -s SIGNATURE [-n NAMESPACE] < MSG
+  sigsum-key verify -k KEY -s SIGNATURE [--namespace NS] < MSG
     KEY and SIGNATURE are file names.
-    NAMESPACE is a string, default being "signed-tree-head:v0@sigsum.org"
+    NS is a string, default being "signed-tree-head:v0@sigsum.org"
 
-  sigsum-key sign -k KEY [-o SIGNATURE] [-n NAMESPACE] [--ssh] < MSG
+  sigsum-key sign -k KEY [-o SIGNATURE] [--namespace NS] [--ssh] < MSG
     KEY and SIGNATURE are file names (by default, signature is written
-    to stdout). NAMESPACE is a string, default being
+    to stdout). NS is a string, default being
     "tree-leaf:v0@sigsum.org". If --ssh is provided, produce an ssh
     signature file, otherwise raw hex.
 
@@ -70,8 +71,7 @@ func main() {
 		log.Fatal(usage)
 	}
 
-	cmd, args := os.Args[1], os.Args[2:]
-	switch cmd {
+	switch os.Args[1] {
 	default:
 		log.Fatal(usage)
 	case "help":
@@ -79,7 +79,7 @@ func main() {
 		os.Exit(0)
 	case "gen":
 		var settings GenSettings
-		settings.parse(args)
+		settings.parse(os.Args)
 		pub, signer, err := crypto.NewKeyPair()
 		if err != nil {
 			log.Fatalf("generating key failed: %v\n", err)
@@ -87,7 +87,7 @@ func main() {
 		writeKeyFiles(settings.outputFile, &pub, signer)
 	case "verify":
 		var settings VerifySettings
-		settings.parse(args)
+		settings.parse(os.Args)
 		publicKey, err := key.ReadPublicKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal(err)
@@ -106,7 +106,7 @@ func main() {
 		}
 	case "sign":
 		var settings SignSettings
-		settings.parse(args)
+		settings.parse(os.Args)
 		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal(err)
@@ -122,9 +122,14 @@ func main() {
 		public := signer.Public()
 		writeSignatureFile(settings.outputFile, settings.sshFormat,
 			&public, settings.namespace, &signature)
+
+		// TODO: Change all subcommands hash, hex, hex-to-pub
+		// to take an optional filename arguments for input
+		// and output, and by default read stdin and write to
+		// stdout.
 	case "hash":
 		var settings ExportSettings
-		settings.parse(args)
+		settings.parse(os.Args)
 		publicKey, err := key.ReadPublicKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal(err)
@@ -132,17 +137,17 @@ func main() {
 		fmt.Printf("%x\n", crypto.HashBytes(publicKey[:]))
 	case "hex":
 		var settings ExportSettings
-		settings.parse(args)
+		settings.parse(os.Args)
 		publicKey, err := key.ReadPublicKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal(err)
 		}
 		fmt.Printf("%x\n", publicKey[:])
 	case "hex-to-pub":
-		if len(args) != 1 {
+		if len(os.Args) != 3 {
 			log.Fatalf("hex key argument missing")
 		}
-		pub, err := crypto.PublicKeyFromHex(args[0])
+		pub, err := crypto.PublicKeyFromHex(os.Args[2])
 		if err != nil {
 			log.Fatalf("invalid key: %v", err)
 		}
@@ -151,60 +156,54 @@ func main() {
 	}
 }
 
-func (s *GenSettings) parse(args []string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.outputFile, "o", "", "Output file")
+func newOptionSet(args []string) *getopt.Set {
+	set := getopt.New()
+	set.SetProgram(os.Args[0] + " " + os.Args[1])
+	set.SetParameters("")
+	return set
+}
 
-	flags.Parse(args)
-
-	if len(s.outputFile) == 0 {
-		log.Printf("output file (-o option) missing")
-		os.Exit(1)
+func parseNoArgs(set *getopt.Set, args []string) {
+	set.Parse(args[1:])
+	if set.NArgs() > 0 {
+		log.Fatal("Too many arguments.")
 	}
+}
+
+func (s *GenSettings) parse(args []string) {
+	set := newOptionSet(args)
+	set.FlagLong(&s.outputFile, "output-file", 'o', "Output File").Mandatory()
+	parseNoArgs(set, args)
 }
 
 func (s *VerifySettings) parse(args []string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.keyFile, "k", "", "Key file")
-	flags.StringVar(&s.signatureFile, "s", "", "Signature file")
-	flags.StringVar(&s.namespace, "n", types.SignedTreeHeadNamespace, "Signature namespace")
+	// Default value.
+	s.namespace = types.SignedTreeHeadNamespace
 
-	flags.Parse(args)
-
-	if len(s.keyFile) == 0 {
-		log.Printf("key file (-k option) missing")
-		os.Exit(1)
-	}
-	if len(s.signatureFile) == 0 {
-		log.Printf("signature file (-s option) missing")
-		os.Exit(1)
-	}
+	set := newOptionSet(args)
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key file").Mandatory()
+	set.FlagLong(&s.signatureFile, "signature", 's', "Signature file").Mandatory()
+	set.FlagLong(&s.namespace, "namespace", 0, "Signature namespace")
+	parseNoArgs(set, args)
 }
 
 func (s *SignSettings) parse(args []string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.keyFile, "k", "", "Key file")
-	flags.StringVar(&s.outputFile, "o", "", "Signature output file")
-	flags.StringVar(&s.namespace, "n", types.TreeLeafNamespace, "Signature namespace")
-	flags.BoolVar(&s.sshFormat, "ssh", false, "Use OpenSSH format for public key")
+	// Default value.
+	s.namespace = types.TreeLeafNamespace
 
-	flags.Parse(args)
-
-	if len(s.keyFile) == 0 {
-		log.Fatalf("key file (-k option) missing")
-	}
+	set := newOptionSet(args)
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key file").Mandatory()
+	set.FlagLong(&s.outputFile, "output-file", 'o', "Signature output file")
+	set.FlagLong(&s.namespace, "namespace", 0, "Signature namespace")
+	set.FlagLong(&s.sshFormat, "ssh", 0, "Use OpenSSH format for public key")
+	parseNoArgs(set, args)
 }
 
 func (s *ExportSettings) parse(args []string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.keyFile, "k", "", "Key file")
-
-	flags.Parse(args)
-
-	if len(s.keyFile) == 0 {
-		log.Printf("key file (-k option) missing")
-		os.Exit(1)
-	}
+	set := newOptionSet(args)
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key file").Mandatory()
+	set.Parse(args[1:])
+	parseNoArgs(set, args)
 }
 
 // If outputFile is non-empty: open file, pass to f, and automatically
