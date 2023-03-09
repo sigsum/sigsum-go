@@ -243,9 +243,8 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 		// Output collected data.
 		buf := bytes.Buffer{}
 
-		fmt.Fprintf(&buf, "version=0\nlog=%x\n\n", crypto.HashBytes(logKey[:]))
-
-		fmt.Fprintf(&buf, "leaf=%x %x\n\n", leaf.KeyHash, leaf.Signature)
+		fmt.Fprintf(&buf, "version=0\nlog=%x\n", crypto.HashBytes(logKey[:]))
+		fmt.Fprintf(&buf, "leaf=%x %x %x\n\n", leaf.Checksum[:2], leaf.KeyHash, leaf.Signature)
 
 		cth.ToASCII(&buf)
 
