@@ -66,10 +66,10 @@ response to the `get-leaves` request, but the checksum is truncated to
 only the first 16 bits (4 hex digits); full checksum must be derived
 from other context.
 
-The last two blocks are verbatim responses from get-tree-head-cosigned
-and get-inclusion proof (in the corner case `tree_size` = 1, the last
-part is omitted, since it is implied that `leaf_index` = 0, and there
-is no inclusion path).
+The last two blocks are verbatim responses from the get-tree-head and
+get-inclusion proof requests (in the corner case that `tree_size` = 1,
+the last part is omitted, since it is implied that `leaf_index` = 0,
+and there is no inclusion path).
 
 # Verifying a proof
 
@@ -99,8 +99,8 @@ To verify the proof, the following steps are required:
    
 6. Compute the `leaf_hash` from the `checksum` and the other items on
    the leaf line, and check that the inclusion proof is valid. In the
-   corner case that `tree_size = 1`, the verifier checks that
-   `leaf_hash = root_hash`.
+   corner case that `tree_size = 1`, the check that `leaf_hash =
+   root_hash`.
 
 ## Use of timestamps
 
