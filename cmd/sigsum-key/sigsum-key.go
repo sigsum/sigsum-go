@@ -1,12 +1,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+
+	flag "github.com/spf13/pflag"
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -152,7 +153,7 @@ func main() {
 
 func (s *GenSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.outputFile, "o", "", "Output file")
+	flags.StringVarP(&s.outputFile, "output-file", "o", "", "Output file")
 
 	flags.Parse(args)
 
@@ -164,9 +165,9 @@ func (s *GenSettings) parse(args []string) {
 
 func (s *VerifySettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.keyFile, "k", "", "Key file")
-	flags.StringVar(&s.signatureFile, "s", "", "Signature file")
-	flags.StringVar(&s.namespace, "n", "signed-tree-head:v0@sigsum.org", "Signature namespace")
+	flags.StringVarP(&s.keyFile, "key", "k", "", "Key file")
+	flags.StringVarP(&s.signatureFile, "signature", "s", "", "Signature file")
+	flags.StringVar(&s.namespace, "namespace", "signed-tree-head:v0@sigsum.org", "Signature namespace")
 
 	flags.Parse(args)
 
@@ -182,9 +183,9 @@ func (s *VerifySettings) parse(args []string) {
 
 func (s *SignSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.keyFile, "k", "", "Key file")
-	flags.StringVar(&s.outputFile, "o", "", "Signature output file")
-	flags.StringVar(&s.namespace, "n", "tree-leaf:v0@sigsum.org", "Signature namespace")
+	flags.StringVarP(&s.keyFile, "key", "k", "", "Key file")
+	flags.StringVarP(&s.outputFile, "output-file", "o", "", "Signature output file")
+	flags.StringVar(&s.namespace, "namespace", "tree-leaf:v0@sigsum.org", "Signature namespace")
 	flags.BoolVar(&s.sshFormat, "ssh", false, "Use OpenSSH format for public key")
 
 	flags.Parse(args)
@@ -196,7 +197,7 @@ func (s *SignSettings) parse(args []string) {
 
 func (s *ExportSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.keyFile, "k", "", "Key file")
+	flags.StringVarP(&s.keyFile, "key", "k", "", "Key file")
 
 	flags.Parse(args)
 

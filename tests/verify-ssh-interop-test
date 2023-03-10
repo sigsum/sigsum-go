@@ -16,11 +16,11 @@ else
     echo "ssh-keygen appears to be too old, openssh 8.9 or later is needed"
     exit 77
 fi
-./bin/sigsum-key verify -k test.key.pub -s test.msg.sig -n sigsum-test < test.msg
+./bin/sigsum-key verify -k test.key.pub -s test.msg.sig --namespace sigsum-test < test.msg
 
 # Check that modified message makes verification fail.
 if (cat test.msg && echo) \
-    | ./sigsum-key verify -k test.key.pub -s test.msg.sig -n sigsum-test 2>/dev/null ; then
+    | ./sigsum-key verify -k test.key.pub -s test.msg.sig --namespace sigsum-test 2>/dev/null ; then
     false
 else
     true
