@@ -79,7 +79,7 @@ func (s *Settings) parse(args []string, usage string) {
 	flags.StringVar(&s.keyFile, "k", "", "Witness private key")
 	flags.StringVar(&s.logKey, "log-key", "", "Log public key")
 	flags.StringVar(&s.stateFile, "state-file", "", "Name of state file")
-	flags.StringVar(&s.prefix, "url-prefix", "", "Prefix preceing the endpoint names")
+	flags.StringVar(&s.prefix, "url-prefix", "", "Prefix preceding the endpoint names")
 	flags.Parse(args)
 	if len(s.keyFile) == 0 {
 		log.Fatal("Mandatory -k flag missing")
@@ -168,7 +168,7 @@ func (s *witness) AddTreeHead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !req.TreeHead.Verify(&s.logPub) {
-		http.Error(w, "invalid log signatrue", http.StatusForbidden)
+		http.Error(w, "invalid log signature", http.StatusForbidden)
 		return
 	}
 
