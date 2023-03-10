@@ -167,7 +167,7 @@ func (s *VerifySettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	flags.StringVarP(&s.keyFile, "key", "k", "", "Key file")
 	flags.StringVarP(&s.signatureFile, "signature", "s", "", "Signature file")
-	flags.StringVar(&s.namespace, "namespace", "signed-tree-head:v0@sigsum.org", "Signature namespace")
+	flags.StringVarP(&s.namespace, "namespace", "n", "signed-tree-head:v0@sigsum.org", "Signature namespace")
 
 	flags.Parse(args)
 
@@ -185,7 +185,7 @@ func (s *SignSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	flags.StringVarP(&s.keyFile, "key", "k", "", "Key file")
 	flags.StringVarP(&s.outputFile, "output-file", "o", "", "Signature output file")
-	flags.StringVar(&s.namespace, "namespace", "tree-leaf:v0@sigsum.org", "Signature namespace")
+	flags.StringVarP(&s.namespace, "namespace", "n", "tree-leaf:v0@sigsum.org", "Signature namespace")
 	flags.BoolVar(&s.sshFormat, "ssh", false, "Use OpenSSH format for public key")
 
 	flags.Parse(args)
