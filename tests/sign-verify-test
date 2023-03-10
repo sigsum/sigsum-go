@@ -7,8 +7,8 @@ set -e
 echo foo > test.msg
 rm -f test.msg.sig
 
-./bin/sigsum-key sign --namespace sigsum-test -k test.key -o test.msg.sig < test.msg
-./bin/sigsum-key verify --namespace sigsum-test -k test.key.pub -s test.msg.sig < test.msg
+./bin/sigsum-key sign -n sigsum-test -k test.key -o test.msg.sig < test.msg
+./bin/sigsum-key verify -n sigsum-test -k test.key.pub -s test.msg.sig < test.msg
 
 # Check that modified message makes verification fail.
 if (cat test.msg && echo) \

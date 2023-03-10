@@ -47,13 +47,13 @@ func main() {
     KEY-FILE, hex-encoded. Corresponding public key file gets a ".pub"
     suffix, and is written in OpenSSH format.
 
-  sigsum-key verify -k KEY -s SIGNATURE [--namespace NS] < MSG
+  sigsum-key verify -k KEY -s SIGNATURE [-n NAMESPACE] < MSG
     KEY and SIGNATURE are file names.
-    NS is a string, default being "signed-tree-head:v0@sigsum.org"
+    NAMESPACE is a string, default being "signed-tree-head:v0@sigsum.org"
 
-  sigsum-key sign -k KEY [-o SIGNATURE] [--namespace NS] [--ssh] < MSG
+  sigsum-key sign -k KEY [-o SIGNATURE] [-n NAMESPACE] [--ssh] < MSG
     KEY and SIGNATURE are file names (by default, signature is written
-    to stdout). NS is a string, default being
+    to stdout). NAMESPACE is a string, default being
     "tree-leaf:v0@sigsum.org". If --ssh is provided, produce an ssh
     signature file, otherwise raw hex.
 
@@ -183,7 +183,7 @@ func (s *VerifySettings) parse(args []string) {
 	set := newOptionSet(args)
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key file").Mandatory()
 	set.FlagLong(&s.signatureFile, "signature", 's', "Signature file").Mandatory()
-	set.FlagLong(&s.namespace, "namespace", 0, "Signature namespace")
+	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
 	parseNoArgs(set, args)
 }
 
@@ -194,7 +194,7 @@ func (s *SignSettings) parse(args []string) {
 	set := newOptionSet(args)
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key file").Mandatory()
 	set.FlagLong(&s.outputFile, "output-file", 'o', "Signature output file")
-	set.FlagLong(&s.namespace, "namespace", 0, "Signature namespace")
+	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
 	set.FlagLong(&s.sshFormat, "ssh", 0, "Use OpenSSH format for public key")
 	parseNoArgs(set, args)
 }
