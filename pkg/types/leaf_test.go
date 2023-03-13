@@ -125,11 +125,11 @@ func TestLeafFromBinary(t *testing.T) {
 
 func TestLeafToASCII(t *testing.T) {
 	desc := "valid:, buffers 0x00,0x01,..."
-	buf := bytes.NewBuffer(nil)
-	if err := validLeaf(t).ToASCII(buf); err != nil {
+	buf := bytes.Buffer{}
+	if err := validLeaf(t).ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
-	if got, want := string(buf.Bytes()), validLeafASCII(t); got != want {
+	if got, want := buf.String(), validLeafASCII(t); got != want {
 		t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
@@ -143,17 +143,17 @@ func TestLeafFromASCII(t *testing.T) {
 	}{
 		{
 			desc:       "invalid: not a tree leaf (wrong key)",
-			serialized: bytes.NewBuffer([]byte("size=0\n")),
+			serialized: bytes.NewBufferString("size=0\n"),
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a tree leaf (too many values)",
-			serialized: bytes.NewBuffer([]byte(invalidLeafASCII(t))),
+			serialized: bytes.NewBufferString(invalidLeafASCII(t)),
 			wantErr:    true,
 		},
 		{
 			desc:       "valid: buffers 0x00,0x01,...",
-			serialized: bytes.NewBuffer([]byte(validLeafASCII(t))),
+			serialized: bytes.NewBufferString(validLeafASCII(t)),
 			want:       validLeaf(t),
 		},
 	} {
@@ -181,32 +181,32 @@ func TestLeavesFromASCII(t *testing.T) {
 	}{
 		{
 			desc:       "invalid: not a list of tree leaves (too few key-value pairs)",
-			serialized: bytes.NewBuffer([]byte("checksum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n")),
+			serialized: bytes.NewBufferString("checksum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"),
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too many key-value pairs)",
-			serialized: bytes.NewBuffer(append([]byte(validLeafASCII(t)), []byte("key=value\n")...)),
+			serialized: bytes.NewBufferString(validLeafASCII(t) + "key=value\n"),
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too few checksums))",
-			serialized: bytes.NewBuffer([]byte(invalidLeavesASCII(t, "checksum"))),
+			serialized: bytes.NewBufferString(invalidLeavesASCII(t, "checksum")),
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too few signatures))",
-			serialized: bytes.NewBuffer([]byte(invalidLeavesASCII(t, "signature"))),
+			serialized: bytes.NewBufferString(invalidLeavesASCII(t, "signature")),
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too few key hashes))",
-			serialized: bytes.NewBuffer([]byte(invalidLeavesASCII(t, "key_hash"))),
+			serialized: bytes.NewBufferString(invalidLeavesASCII(t, "key_hash")),
 			wantErr:    true,
 		},
 		{
 			desc:       "valid leaves",
-			serialized: bytes.NewBuffer([]byte(validLeavesASCII(t))),
+			serialized: bytes.NewBufferString(validLeavesASCII(t)),
 			want:       validLeaves(t),
 		},
 	} {

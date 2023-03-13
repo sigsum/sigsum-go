@@ -12,11 +12,11 @@ import (
 
 func TestInclusionProofToASCII(t *testing.T) {
 	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validInclusionProof(t).ToASCII(buf); err != nil {
+	buf := bytes.Buffer{}
+	if err := validInclusionProof(t).ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
-	if got, want := string(buf.Bytes()), validInclusionProofASCII(t); got != want {
+	if got, want := buf.String(), validInclusionProofASCII(t); got != want {
 		t.Errorf("got inclusion proof\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
@@ -30,13 +30,13 @@ func TestInclusionProofFromASCII(t *testing.T) {
 	}{
 		{
 			desc:       "invalid: not an inclusion proof (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(append([]byte(validInclusionProofASCII(t)), []byte("size=4")...)),
+			serialized: bytes.NewBufferString(validInclusionProofASCII(t) + "size=4"),
 			wantErr:    true,
 			want:       validInclusionProof(t), // to populate input to FromASCII
 		},
 		{
 			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validInclusionProofASCII(t))),
+			serialized: bytes.NewBufferString(validInclusionProofASCII(t)),
 			want:       validInclusionProof(t),
 		},
 	} {
@@ -56,11 +56,11 @@ func TestInclusionProofFromASCII(t *testing.T) {
 
 func TestConsistencyProofToASCII(t *testing.T) {
 	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validConsistencyProof(t).ToASCII(buf); err != nil {
+	buf := bytes.Buffer{}
+	if err := validConsistencyProof(t).ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
-	if got, want := string(buf.Bytes()), validConsistencyProofASCII(t); got != want {
+	if got, want := buf.String(), validConsistencyProofASCII(t); got != want {
 		t.Errorf("got consistency proof\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
@@ -74,13 +74,13 @@ func TestConsistencyProofFromASCII(t *testing.T) {
 	}{
 		{
 			desc:       "invalid: not a consistency proof (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(append([]byte(validConsistencyProofASCII(t)), []byte("start_size=1")...)),
+			serialized: bytes.NewBufferString(validConsistencyProofASCII(t) + "start_size=1"),
 			wantErr:    true,
 			want:       validConsistencyProof(t), // to populate input to FromASCII
 		},
 		{
 			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validConsistencyProofASCII(t))),
+			serialized: bytes.NewBufferString(validConsistencyProofASCII(t)),
 			want:       validConsistencyProof(t),
 		},
 	} {
