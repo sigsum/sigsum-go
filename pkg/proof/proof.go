@@ -18,13 +18,57 @@ const (
 
 type ShortChecksum [ShortChecksumSize]byte
 
+// Variant of types.Leaf, with truncated checksum.
+type ShortLeaf struct {
+	ShortChecksum ShortChecksum
+	Signature     crypto.Signature
+	KeyHash       crypto.Hash
+}
+
+func NewShortLeaf(leaf *types.Leaf) ShortLeaf {
+	proofLeaf := ShortLeaf{Signature: leaf.Signature, KeyHash: leaf.KeyHash}
+	copy(proofLeaf.ShortChecksum[:], leaf.Checksum[:ShortChecksumSize])
+	return proofLeaf
+}
+
+func (l *ShortLeaf) ToLeaf(checksum *crypto.Hash) (types.Leaf, error) {
+	if !bytes.Equal(l.ShortChecksum[:], checksum[:ShortChecksumSize]) {
+		return types.Leaf{}, fmt.Errorf("checksum doesn't match truncated checksum")
+	}
+	return types.Leaf{Checksum: *checksum, Signature: l.Signature, KeyHash: l.KeyHash}, nil
+}
+
+func (l *ShortLeaf) Parse(p ascii.Parser) error {
+	// Same as a leaf line from get-leaves, except that checksum is truncated.
+	v, err := p.GetValues("leaf", 3)
+	if err != nil {
+		return err
+	}
+	l.ShortChecksum, err = decodeShortChecksum(v[0])
+	if err != nil {
+		return fmt.Errorf("invalid submitter checksum: %v", err)
+	}
+
+	l.KeyHash, err = crypto.HashFromHex(v[1])
+	if err != nil {
+		return fmt.Errorf("invalid submitter key hash: %v", err)
+	}
+	l.Signature, err = crypto.SignatureFromHex(v[2])
+	if err != nil {
+		return fmt.Errorf("invalid leaf signature: %v", err)
+	}
+	return nil
+}
+
+func (l *ShortLeaf) ToASCII(w io.Writer) error {
+	return ascii.WriteLine(w, "leaf", l.ShortChecksum[:], l.KeyHash[:], l.Signature[:])
+}
+
 type SigsumProof struct {
-	LogKeyHash       crypto.Hash
-	Checksum         ShortChecksum
-	SubmitterKeyHash crypto.Hash
-	LeafSignature    crypto.Signature
-	TreeHead         types.CosignedTreeHead
-	InclusionProof   types.InclusionProof
+	LogKeyHash crypto.Hash
+	Leaf       ShortLeaf
+	TreeHead   types.CosignedTreeHead
+	Inclusion  types.InclusionProof
 }
 
 func decodeShortChecksum(s string) (out ShortChecksum, err error) {
@@ -66,23 +110,8 @@ func (sp *SigsumProof) FromASCII(r io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("invalid log line: %v", err)
 	}
-	// Same as a leaf line from get-leaves, except that checksum is truncated.
-	v, err := p.GetValues("leaf", 3)
-	if err != nil {
+	if err := sp.Leaf.Parse(p); err != nil {
 		return err
-	}
-	sp.Checksum, err = decodeShortChecksum(v[0])
-	if err != nil {
-		return fmt.Errorf("invalid submitter checksum: %v", err)
-	}
-
-	sp.SubmitterKeyHash, err = crypto.HashFromHex(v[1])
-	if err != nil {
-		return fmt.Errorf("invalid submitter key hash: %v", err)
-	}
-	sp.LeafSignature, err = crypto.SignatureFromHex(v[2])
-	if err != nil {
-		return fmt.Errorf("invalid leaf signature: %v", err)
 	}
 	if err := p.GetEOF(); err != nil {
 		return err
@@ -98,13 +127,40 @@ func (sp *SigsumProof) FromASCII(r io.Reader) error {
 		if len(proofParts) != 2 {
 			return fmt.Errorf("too many parts")
 		}
-		sp.InclusionProof = types.InclusionProof{}
+		sp.Inclusion = types.InclusionProof{}
 		return nil
 	}
 	if len(proofParts) != 3 {
 		return fmt.Errorf("too few parts")
 	}
-	return sp.InclusionProof.FromASCII(bytes.NewBuffer(proofParts[2]))
+	return sp.Inclusion.FromASCII(bytes.NewBuffer(proofParts[2]))
+}
+
+func (sp *SigsumProof) ToASCII(w io.Writer) error {
+	if err := ascii.WriteInt(w, "version", SigsumProofVersion); err != nil {
+		return err
+	}
+	if err := ascii.WriteHash(w, "log", &sp.LogKeyHash); err != nil {
+		return err
+	}
+	if err := sp.Leaf.ToASCII(w); err != nil {
+		return err
+	}
+	// Empty line as separator.
+	if _, err := fmt.Fprint(w, "\n"); err != nil {
+		return err
+	}
+	if err := sp.TreeHead.ToASCII(w); err != nil {
+		return err
+	}
+	if sp.TreeHead.Size <= 1 {
+		return nil
+	}
+	// Empty line as separator.
+	if _, err := fmt.Fprint(w, "\n"); err != nil {
+		return err
+	}
+	return sp.Inclusion.ToASCII(w)
 }
 
 // TODO: Implement a more general verify method, taking policy,
@@ -113,16 +169,13 @@ func (sp *SigsumProof) VerifyNoCosignatures(msg *crypto.Hash, submitKey *crypto.
 	if sp.LogKeyHash != crypto.HashBytes(logKey[:]) {
 		return fmt.Errorf("unexpected log key hash")
 	}
-	leaf := types.Leaf{
-		Checksum:  crypto.HashBytes(msg[:]),
-		Signature: sp.LeafSignature,
-		KeyHash:   crypto.HashBytes(submitKey[:]),
+	if sp.Leaf.KeyHash != crypto.HashBytes(submitKey[:]) {
+		return fmt.Errorf("unexpected submit key hash")
 	}
-	if !bytes.Equal(sp.Checksum[:], leaf.Checksum[:ShortChecksumSize]) {
-		return fmt.Errorf("unexpected (truncated) checksum")
-	}
-	if sp.SubmitterKeyHash != leaf.KeyHash {
-		return fmt.Errorf("unexpected submitter hash")
+	checksum := crypto.HashBytes(msg[:])
+	leaf, err := sp.Leaf.ToLeaf(&checksum)
+	if err != nil {
+		return err
 	}
 	if !leaf.Verify(submitKey) {
 		return fmt.Errorf("leaf signature not valid")
@@ -131,5 +184,5 @@ func (sp *SigsumProof) VerifyNoCosignatures(msg *crypto.Hash, submitKey *crypto.
 		return fmt.Errorf("invalid log signature on tree head")
 	}
 	leafHash := leaf.ToHash()
-	return sp.InclusionProof.Verify(&leafHash, &sp.TreeHead.TreeHead)
+	return sp.Inclusion.Verify(&leafHash, &sp.TreeHead.TreeHead)
 }
