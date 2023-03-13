@@ -1,0 +1,49 @@
+#! /bin/sh
+
+set -e
+
+./bin/sigsum-key gen -o test.log.key
+./bin/sigsum-key gen -o test.submit.key
+./bin/sigsum-key gen -o test.witness.key
+
+# Start witness server
+rm -f test.witness.cth
+./bin/sigsum-witness -k test.witness.key --log-key test.log.key.pub \
+  --state-file test.witness.cth localhost:7777 &
+
+WITNESS_PID=$!
+
+# Start sigsum log server
+rm -f test.log.sth
+echo "startup=empty" > test.log.sth.startup
+./bin/sigsum-log-primary --key test.log.key \
+    --witnesses=test.witness.key.pub --witness-urls=http://localhost:7777 \
+    --interval=1s --log-level=error --ephemeral-test-backend --sth-path test.log.sth &
+
+SIGSUM_PID=$!
+
+cleanup () {
+    kill ${SIGSUM_PID} ${WITNESS_PID}
+}
+
+trap cleanup EXIT
+
+# Give log server some time to get ready.
+sleep 2
+
+echo "log $(./bin/sigsum-key hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "witness W $(./bin/sigsum-key hex -k test.witness.key.pub)" >> test.policy
+echo "quorum W" >> test.policy
+
+for x in $(seq 5); do
+    echo >&2 "submit $x"
+    # Must be exactly 32 bytes
+    printf "%31s\n" foo-$x \
+	| ./bin/sigsum-submit --diagnostics=warning --raw-hash -o test.$x.proof -k test.submit.key --policy test.policy
+done
+
+for x in $(seq 5); do
+    echo >&2 "verify $x"
+    printf "%31s\n" foo-$x \
+	| ./bin/sigsum-verify --raw-hash --submit-key test.submit.key.pub --policy test.policy "test.$x.proof"
+done

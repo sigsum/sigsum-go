@@ -1,7 +1,7 @@
 package main
 
 // Program to generate a witness add-tree request, from a
-// determinsitically built tree.
+// deterministically built tree.
 import (
 	"encoding/binary"
 	"fmt"
