@@ -16,9 +16,7 @@ import (
 	"os"
 
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/head"
-	"sigsum.org/sigsum-go/cmd/sigsum-debug/key"
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf"
-	"sigsum.org/sigsum-go/cmd/sigsum-debug/token"
 	"sigsum.org/sigsum-go/internal/options"
 )
 
@@ -29,10 +27,8 @@ It is meant to be used in conjuction with other utilities such as curl.
 Usage:
 
   sigsum-debug help  Usage message
-  sigsum-debug key   Private and public key utilities
   sigsum-debug leaf  Hash, sign, and verify tree leaves
   sigsum-debug head  Sign and verify tree heads
-  sigsum-debug token Create a submit token
 
 `
 
@@ -44,14 +40,10 @@ func main() {
 	switch opt.Name() {
 	case "help", "":
 		opt.Usage()
-	case "key":
-		err = key.Main(opt.Args())
 	case "leaf":
 		err = leaf.Main(opt.Args())
 	case "head":
 		err = head.Main(opt.Args())
-	case "token":
-		err = token.Main(opt.Args())
 	default:
 		err = fmt.Errorf(": invalid command %q, try \"help\"", opt.Name())
 	}
