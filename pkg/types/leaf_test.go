@@ -117,7 +117,7 @@ func TestLeafFromBinary(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := &leaf, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := leaf, *table.want; got != want {
 			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -166,7 +166,7 @@ func TestLeafFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := &leaf, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := leaf, *table.want; got != want {
 			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}

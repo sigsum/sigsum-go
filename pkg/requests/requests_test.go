@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"reflect"
 	"testing"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -78,7 +77,7 @@ func TestLeafFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := &leaf, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := leaf, *table.want; got != want {
 			t.Errorf("got leaf request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -106,7 +105,7 @@ func TestLeavesFromURL(t *testing.T) {
 			continue
 		}
 
-		if got, want := req, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := req, table.want; got != want {
 			t.Errorf("%s: got leaves request\n%v\nbut wanted\n%v", table.desc, got, want)
 		}
 	}
@@ -138,7 +137,7 @@ func TestInclusionProofFromURL(t *testing.T) {
 			continue
 		}
 
-		if got, want := req, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := req, table.want; got != want {
 			t.Errorf("%s: got inclusion proof request\n%v\nbut wanted\n%v", table.desc, got, want)
 		}
 	}
@@ -166,7 +165,7 @@ func TestConsistencyProofFromURL(t *testing.T) {
 			continue
 		}
 
-		if got, want := req, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := req, table.want; got != want {
 			t.Errorf("%s: got consistency proof request\n%v\nbut wanted\n%v", table.desc, got, want)
 		}
 	}

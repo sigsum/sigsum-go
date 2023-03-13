@@ -102,7 +102,7 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := &sth, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := sth, *table.want; got != want {
 			t.Errorf("got signed tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -167,7 +167,7 @@ func TestCosignatureFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := &req, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := req, *table.want; got != want {
 			t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
