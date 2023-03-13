@@ -8,6 +8,7 @@ import (
 
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -163,26 +164,29 @@ func (sp *SigsumProof) ToASCII(w io.Writer) error {
 	return sp.Inclusion.ToASCII(w)
 }
 
-// TODO: Implement a more general verify method, taking policy,
-// cosignatures, timestamps into account.
-func (sp *SigsumProof) VerifyNoCosignatures(msg *crypto.Hash, submitKey *crypto.PublicKey, logKey *crypto.PublicKey) error {
-	if sp.LogKeyHash != crypto.HashBytes(logKey[:]) {
-		return fmt.Errorf("unexpected log key hash")
-	}
-	if sp.Leaf.KeyHash != crypto.HashBytes(submitKey[:]) {
-		return fmt.Errorf("unexpected submit key hash")
-	}
+func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKey *crypto.PublicKey, policy *policy.Policy) error {
 	checksum := crypto.HashBytes(msg[:])
 	leaf, err := sp.Leaf.ToLeaf(&checksum)
 	if err != nil {
 		return err
 	}
+	if sp.Leaf.KeyHash != crypto.HashBytes(submitKey[:]) {
+		return fmt.Errorf("unexpected submit key hash")
+	}
 	if !leaf.Verify(submitKey) {
 		return fmt.Errorf("leaf signature not valid")
 	}
-	if !sp.TreeHead.Verify(logKey) {
-		return fmt.Errorf("invalid log signature on tree head")
+	if err := policy.VerifyCosignedTreeHead(&sp.LogKeyHash, &sp.TreeHead); err != nil {
+		return err
 	}
 	leafHash := leaf.ToHash()
 	return sp.Inclusion.Verify(&leafHash, &sp.TreeHead.TreeHead)
+}
+
+func (sp *SigsumProof) VerifyNoCosignatures(msg *crypto.Hash, submitKey *crypto.PublicKey, logKey *crypto.PublicKey) error {
+	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{*logKey}, nil, 0)
+	if err != nil {
+		return fmt.Errorf("internal error: %v", err)
+	}
+	return sp.Verify(msg, submitKey, policy)
 }
