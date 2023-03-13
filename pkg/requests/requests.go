@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
@@ -95,11 +94,11 @@ func (req *Leaves) FromURL(url string) (err error) {
 		return fmt.Errorf("not enough input")
 	}
 	startIndex := split[len(split)-2]
-	if req.StartIndex, err = strconv.ParseUint(startIndex, 10, 64); err != nil {
+	if req.StartIndex, err = ascii.IntFromDecimal(startIndex); err != nil {
 		return err
 	}
 	endIndex := split[len(split)-1]
-	if req.EndIndex, err = strconv.ParseUint(endIndex, 10, 64); err != nil {
+	if req.EndIndex, err = ascii.IntFromDecimal(endIndex); err != nil {
 		return err
 	}
 	return nil
@@ -112,7 +111,7 @@ func (req *InclusionProof) FromURL(url string) (err error) {
 		return fmt.Errorf("not enough input")
 	}
 	treeSize := split[len(split)-2]
-	if req.Size, err = strconv.ParseUint(treeSize, 10, 64); err != nil {
+	if req.Size, err = ascii.IntFromDecimal(treeSize); err != nil {
 		return err
 	}
 	req.LeafHash, err = crypto.HashFromHex(split[len(split)-1])
@@ -126,11 +125,11 @@ func (req *ConsistencyProof) FromURL(url string) (err error) {
 		return fmt.Errorf("not enough input")
 	}
 	oldSize := split[len(split)-2]
-	if req.OldSize, err = strconv.ParseUint(oldSize, 10, 64); err != nil {
+	if req.OldSize, err = ascii.IntFromDecimal(oldSize); err != nil {
 		return err
 	}
 	newSize := split[len(split)-1]
-	if req.NewSize, err = strconv.ParseUint(newSize, 10, 64); err != nil {
+	if req.NewSize, err = ascii.IntFromDecimal(newSize); err != nil {
 		return err
 	}
 	return nil

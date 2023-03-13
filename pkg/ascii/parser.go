@@ -14,14 +14,7 @@ import (
 // Basic value types
 func IntFromDecimal(s string) (uint64, error) {
 	// Use ParseUint, to not accept leading +/-.
-	i, err := strconv.ParseUint(s, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	if i >= (1 << 63) {
-		return 0, fmt.Errorf("integer %d is out of range", i)
-	}
-	return i, nil
+	return strconv.ParseUint(s, 10, 63)
 }
 
 func split(s string, n int) ([]string, error) {
