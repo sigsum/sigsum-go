@@ -92,8 +92,8 @@ func (p *Policy) addLog(log *entity) (crypto.Hash, error) {
 
 func (p *Policy) addWitness(witness *entity) (crypto.Hash, error) {
 	h := crypto.HashBytes(witness.pubKey[:])
-	if _, dup := p.logs[h]; dup {
-		return crypto.Hash{}, fmt.Errorf("duplicate log: %x\n", witness.pubKey)
+	if _, dup := p.witnesses[h]; dup {
+		return crypto.Hash{}, fmt.Errorf("duplicate witness: %x\n", witness.pubKey)
 	}
 	p.witnesses[h] = *witness
 	return h, nil
