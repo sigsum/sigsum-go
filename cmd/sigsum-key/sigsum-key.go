@@ -11,6 +11,7 @@ import (
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 type GenSettings struct {
