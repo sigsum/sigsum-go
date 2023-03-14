@@ -1,17 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 
-	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/pkg/proof"
 )
 
 type Settings struct {
@@ -48,47 +46,16 @@ func main() {
 
 	msg := readMessage(os.Stdin, settings.rawHash)
 
-	// TODO: Could use a variant of ascii.Parser that treats empty line as EOF.
-	proof, err := os.ReadFile(settings.proofFile)
+	f, err := os.Open(settings.proofFile)
 	if err != nil {
-		log.Fatalf("reading proof file %q failed: %v", settings.proofFile, err)
+		log.Fatalf("opening file %q failed: %v", settings.proofFile, err)
 	}
-	proofParts := bytes.Split(proof, []byte{'\n', '\n'})
-	if len(proofParts) < 3 {
-		log.Fatal("invalid proof, too few parts")
+	var pr proof.SigsumProof
+	if err := pr.FromASCII(f); err != nil {
+		log.Fatalf("invalid proof: %v", err)
 	}
-	checkProofHeader(proofParts[0], &logKey)
-	leafHash := checkProofLeaf(proofParts[1], msg[:], &submitKey)
-	var cth types.CosignedTreeHead
-	if err := cth.FromASCII(bytes.NewBuffer(proofParts[2])); err != nil {
-		log.Fatalf("failed to parse cosigned tree head: %v", err)
-	}
-	if !cth.Verify(&logKey) {
-		log.Fatal("invalid log signature on tree head")
-	}
-	// TODO: Check cosignatures, process timestamp?
-
-	if cth.Size == 0 {
-		log.Fatal("empty tree")
-	}
-	if cth.Size == 1 {
-		if len(proofParts) != 3 {
-			log.Fatal("invalid proof, unexpected inclusion part for tree_size 1")
-		}
-		if cth.RootHash != leafHash {
-			log.Fatal("inclusion check failed (for tree_size 1)")
-		}
-		return
-	}
-	if len(proofParts) != 4 {
-		log.Fatalf("invalid proof, got %d parts, need 4", len(proofParts))
-	}
-	var inclusion types.InclusionProof
-	if err := inclusion.FromASCII(bytes.NewBuffer(proofParts[3])); err != nil {
-		log.Fatalf("failed to parse inclusion proof: %v", err)
-	}
-	if err := inclusion.Verify(&leafHash, &cth.TreeHead); err != nil {
-		log.Fatalf("inclusion proof invalid: %v", err)
+	if err := pr.VerifyNoCosignatures(&msg, &submitKey, &logKey); err != nil {
+		log.Fatalf("sigsum proof failed to verify: %v", err)
 	}
 }
 
@@ -134,50 +101,4 @@ func readMessage(r io.Reader, rawHash bool) crypto.Hash {
 		log.Fatal(err)
 	}
 	return msg
-}
-
-func checkProofHeader(header []byte, logKey *crypto.PublicKey) {
-	p := ascii.NewParser(bytes.NewBuffer(header))
-	if version, err := p.GetInt("version"); err != nil || version != 0 {
-		if err != nil {
-			log.Fatalf("invalid version line: %v", err)
-		}
-		log.Fatalf("unexpected version %d, wanted 0", version)
-	}
-	if hash, err := p.GetHash("log"); err != nil || hash != crypto.HashBytes(logKey[:]) {
-		if err != nil {
-			log.Fatalf("invalid log line: %v", err)
-		}
-		log.Fatalf("proof doesn't match log's public key")
-	}
-	if err := p.GetEOF(); err != nil {
-		log.Fatalf("invalid proof header: %v", err)
-	}
-
-}
-
-// On success, returns the leaf hash.
-func checkProofLeaf(leaf []byte, msg []byte, submitKey *crypto.PublicKey) crypto.Hash {
-	p := ascii.NewParser(bytes.NewBuffer(leaf))
-	values, err := p.GetValues("leaf", 2)
-	if err != nil {
-		log.Fatalf("invalid leaf line: %v", err)
-	}
-	keyHash, err := crypto.HashFromHex(values[0])
-	if err != nil || keyHash != crypto.HashBytes(submitKey[:]) {
-		log.Fatalf("unexpected leaf key hash: %q", values[0])
-	}
-	signature, err := crypto.SignatureFromHex(values[1])
-	if err != nil {
-		log.Fatalf("failed to parse signature: %v", err)
-	}
-	if !types.VerifyLeafMessage(submitKey, msg, &signature) {
-		log.Fatalf("leaf signature not valid")
-	}
-
-	return (&types.Leaf{
-		Checksum:  crypto.HashBytes(msg[:]),
-		KeyHash:   keyHash,
-		Signature: signature,
-	}).ToHash()
 }
