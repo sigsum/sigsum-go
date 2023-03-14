@@ -253,6 +253,6 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 			fmt.Fprintf(&buf, "\n")
 			proof.ToASCII(&buf)
 		}
-		return string(buf.Bytes()), nil
+		return buf.String(), nil
 	}
 }

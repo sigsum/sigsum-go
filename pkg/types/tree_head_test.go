@@ -64,11 +64,11 @@ func TestTreeHeadSign(t *testing.T) {
 
 func TestSignedTreeHeadToASCII(t *testing.T) {
 	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validSignedTreeHead(t).ToASCII(buf); err != nil {
+	buf := bytes.Buffer{}
+	if err := validSignedTreeHead(t).ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
-	if got, want := string(buf.Bytes()), validSignedTreeHeadASCII(t); got != want {
+	if got, want := buf.String(), validSignedTreeHeadASCII(t); got != want {
 		t.Errorf("got signed tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
@@ -81,16 +81,13 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 		want       *SignedTreeHead
 	}{
 		{
-			desc: "invalid: not a signed tree head (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(append(
-				[]byte(validSignedTreeHeadASCII(t)),
-				[]byte("key=4")...),
-			),
-			wantErr: true,
+			desc:       "invalid: not a signed tree head (unexpected key-value pair)",
+			serialized: bytes.NewBufferString(validSignedTreeHeadASCII(t) + "key=4"),
+			wantErr:    true,
 		},
 		{
 			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validSignedTreeHeadASCII(t))),
+			serialized: bytes.NewBufferString(validSignedTreeHeadASCII(t)),
 			want:       validSignedTreeHead(t),
 		},
 	} {
@@ -129,11 +126,11 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 
 func TestCosignatureToASCII(t *testing.T) {
 	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validCosignature(t).ToASCII(buf); err != nil {
+	buf := bytes.Buffer{}
+	if err := validCosignature(t).ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
-	if got, want := string(buf.Bytes()), validCosignatureASCII(t); got != want {
+	if got, want := buf.String(), validCosignatureASCII(t); got != want {
 		t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
@@ -146,16 +143,13 @@ func TestCosignatureFromASCII(t *testing.T) {
 		want       *Cosignature
 	}{
 		{
-			desc: "invalid: not a cosignature request (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(
-				append([]byte(validCosignatureASCII(t)),
-					[]byte("key=4")...),
-			),
-			wantErr: true,
+			desc:       "invalid: not a cosignature request (unexpected key-value pair)",
+			serialized: bytes.NewBufferString(validCosignatureASCII(t) + "key=4"),
+			wantErr:    true,
 		},
 		{
 			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validCosignatureASCII(t))),
+			serialized: bytes.NewBufferString(validCosignatureASCII(t)),
 			want:       validCosignature(t),
 		},
 	} {
@@ -229,11 +223,11 @@ func TestCosignAndVerify(t *testing.T) {
 
 func TestCosignedTreeHeadToASCII(t *testing.T) {
 	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validCosignedTreeHead(t).ToASCII(buf); err != nil {
+	buf := bytes.Buffer{}
+	if err := validCosignedTreeHead(t).ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
-	if got, want := string(buf.Bytes()), validCosignedTreeHeadASCII(t); got != want {
+	if got, want := buf.String(), validCosignedTreeHeadASCII(t); got != want {
 		t.Errorf("got cosigned tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
@@ -246,24 +240,19 @@ func TestCosignedTreeHeadFromASCII(t *testing.T) {
 		want       *CosignedTreeHead
 	}{
 		{
-			desc: "invalid: not a cosigned tree head (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(append(
-				[]byte(validCosignedTreeHeadASCII(t)),
-				[]byte("key=4")...),
-			),
-			wantErr: true,
+			desc:       "invalid: not a cosigned tree head (unexpected key-value pair)",
+			serialized: bytes.NewBufferString(validCosignedTreeHeadASCII(t) + "key=4"),
+			wantErr:    true,
 		},
 		{
 			desc: "invalid: not a cosigned tree head (not enough cosignatures)",
-			serialized: bytes.NewBuffer(append(
-				[]byte(validCosignedTreeHeadASCII(t)),
-				[]byte(fmt.Sprintf("key_hash=%x\n", crypto.Hash{}))...,
-			)),
+			serialized: bytes.NewBufferString(validCosignedTreeHeadASCII(t) +
+				fmt.Sprintf("key_hash=%x\n", crypto.Hash{})),
 			wantErr: true,
 		},
 		{
 			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validCosignedTreeHeadASCII(t))),
+			serialized: bytes.NewBufferString(validCosignedTreeHeadASCII(t)),
 			want:       validCosignedTreeHead(t),
 		},
 	} {

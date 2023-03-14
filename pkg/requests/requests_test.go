@@ -12,11 +12,11 @@ import (
 
 func TestLeafToASCII(t *testing.T) {
 	desc := "valid"
-	buf := bytes.NewBuffer(nil)
-	if err := validLeaf(t).ToASCII(buf); err != nil {
+	buf := bytes.Buffer{}
+	if err := validLeaf(t).ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
-	if got, want := string(buf.Bytes()), validLeafASCII(t); got != want {
+	if got, want := buf.String(), validLeafASCII(t); got != want {
 		t.Errorf("got leaf request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
@@ -56,16 +56,13 @@ func TestLeafFromASCII(t *testing.T) {
 		want       *Leaf
 	}{
 		{
-			desc: "invalid: not a leaf request (unexpected key-value pair)",
-			serialized: bytes.NewBuffer(
-				append([]byte(validLeafASCII(t)),
-					[]byte("key=4")...),
-			),
-			wantErr: true,
+			desc:       "invalid: not a leaf request (unexpected key-value pair)",
+			serialized: bytes.NewBufferString(validLeafASCII(t) + "key=4"),
+			wantErr:    true,
 		},
 		{
 			desc:       "valid",
-			serialized: bytes.NewBuffer([]byte(validLeafASCII(t))),
+			serialized: bytes.NewBufferString(validLeafASCII(t)),
 			want:       validLeaf(t),
 		},
 	} {

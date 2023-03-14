@@ -50,7 +50,7 @@ func TestParser(t *testing.T) {
 	hash := crypto.HashBytes([]byte("x"))
 	input := fmt.Sprintf("hash=%x\nint=12345\nvalues=a b c\n", hash)
 
-	p := NewParser(bytes.NewBuffer([]byte(input)))
+	p := NewParser(bytes.NewBufferString(input))
 	if got, err := p.GetHash("hash"); err != nil || got != hash {
 		if err != nil {
 			t.Fatal(err)
