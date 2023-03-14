@@ -13,6 +13,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/log"
+	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -175,6 +176,11 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 	}
 	leafHash := leaf.ToHash()
 
+	proof := proof.SigsumProof{
+		LogKeyHash: crypto.HashBytes(logKey[:]),
+		Leaf:       proof.NewShortLeaf(&leaf),
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -198,31 +204,31 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 	}
 	// Leaf submitted, now get a signed tree head + inclusion proof.
 	for {
-		cth, err := c.GetTreeHead(ctx)
+		var err error
+		proof.TreeHead, err = c.GetTreeHead(ctx)
 		if err != nil {
 			log.Fatal("get-tree-head failed: %v", err)
 		}
-		if !cth.Verify(logKey) {
+		if !proof.TreeHead.Verify(logKey) {
 			log.Fatal("invalid log signature on tree head")
 		}
 		// See if we can have an inclusion proof for this tree size.
-		if cth.Size == 0 {
+		if proof.TreeHead.Size == 0 {
 			// Certainly not included yet.
 			time.Sleep(delay)
 			continue
 		}
-		var proof types.InclusionProof
 		// Special case for the very first leaf.
-		if cth.Size == 1 {
-			if cth.RootHash != leafHash {
+		if proof.TreeHead.Size == 1 {
+			if proof.TreeHead.RootHash != leafHash {
 				// Certainly not included yet.
 				time.Sleep(delay)
 				continue
 			}
 		} else {
-			proof, err = c.GetInclusionProof(ctx,
+			proof.Inclusion, err = c.GetInclusionProof(ctx,
 				requests.InclusionProof{
-					Size:     cth.Size,
+					Size:     proof.TreeHead.Size,
 					LeafHash: leafHash,
 				})
 			if err == client.HttpNotFound {
@@ -236,23 +242,15 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 		}
 
 		// Check validity.
-		if err = proof.Verify(&leafHash, &cth.TreeHead); err != nil {
+		if err = proof.Inclusion.Verify(&leafHash, &proof.TreeHead.TreeHead); err != nil {
 			return "", fmt.Errorf("inclusion proof invalid: %v", err)
 		}
 
 		// Output collected data.
 		buf := bytes.Buffer{}
-
-		fmt.Fprintf(&buf, "version=0\nlog=%x\n\n", crypto.HashBytes(logKey[:]))
-
-		fmt.Fprintf(&buf, "leaf=%x %x\n\n", leaf.KeyHash, leaf.Signature)
-
-		cth.ToASCII(&buf)
-
-		if cth.Size > 1 {
-			fmt.Fprintf(&buf, "\n")
-			proof.ToASCII(&buf)
+		if err := proof.ToASCII(&buf); err != nil {
+			return "", err
 		}
-		return string(buf.Bytes()), nil
+		return buf.String(), nil
 	}
 }
