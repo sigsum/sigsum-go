@@ -31,27 +31,28 @@ func main() {
 	const usage = `sigsum-log [OPTIONS] < INPUT
     Options:
       -h --help Display this help
-      -k PRIVATE-KEY
+      -k PRIVATE-KEY-FILE
       --log-url LOG-URL
-      --log-key LOG-KEY
+      --log-key LOG-KEY-FILE
       --diagnostics LEVEL
       --raw-hash
       -o OUTPUT-FILE
     Creates and/or submits an add-leaf request.
 
-    If -k PRIVATE-KEY is provided, a new leaf is created based on the
-    SHA256 hash of the input (or if --raw-hash is given, input is the
-    hash value, of size exactly 32 octets).
+    If -k PRIVATE-KEY-FILE is provided, a new leaf is created based on
+    the SHA256 hash of INPUT (or, if --raw-hash is provided, INPUT is
+    treated as the hash value to be used, exactly 32 octets long).
 
-    If -k option is missing, the INPUT should instead be the body of a
-    leaf request, which is parsed and verified.
+    If the -k option is missing, INPUT should instead be the body of an
+    add-leaf request, which is then parsed and verified.
 
-    If --log-url is provided, the leaf is submitted to the log, and a sigsum
-    proof is collected and written to the output. The log's public key (file)
+    If --log-url is provided, the request is submitted to the log, and a Sigsum
+    proof is collected and written to stdout. A file containing the log's public key
     must be passed with the --log-key option.
 
-    With -k and no --log-url, leaf request is written to stdout. With no -k and no
-    --log-url, just verifies the leaf syntax and signature.
+    With -k but without --log-url, the add-leaf request created is
+    written to stdout. With no -k and no --log-url, the leaf syntax
+    and signature in INPUT are verified.
 
     The --diagnostics option specifies level of diagnostig messages,
     one of "fatal", "error", "warning", "info" (default), or "debug".
