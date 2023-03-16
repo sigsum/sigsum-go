@@ -74,32 +74,52 @@ func (q *quorumKofN) IsQuorum(verified map[crypto.Hash]struct{}) bool {
 	return c >= q.k
 }
 
+func newEmptyPolicy() *Policy {
+	return &Policy{
+		logs:      make(map[crypto.Hash]entity),
+		witnesses: make(map[crypto.Hash]entity),
+	}
+}
+
+func (p *Policy) addLog(log *entity) (crypto.Hash, error) {
+	h := crypto.HashBytes(log.pubKey[:])
+	if _, dup := p.logs[h]; dup {
+		return crypto.Hash{}, fmt.Errorf("duplicate log: %x\n", log.pubKey)
+	}
+	p.logs[h] = *log
+	return h, nil
+}
+
+func (p *Policy) addWitness(witness *entity) (crypto.Hash, error) {
+	h := crypto.HashBytes(witness.pubKey[:])
+	if _, dup := p.witnesses[h]; dup {
+		return crypto.Hash{}, fmt.Errorf("duplicate witness: %x\n", witness.pubKey)
+	}
+	p.witnesses[h] = *witness
+	return h, nil
+}
+
 func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
 	if k > len(witnesses) {
 		return nil, fmt.Errorf("invalid policy k (%d) > n (%d)\n", k, len(witnesses))
 	}
-	p := Policy{
-		logs:      make(map[crypto.Hash]entity),
-		witnesses: make(map[crypto.Hash]entity),
-	}
+	p := newEmptyPolicy()
+
 	for _, l := range logs {
-		h := crypto.HashBytes(l[:])
-		if _, dup := p.logs[h]; dup {
-			return nil, fmt.Errorf("duplicate log: %x\n", l)
+		if _, err := p.addLog(&entity{l}); err != nil {
+			return nil, err
 		}
-		p.logs[h] = entity{l}
 	}
 
 	subQuorums := []Quorum{}
 
 	for _, w := range witnesses {
-		h := crypto.HashBytes(w[:])
-		if _, dup := p.witnesses[h]; dup {
-			return nil, fmt.Errorf("duplicate witness: %x\n", w)
+		h, err := p.addWitness(&entity{w})
+		if err != nil {
+			return nil, err
 		}
-		p.witnesses[h] = entity{w}
 		subQuorums = append(subQuorums, &quorumSingle{h})
 	}
 	p.quorum = &quorumKofN{subQuorums: subQuorums, k: k}
-	return &p, nil
+	return p, nil
 }
