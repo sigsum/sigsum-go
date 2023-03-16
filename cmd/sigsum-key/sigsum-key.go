@@ -11,6 +11,7 @@ import (
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 type GenSettings struct {
@@ -166,7 +167,7 @@ func (s *VerifySettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	flags.StringVar(&s.keyFile, "k", "", "Key file")
 	flags.StringVar(&s.signatureFile, "s", "", "Signature file")
-	flags.StringVar(&s.namespace, "n", "signed-tree-head:v0@sigsum.org", "Signature namespace")
+	flags.StringVar(&s.namespace, "n", types.SignedTreeHeadNamespace, "Signature namespace")
 
 	flags.Parse(args)
 
@@ -184,7 +185,7 @@ func (s *SignSettings) parse(args []string) {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 	flags.StringVar(&s.keyFile, "k", "", "Key file")
 	flags.StringVar(&s.outputFile, "o", "", "Signature output file")
-	flags.StringVar(&s.namespace, "n", "tree-leaf:v0@sigsum.org", "Signature namespace")
+	flags.StringVar(&s.namespace, "n", types.TreeLeafNamespace, "Signature namespace")
 	flags.BoolVar(&s.sshFormat, "ssh", false, "Use OpenSSH format for public key")
 
 	flags.Parse(args)
