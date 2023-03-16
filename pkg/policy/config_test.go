@@ -2,6 +2,7 @@ package policy
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -74,6 +75,54 @@ witness W4 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 		}
 		if got, want := policy.quorum.IsQuorum(m), table.sufficient; got != want {
 			t.Errorf("Unexpected result of IsQuorum for set %v, got %v, expected %v", table.witnesses, got, want)
+		}
+	}
+}
+
+func TestInvalidConfig(t *testing.T) {
+	for _, table := range []struct {
+		desc   string
+		err    string
+		config string
+	}{
+		{"empty", "no quorum", ""},
+		{"duplicate log", "duplicate log: aaa", `
+log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa #foo
+  log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa #bar
+`},
+		{"duplicate witness", "duplicate witness: ccc", `
+witness W1 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+witness W2 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+`},
+		{"duplicate name", "duplicate name: \"W1\"", `
+witness W1 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+witness W1 dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+`},
+		{"duplicate none", "duplicate name: \"none\"", `
+witness none cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+`},
+		{"undef name", "undefined name: \"W3\"", `
+witness W1 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+witness W2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+group G all W1 W3 W2
+`},
+		{"missing quorum", "no quorum", `
+witness W1 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+witness W2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+group G all W1 W2
+`},
+	} {
+		policy, err := ParseConfig(bytes.NewBufferString(table.config))
+		if err == nil {
+			t.Errorf("%s: invalid config not rejected", table.desc)
+		} else {
+			if strings.Index(err.Error(), table.err) < 0 {
+				t.Errorf("%s: expected error containing %q: %v",
+					table.desc, table.err, err)
+			}
+			if policy != nil {
+				t.Errorf("returned policy (for invalid config) is non-nil")
+			}
 		}
 	}
 }

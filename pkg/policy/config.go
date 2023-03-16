@@ -56,7 +56,7 @@ func (c *config) parseWitness(args []string) error {
 		return err
 	}
 	if c.ifdef(name) {
-		return fmt.Errorf("duplicate name %q", name)
+		return fmt.Errorf("duplicate name: %q", name)
 	}
 	h, err := c.policy.addWitness(&entity{key})
 	if err != nil {
@@ -98,7 +98,7 @@ func (c *config) parseGroup(args []string) error {
 		if q, ok := c.names[member]; ok {
 			subQuorums = append(subQuorums, q)
 		} else {
-			return fmt.Errorf("undefined name %q", member)
+			return fmt.Errorf("undefined name: %q", member)
 		}
 	}
 	if len(subQuorums) != n {
