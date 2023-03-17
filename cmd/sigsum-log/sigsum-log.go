@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/log"
+	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -21,8 +21,7 @@ import (
 type Settings struct {
 	rawHash     bool
 	keyFile     string
-	logUrl      string
-	logKey      string
+	policyFile  string
 	diagnostics string
 	outputFile  string
 }
@@ -32,26 +31,26 @@ func main() {
     Options:
       -h --help Display this help
       -k PRIVATE-KEY-FILE
-      --log-url LOG-URL
-      --log-key LOG-KEY-FILE
+      --policy POLICY-FILE
       --diagnostics LEVEL
       --raw-hash
       -o OUTPUT-FILE
     Creates and/or submits an add-leaf request.
 
-    If -k PRIVATE-KEY-FILE is provided, a new leaf is created based on
+    If -k PRIVATE-KEY-FILE is provided, a new request is created based on
     the SHA256 hash of INPUT (or, if --raw-hash is provided, INPUT is
     treated as the hash value to be used, exactly 32 octets long).
 
     If the -k option is missing, INPUT should instead be the body of an
     add-leaf request, which is then parsed and verified.
 
-    If --log-url is provided, the request is submitted to the log, and a Sigsum
-    proof is collected and written to stdout. A file containing the log's public key
-    must be passed with the --log-key option.
+    If --policy is provided, the request is submitted to some log
+    specified by the policy, and a Sigsum proof is collected and
+    written to stdout. If there are multiple logs in the policy, they are
+    be tried in randomized order.
 
-    With -k but without --log-url, the add-leaf request created is
-    written to stdout. With no -k and no --log-url, the leaf syntax
+    With -k but without --policy, the add-leaf request created is
+    written to stdout. With no -k and no --policy, the request syntax
     and signature in INPUT are verified.
 
     The --diagnostics option specifies level of diagnostig messages,
@@ -83,7 +82,7 @@ func main() {
 		}
 		leaf = requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey}
 
-		if len(settings.logUrl) == 0 {
+		if len(settings.policyFile) == 0 {
 			file := os.Stdout
 			if len(settings.outputFile) > 0 {
 				var err error
@@ -107,15 +106,12 @@ func main() {
 			log.Fatal("invalid leaf signature")
 		}
 	}
-	if len(settings.logUrl) > 0 {
-		publicKey, err := key.ReadPublicKeyFile(settings.logKey)
+	if len(settings.policyFile) > 0 {
+		policy, err := policy.ReadPolicyFile(settings.policyFile)
 		if err != nil {
 			log.Fatal("%v", err)
 		}
-		proof, err := submitLeaf(settings.logUrl, &publicKey, &leaf)
-		if err != nil {
-			log.Fatal("submitting leaf failed: %v", err)
-		}
+		proof := submitLeaf(policy, &leaf)
 		file := os.Stdout
 		if len(settings.outputFile) > 0 {
 			var err error
@@ -126,7 +122,7 @@ func main() {
 			}
 			defer file.Close()
 		}
-		fmt.Fprint(file, proof)
+		proof.ToASCII(file)
 	}
 }
 
@@ -136,15 +132,11 @@ func (s *Settings) parse(args []string, usage string) {
 
 	flags.BoolVar(&s.rawHash, "raw-hash", false, "Use raw hash input")
 	flags.StringVar(&s.keyFile, "k", "", "Key file")
-	flags.StringVar(&s.logUrl, "log-url", "", "Log base url")
-	flags.StringVar(&s.logKey, "log-key", "", "Public key file for log")
+	flags.StringVar(&s.policyFile, "policy", "", "Policy file")
 	flags.StringVar(&s.outputFile, "o", "", "Output file")
 	flags.StringVar(&s.diagnostics, "diagnostics", "", "Level of diagnostic messages")
 
 	flags.Parse(args)
-	if len(s.logUrl) > 0 && len(s.logKey) == 0 {
-		log.Fatal("--log-url option requires log's public key (--log-key option)")
-	}
 }
 
 func readMessage(r io.Reader, rawHash bool) crypto.Hash {
@@ -170,16 +162,34 @@ func readMessage(r io.Reader, rawHash bool) crypto.Hash {
 	return msg
 }
 
-func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (string, error) {
+func submitLeaf(policy *policy.Policy, req *requests.Leaf) proof.SigsumProof {
 	leaf, err := req.Verify()
 	if err != nil {
-		return "", err
+		log.Fatal("Verifying leaf request failed")
 	}
 	leafHash := leaf.ToHash()
 
-	proof := proof.SigsumProof{
-		LogKeyHash: crypto.HashBytes(logKey[:]),
-		Leaf:       proof.NewShortLeaf(&leaf),
+	logs := policy.GetLogsWithUrl()
+	if len(logs) == 0 {
+		log.Fatal("No logs defined in policy")
+	}
+	for _, entity := range logs {
+		pr, err := submitLeafToLog(&entity, policy, req, &leafHash)
+		if err == nil {
+			pr.Leaf = proof.NewShortLeaf(&leaf)
+			return pr
+		}
+		log.Error("Submitting to log %q failed: ", entity.Url, err)
+	}
+	log.Fatal("All logs failed, giving up")
+	panic("can't happen")
+}
+
+func submitLeafToLog(entity *policy.Entity, policy *policy.Policy,
+	req *requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
+	pr := proof.SigsumProof{
+		// Note: Leaves to caller to populate proof.Leaf.
+		LogKeyHash: crypto.HashBytes(entity.PubKey[:]),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -187,16 +197,15 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 
 	c := client.New(client.Config{
 		UserAgent: "sigsum-log",
-		LogURL:    logUrl,
+		LogURL:    entity.Url,
 	})
 
 	delay := 2 * time.Second
-
 	for {
 		persisted, err := c.AddLeaf(ctx, *req)
 
 		if err != nil {
-			log.Fatal("%v", err)
+			return proof.SigsumProof{}, err
 		}
 		if persisted {
 			break
@@ -206,31 +215,32 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 	// Leaf submitted, now get a signed tree head + inclusion proof.
 	for {
 		var err error
-		proof.TreeHead, err = c.GetTreeHead(ctx)
+		pr.TreeHead, err = c.GetTreeHead(ctx)
 		if err != nil {
-			log.Fatal("get-tree-head failed: %v", err)
+			return proof.SigsumProof{}, err
 		}
-		if !proof.TreeHead.Verify(logKey) {
-			log.Fatal("invalid log signature on tree head")
+		if err := policy.VerifyCosignedTreeHead(&pr.LogKeyHash, &pr.TreeHead); err != nil {
+			return proof.SigsumProof{}, fmt.Errorf("verifying tree head failed")
 		}
+
 		// See if we can have an inclusion proof for this tree size.
-		if proof.TreeHead.Size == 0 {
+		if pr.TreeHead.Size == 0 {
 			// Certainly not included yet.
 			time.Sleep(delay)
 			continue
 		}
 		// Special case for the very first leaf.
-		if proof.TreeHead.Size == 1 {
-			if proof.TreeHead.RootHash != leafHash {
+		if pr.TreeHead.Size == 1 {
+			if pr.TreeHead.RootHash != *leafHash {
 				// Certainly not included yet.
 				time.Sleep(delay)
 				continue
 			}
 		} else {
-			proof.Inclusion, err = c.GetInclusionProof(ctx,
+			pr.Inclusion, err = c.GetInclusionProof(ctx,
 				requests.InclusionProof{
-					Size:     proof.TreeHead.Size,
-					LeafHash: leafHash,
+					Size:     pr.TreeHead.Size,
+					LeafHash: *leafHash,
 				})
 			if err == client.HttpNotFound {
 				log.Info("no inclusion proof yet, will retry")
@@ -238,20 +248,15 @@ func submitLeaf(logUrl string, logKey *crypto.PublicKey, req *requests.Leaf) (st
 				continue
 			}
 			if err != nil {
-				return "", fmt.Errorf("failed to get inclusion proof: %v", err)
+				return proof.SigsumProof{}, fmt.Errorf("failed to get inclusion proof: %v", err)
 			}
 		}
 
 		// Check validity.
-		if err = proof.Inclusion.Verify(&leafHash, &proof.TreeHead.TreeHead); err != nil {
-			return "", fmt.Errorf("inclusion proof invalid: %v", err)
+		if err = pr.Inclusion.Verify(leafHash, &pr.TreeHead.TreeHead); err != nil {
+			return proof.SigsumProof{}, fmt.Errorf("inclusion proof invalid: %v", err)
 		}
 
-		// Output collected data.
-		buf := bytes.Buffer{}
-		if err := proof.ToASCII(&buf); err != nil {
-			return "", err
-		}
-		return buf.String(), nil
+		return pr, nil
 	}
 }

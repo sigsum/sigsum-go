@@ -2,14 +2,15 @@ package policy
 
 import (
 	"fmt"
+	"math/rand"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-type entity struct {
-	pubKey crypto.PublicKey
-	// Add URL, to interact with entity?
+type Entity struct {
+	PubKey crypto.PublicKey
+	Url    string
 }
 
 // The method gets a set of witnesses for which a cosignature was
@@ -19,8 +20,8 @@ type Quorum interface {
 }
 
 type Policy struct {
-	logs      map[crypto.Hash]entity
-	witnesses map[crypto.Hash]entity
+	logs      map[crypto.Hash]Entity
+	witnesses map[crypto.Hash]Entity
 	quorum    Quorum
 }
 
@@ -30,14 +31,14 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 	if !ok {
 		return fmt.Errorf("unknown log")
 	}
-	if !cth.Verify(&log.pubKey) {
+	if !cth.Verify(&log.PubKey) {
 		return fmt.Errorf("invalid log signature")
 	}
 	verified := make(map[crypto.Hash]struct{})
 	failed := 0
 	for _, cs := range cth.Cosignatures {
 		if witness, ok := p.witnesses[cs.KeyHash]; ok {
-			if cs.Verify(&witness.pubKey, logKeyHash, &cth.TreeHead) {
+			if cs.Verify(&witness.PubKey, logKeyHash, &cth.TreeHead) {
 				verified[cs.KeyHash] = struct{}{}
 			} else {
 				failed++
@@ -76,27 +77,49 @@ func (q *quorumKofN) IsQuorum(verified map[crypto.Hash]struct{}) bool {
 
 func newEmptyPolicy() *Policy {
 	return &Policy{
-		logs:      make(map[crypto.Hash]entity),
-		witnesses: make(map[crypto.Hash]entity),
+		logs:      make(map[crypto.Hash]Entity),
+		witnesses: make(map[crypto.Hash]Entity),
 	}
 }
 
-func (p *Policy) addLog(log *entity) (crypto.Hash, error) {
-	h := crypto.HashBytes(log.pubKey[:])
+func (p *Policy) addLog(log *Entity) (crypto.Hash, error) {
+	h := crypto.HashBytes(log.PubKey[:])
 	if _, dup := p.logs[h]; dup {
-		return crypto.Hash{}, fmt.Errorf("duplicate log: %x\n", log.pubKey)
+		return crypto.Hash{}, fmt.Errorf("duplicate log: %x\n", log.PubKey)
 	}
 	p.logs[h] = *log
 	return h, nil
 }
 
-func (p *Policy) addWitness(witness *entity) (crypto.Hash, error) {
-	h := crypto.HashBytes(witness.pubKey[:])
+func (p *Policy) addWitness(witness *Entity) (crypto.Hash, error) {
+	h := crypto.HashBytes(witness.PubKey[:])
 	if _, dup := p.witnesses[h]; dup {
-		return crypto.Hash{}, fmt.Errorf("duplicate witness: %x\n", witness.pubKey)
+		return crypto.Hash{}, fmt.Errorf("duplicate witness: %x\n", witness.PubKey)
 	}
 	p.witnesses[h] = *witness
 	return h, nil
+}
+
+func randomizeEntities(m map[crypto.Hash]Entity) []Entity {
+	entities := make([]Entity, 0, len(m))
+	for _, entity := range m {
+		if len(entity.Url) > 0 {
+			entities = append(entities, entity)
+		}
+	}
+	// Return in randomized order.
+	rand.Shuffle(len(entities), func(i, j int) { entities[i], entities[j] = entities[j], entities[i] })
+	return entities
+}
+
+// Returns all logs with url specified, in randomized order.
+func (p *Policy) GetLogsWithUrl() []Entity {
+	return randomizeEntities(p.logs)
+}
+
+// Returns all witnesses with url specified, in randomized order.
+func (p *Policy) GetWitnessesWithUrl() []Entity {
+	return randomizeEntities(p.witnesses)
 }
 
 func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
@@ -106,7 +129,7 @@ func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
 	p := newEmptyPolicy()
 
 	for _, l := range logs {
-		if _, err := p.addLog(&entity{l}); err != nil {
+		if _, err := p.addLog(&Entity{PubKey: l}); err != nil {
 			return nil, err
 		}
 	}
@@ -114,7 +137,7 @@ func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
 	subQuorums := []Quorum{}
 
 	for _, w := range witnesses {
-		h, err := p.addWitness(&entity{w})
+		h, err := p.addWitness(&Entity{PubKey: w})
 		if err != nil {
 			return nil, err
 		}

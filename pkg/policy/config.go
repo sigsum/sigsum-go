@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 
@@ -11,8 +12,8 @@ import (
 )
 
 // Config file syntax is
-//   log <pubkey>
-//   witness <name> <pubkey>
+//   log <pubkey> [<url>]
+//   witness <name> <pubkey> [<url>]
 //   group <name> <threshold> <name>...
 //   quorum <name>
 // with # used for comments.
@@ -35,20 +36,24 @@ func (c *config) ifdef(name string) bool {
 }
 
 func (c *config) parseLog(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("invalid log line, public key required")
+	if len(args) < 1 || len(args) > 2 {
+		return fmt.Errorf("invalid log policy line, public key required, url optional")
 	}
 	key, err := crypto.PublicKeyFromHex(args[0])
 	if err != nil {
 		return err
 	}
-	_, err = c.policy.addLog(&entity{key})
+	var url string
+	if len(args) > 1 {
+		url = args[1]
+	}
+	_, err = c.policy.addLog(&Entity{PubKey: key, Url: url})
 	return err
 }
 
 func (c *config) parseWitness(args []string) error {
-	if len(args) != 2 {
-		return fmt.Errorf("invalid witness line, name and public key required")
+	if len(args) < 2 || len(args) > 3 {
+		return fmt.Errorf("invalid witness policy line, public key and name required, url optional")
 	}
 	name := args[0]
 	key, err := crypto.PublicKeyFromHex(args[1])
@@ -58,7 +63,11 @@ func (c *config) parseWitness(args []string) error {
 	if c.ifdef(name) {
 		return fmt.Errorf("duplicate name: %q", name)
 	}
-	h, err := c.policy.addWitness(&entity{key})
+	var url string
+	if len(args) > 2 {
+		url = args[2]
+	}
+	h, err := c.policy.addWitness(&Entity{PubKey: key, Url: url})
 	if err != nil {
 		return err
 	}
@@ -167,4 +176,13 @@ func ParseConfig(file io.Reader) (*Policy, error) {
 		return nil, fmt.Errorf("no quorum defined")
 	}
 	return config.policy, nil
+}
+
+func ReadPolicyFile(name string) (*Policy, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ParseConfig(f)
 }
