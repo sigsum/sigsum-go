@@ -22,22 +22,25 @@ trap cleanup EXIT
 # Give log server some time to get ready.
 sleep 2
 
+echo "log $(./bin/sigsum-key hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "quorum none" >> test.policy
+
 for x in $(seq 5); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
     printf "%31s\n" foo-$x \
-	| ./bin/sigsum-log --diagnostics=warning --raw-hash -o test.$x.proof -k test.submit.key --log-url http://localhost:6965 --log-key test.log.key.pub
+	| ./bin/sigsum-log --diagnostics=warning --raw-hash -o test.$x.proof -k test.submit.key --policy test.policy
 done
 
 for x in $(seq 5); do
     echo >&2 "verify $x"
     printf "%31s\n" foo-$x \
-	| ./bin/sigsum-verify --raw-hash --submit-key test.submit.key.pub --log-key test.log.key.pub "test.$x.proof"
+	| ./bin/sigsum-verify --raw-hash --submit-key test.submit.key.pub --policy test.policy "test.$x.proof"
 done
 
 # Check that the message is taken into account in validation.
 if printf "%31s\n" foo-2 \
-	| ./bin/sigsum-verify --submit-key test.submit.key.pub --log-key test.log.key.pub "test.1.proof" ; then
+	| ./bin/sigsum-verify --submit-key test.submit.key.pub --policy test.policy "test.1.proof" ; then
     false
 else
     true

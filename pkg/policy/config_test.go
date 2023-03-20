@@ -11,13 +11,13 @@ import (
 func TestValidConfig(t *testing.T) {
 	policy, err := ParseConfig(bytes.NewBufferString(`
 # example config
-log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa http://sigsum.example.org
   log bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb#comment
 
-witness W1 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+witness W1 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc http://w1
 # same key for log and key is undesirable, but not an error
 witness W2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-witness W3 dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+witness W3 dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd http://w3
 
 group G1 any W1 W2
 group G2 2 W1 W2 W3
@@ -41,6 +41,21 @@ witness W4 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 	if got, want := len(policy.witnesses), 4; got != want {
 		t.Errorf("Unexpected number of logs in policy, got %d, expected %d", got, want)
 	}
+	logs := policy.GetLogsWithUrl()
+	if got, want := len(logs), 1; got != want {
+		t.Errorf("Unexpected number of logs with url in policy, got %d, expected %d", got, want)
+	} else if got, want := logs[0].Url, "http://sigsum.example.org"; got != want {
+		t.Errorf("Unexpected log url, got %q, expected %q", got, want)
+	}
+
+	witnesses := policy.GetWitnessesWithUrl()
+	if got, want := len(witnesses), 2; got != want {
+		t.Errorf("Unexpected number of witnesses with url in policy, got %d, expected %d", got, want)
+	} else if !((witnesses[0].Url == "http://w1" && witnesses[1].Url == "http://w3") ||
+		(witnesses[1].Url == "http://w1" && witnesses[0].Url == "http://w3")) {
+		t.Errorf("Unexpected witness urls, got %v, %v", witnesses[0].Url, witnesses[1].Url)
+	}
+
 	if policy.quorum == nil {
 		t.Fatalf("No quorum defined")
 	}
