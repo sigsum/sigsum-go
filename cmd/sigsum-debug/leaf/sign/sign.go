@@ -3,17 +3,13 @@ package sign
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-func Main(args []string, optPrivateKey string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("trailing arguments: %s", strings.Join(args, ", "))
-	}
+func Main(optPrivateKey string) error {
 	priv, err := readPrivateKeyFile(optPrivateKey)
 	if err != nil {
 		return fmt.Errorf("parse private key: %w", err)

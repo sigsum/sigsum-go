@@ -1,11 +1,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+
+	getopt "github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
@@ -35,7 +36,7 @@ func main() {
 `
 	log.SetFlags(0)
 	var settings Settings
-	settings.parse(os.Args[1:], usage)
+	settings.parse(os.Args, usage)
 	submitKey, err := key.ReadPublicKeyFile(settings.submitKey)
 	if err != nil {
 		log.Fatal(err)
@@ -60,24 +61,17 @@ func main() {
 }
 
 func (s *Settings) parse(args []string, usage string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.Usage = func() { fmt.Print(usage) }
-
-	flags.BoolVar(&s.rawHash, "raw-hash", false, "Use raw hash input")
-	flags.StringVar(&s.submitKey, "submit-key", "", "Public key file")
-	flags.StringVar(&s.policyFile, "policy", "", "Policy file")
-
-	flags.Parse(args)
-	if flags.NArg() != 1 {
+	set := getopt.New()
+	set.SetParameters("")
+	set.SetUsage(func() { fmt.Print(usage) })
+	set.FlagLong(&s.rawHash, "raw-hash", 0, "Use raw hash input")
+	set.FlagLong(&s.submitKey, "submit-key", 0, "Public key file").Mandatory()
+	set.FlagLong(&s.policyFile, "policy", 0, "Policy file").Mandatory()
+	set.Parse(args)
+	if set.NArgs() != 1 {
 		log.Fatalf("no proof given on command line")
 	}
-	s.proofFile = flags.Arg(0)
-	if len(s.submitKey) == 0 {
-		log.Fatalf("--submit-key argument is required")
-	}
-	if len(s.policyFile) == 0 {
-		log.Fatalf("--policy argument is required")
-	}
+	s.proofFile = set.Arg(0)
 }
 
 func readMessage(r io.Reader, rawHash bool) crypto.Hash {

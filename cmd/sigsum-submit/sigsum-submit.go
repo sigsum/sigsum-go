@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"os"
 	"time"
+
+	getopt "github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/pkg/client"
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -58,9 +59,8 @@ func main() {
 
     If no output file is provided with the -o option, output is sent to stdout.
 `
-	// TODO: Witness config/policy.
 	var settings Settings
-	settings.parse(os.Args[1:], usage)
+	settings.parse(os.Args, usage)
 	if len(settings.diagnostics) > 0 {
 		if err := log.SetLevelFromString(settings.diagnostics); err != nil {
 			log.Fatal("%v", err)
@@ -127,16 +127,20 @@ func main() {
 }
 
 func (s *Settings) parse(args []string, usage string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.Usage = func() { fmt.Print(usage) }
+	set := getopt.New()
+	set.SetParameters("")
+	set.SetUsage(func() { fmt.Print(usage) })
 
-	flags.BoolVar(&s.rawHash, "raw-hash", false, "Use raw hash input")
-	flags.StringVar(&s.keyFile, "k", "", "Key file")
-	flags.StringVar(&s.policyFile, "policy", "", "Policy file")
-	flags.StringVar(&s.outputFile, "o", "", "Output file")
-	flags.StringVar(&s.diagnostics, "diagnostics", "", "Level of diagnostic messages")
+	set.FlagLong(&s.rawHash, "raw-hash", 0, "Use raw hash input")
+	set.FlagLong(&s.keyFile, "key", 'k', "Key file")
+	set.FlagLong(&s.policyFile, "policy", 0, "Policy file")
+	set.FlagLong(&s.outputFile, "output-file", 'o', "Output file")
+	set.FlagLong(&s.diagnostics, "diagnostics", 0, "Level of diagnostic messages")
 
-	flags.Parse(args)
+	set.Parse(args)
+	if set.NArgs() > 0 {
+		log.Fatal("Too many arguments.")
+	}
 }
 
 func readMessage(r io.Reader, rawHash bool) crypto.Hash {
