@@ -27,7 +27,7 @@ type Settings struct {
 }
 
 func main() {
-	const usage = `sigsum-log [OPTIONS] < INPUT
+	const usage = `sigsum-submit [OPTIONS] < INPUT
     Options:
       -h --help Display this help
       -k PRIVATE-KEY-FILE
@@ -196,7 +196,7 @@ func submitLeafToLog(entity *policy.Entity, policy *policy.Policy,
 	defer cancel()
 
 	c := client.New(client.Config{
-		UserAgent: "sigsum-log",
+		UserAgent: "sigsum-submit",
 		LogURL:    entity.Url,
 	})
 

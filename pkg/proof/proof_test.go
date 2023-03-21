@@ -14,7 +14,7 @@ func TestASCII(t *testing.T) {
 		desc  string
 		ascii string
 	}{
-		// Examples from running sigsum-log-test.
+		// Examples from running sigsum-submit-test.
 		{"size 1", `version=0
 log=24a68b92fe18d8fb6dce4b3a3c8ac25453eb4ee6c3bb575651bdfbda95e2e952
 leaf=5cc0 518ac523804cb74e2cb41f219aed1bfccc76a1202d8b891eed1a7cf3791eab9c 90c47772e2758fac56740ad52913af66874dc49b31ef21e4fab544a2836b7d9991f07559792f22c617c172e10391317b4a0a4396c4eb9cfc1871ed07a360240f
@@ -57,7 +57,7 @@ node_hash=eb94766b094058835d61c551a8ef581e8242ea419b665a2d2043291b98524e14
 }
 
 func TestVerifyNoCosignatures(t *testing.T) {
-	// Example from running sigsum-log-test.
+	// Example from running sigsum-submit-test.
 	proofASCII := `version=0
 log=24a68b92fe18d8fb6dce4b3a3c8ac25453eb4ee6c3bb575651bdfbda95e2e952
 leaf=7e28 518ac523804cb74e2cb41f219aed1bfccc76a1202d8b891eed1a7cf3791eab9c 5c46852140e41b49925f8c93dee5c3e776ababdd230425d17f44b519f5565e0026f86aea998ccb7685fbc672c7d016a3940db5d684279a39c870318c840bf002
