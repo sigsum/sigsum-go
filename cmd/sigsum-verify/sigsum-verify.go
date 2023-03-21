@@ -28,7 +28,7 @@ func main() {
       --policy POLICY-FILE
       --raw-hash
 
-    Verifies a sigsum proof, as produced by sigsum-log. Proof file
+    Verifies a sigsum proof, as produced by sigsum-submit. Proof file
     specified on command line, data being verified is the hash of the
     data on stdin (or if --raw-hash is given, input is the hash value,
     of size exactly 32 octets).

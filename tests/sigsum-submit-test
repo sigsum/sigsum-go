@@ -29,7 +29,7 @@ for x in $(seq 5); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
     printf "%31s\n" foo-$x \
-	| ./bin/sigsum-log --diagnostics=warning --raw-hash -o test.$x.proof -k test.submit.key --policy test.policy
+	| ./bin/sigsum-submit --diagnostics=warning --raw-hash -o test.$x.proof -k test.submit.key --policy test.policy
 done
 
 for x in $(seq 5); do
