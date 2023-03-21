@@ -131,13 +131,19 @@ func (s *Settings) parse(args []string, usage string) {
 	set.SetParameters("")
 	set.SetUsage(func() { fmt.Print(usage) })
 
+	help := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Use raw hash input")
 	set.FlagLong(&s.keyFile, "key", 'k', "Key file")
 	set.FlagLong(&s.policyFile, "policy", 0, "Policy file")
 	set.FlagLong(&s.outputFile, "output-file", 'o', "Output file")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "Level of diagnostic messages")
-
+	set.FlagLong(&help, "help", 0, "Display help")
 	set.Parse(args)
+	if help {
+		// TODO: Let getopt package list options, and append further details.
+		fmt.Print(usage)
+		os.Exit(0)
+	}
 	if set.NArgs() > 0 {
 		log.Fatal("Too many arguments.")
 	}

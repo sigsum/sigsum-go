@@ -36,6 +36,9 @@ type verifySettings struct {
 func main() {
 	const usage = `sigsum-token sub commands:
 
+  sigsum-token help | --help
+    Display this help.
+
   sigsum-token create -k KEY-FILE --log PUBKEY [--domain DOMAIN] [-o OUTPUT-FILE]
     Create a token for submissions to the the given log, essentially
     a signature using the given private key. If --domain is given, output
@@ -61,8 +64,8 @@ func main() {
 	switch os.Args[1] {
 	default:
 		log.Fatal(usage)
-	case "help":
-		log.Print(usage)
+	case "help", "--help":
+		fmt.Print(usage)
 		os.Exit(0)
 	case "create":
 		var settings createSettings

@@ -39,7 +39,7 @@ type ExportSettings struct {
 func main() {
 	const usage = `sigsum-key sub commands:
 
-  sigsum-key help 
+  sigsum-key help | --help
     Display this help.
 
   sigsum-key gen -o KEY-FILE
@@ -74,8 +74,8 @@ func main() {
 	switch os.Args[1] {
 	default:
 		log.Fatal(usage)
-	case "help":
-		log.Print(usage)
+	case "help", "--help":
+		fmt.Print(usage)
 		os.Exit(0)
 	case "gen":
 		var settings GenSettings

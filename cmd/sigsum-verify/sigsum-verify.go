@@ -64,10 +64,24 @@ func (s *Settings) parse(args []string, usage string) {
 	set := getopt.New()
 	set.SetParameters("")
 	set.SetUsage(func() { fmt.Print(usage) })
+
+	help := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Use raw hash input")
 	set.FlagLong(&s.submitKey, "submit-key", 0, "Public key file").Mandatory()
 	set.FlagLong(&s.policyFile, "policy", 0, "Policy file").Mandatory()
-	set.Parse(args)
+	set.FlagLong(&help, "help", 0, "Display help")
+	err := set.Getopt(args, nil)
+	// Check help first; if seen, ignore errors about missing mandatory arguments.
+	if help {
+		// TODO: Let getopt package list options, and append further details.
+		fmt.Print(usage)
+		os.Exit(0)
+	}
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		fmt.Fprint(os.Stderr, usage)
+		os.Exit(1)
+	}
 	if set.NArgs() != 1 {
 		log.Fatalf("no proof given on command line")
 	}

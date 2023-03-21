@@ -3,7 +3,6 @@ package head
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -33,8 +32,8 @@ func Main(args []string) error {
 	set.SetUsage(func() { log.Printf(usage[1:]) })
 	set.SetParameters("")
 	switch args[2] {
-	case "help", "":
-		set.PrintUsage(os.Stdout)
+	case "help", "--help":
+		fmt.Print(usage[1:])
 		return nil
 	case "sign":
 		var optPrivateKey, optKeyHash string

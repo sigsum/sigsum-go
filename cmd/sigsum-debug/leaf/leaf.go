@@ -3,7 +3,6 @@ package leaf
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	getopt "github.com/pborman/getopt/v2"
@@ -38,8 +37,8 @@ func Main(args []string) error {
 	set.SetParameters("")
 
 	switch args[2] {
-	case "help", "":
-		set.PrintUsage(os.Stdout)
+	case "help", "--help":
+		fmt.Print(usage[1:])
 		return nil
 	case "sign":
 		var optPrivateKey string

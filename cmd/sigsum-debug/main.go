@@ -40,8 +40,8 @@ func main() {
 	}
 
 	switch os.Args[1] {
-	case "help":
-		log.Print(usage)
+	case "help", "--help":
+		fmt.Print(usage)
 		os.Exit(0)
 	case "leaf":
 		err = leaf.Main(os.Args)
