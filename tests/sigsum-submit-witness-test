@@ -6,6 +6,10 @@ set -e
 ./bin/sigsum-key gen -o test.submit.key
 ./bin/sigsum-key gen -o test.witness.key
 
+echo "log $(./bin/sigsum-key hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "witness W $(./bin/sigsum-key hex -k test.witness.key.pub) http://localhost:7777" >> test.policy
+echo "quorum W" >> test.policy
+
 # Start witness server
 rm -f test.witness.cth
 ./bin/sigsum-witness -k test.witness.key --log-key test.log.key.pub \
@@ -16,9 +20,9 @@ WITNESS_PID=$!
 # Start sigsum log server
 rm -f test.log.sth
 echo "startup=empty" > test.log.sth.startup
-./bin/sigsum-log-primary --key test.log.key \
-    --witnesses=test.witness.key.pub --witness-urls=http://localhost:7777 \
-    --interval=1s --log-level=error --ephemeral-test-backend --sth-path test.log.sth &
+./bin/sigsum-log-primary --key-file test.log.key \
+    --policy-file=test.policy \
+    --interval=1s --log-level=error --backend=ephemeral --sth-file test.log.sth &
 
 SIGSUM_PID=$!
 
@@ -30,10 +34,6 @@ trap cleanup EXIT
 
 # Give log server some time to get ready.
 sleep 2
-
-echo "log $(./bin/sigsum-key hex -k test.log.key.pub) http://localhost:6965" > test.policy
-echo "witness W $(./bin/sigsum-key hex -k test.witness.key.pub)" >> test.policy
-echo "quorum W" >> test.policy
 
 for x in $(seq 5); do
     echo >&2 "submit $x"
