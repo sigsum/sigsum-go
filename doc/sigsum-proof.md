@@ -15,20 +15,20 @@ publicly logged. See
 for the bigger picture on why that is useful. The submitter interacts
 with a sigsum log server to submit the message, and collect related
 inclusion proof and cosignatures. This is packaged, together with
-message and any associated data, to be distributed to a *verifier*.
+the message and any associated data, to be distributed to a *verifier*.
 
 As concrete usecase, consider distribution of software updates. Then
-the logged message is then the hash of a software update. The update
+the logged message is the hash of a software update. The update
 and the sigsum proof is distributed to the devices to be updated. The
 software update client then uses the sigsum proof to determine whether
 or not the update should be installed.
 
 # Syntax/serialization
 
-In principle, each application can choose it's own representation,
+In principle, each application can choose its own representation,
 e.g., if a sigsum proof is incorporated inside a future version of a
 binary debian package. The intention of this document is to both
-describe the parts that be included in a sigsum proof, regardless of
+describe the parts that must be included in a sigsum proof, regardless of
 representation, and specify the particular format that is used by the
 sigsum commandline tools.
 
@@ -40,8 +40,8 @@ used on the wire when interacting with a sigsum log, we defined the
 following ascii format for a sigsum proof. It includes a version
 number, currently 0, the keyhash identifying the log that was used,
 the recorded sigsum leaf (but with truncated checksum), a cosigned
-tree head and an inclusino inclusion proof, with an empty line (i.e.,
-double newline character) separating distinct parts.
+tree head and an inclusion proof, with an empty line (i.e., double
+newline character) separating distinct parts.
 
 ```
 version=0
@@ -99,13 +99,13 @@ To verify the proof, the following steps are required:
    
 6. Compute the `leaf_hash` from the `checksum` and the other items on
    the leaf line, and check that the inclusion proof is valid. In the
-   corner case that `tree_size = 1`, the check that `leaf_hash =
+   corner case that `tree_size = 1`, instead check that `leaf_hash =
    root_hash`.
 
 ## Use of timestamps
 
-The cosignature timestamps covered by the corresponding witness
+Each cosignature timestamp is covered by the corresponding witness
 cosignature, and hence are required to be able to verify the
-cosignatures. However, after a cosignature has been verified, the
+cosignature. However, after a cosignature has been verified, the
 timestamp value is ignored by the above verification procedure.
 Application policy may apply additional constraints on the timestamps.
