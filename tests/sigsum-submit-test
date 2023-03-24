@@ -8,8 +8,8 @@ set -e
 # Start sigsum log server
 rm -f test.log.sth
 echo "startup=empty" > test.log.sth.startup
-./bin/sigsum-log-primary --key test.log.key \
-    --interval=1s --log-level=error --ephemeral-test-backend --sth-path test.log.sth &
+./bin/sigsum-log-primary --key-file test.log.key \
+    --interval=1s --log-level=error --backend=ephemeral --sth-file test.log.sth &
 
 SIGSUM_PID=$!
 
