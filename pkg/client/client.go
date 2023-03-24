@@ -13,6 +13,7 @@ import (
 	"net/http"
 
 	"sigsum.org/sigsum-go/pkg/requests"
+	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -23,7 +24,7 @@ type LogClient interface {
 	GetConsistencyProof(context.Context, requests.ConsistencyProof) (types.ConsistencyProof, error)
 	GetLeaves(context.Context, requests.Leaves) ([]types.Leaf, error)
 
-	AddLeaf(context.Context, requests.Leaf) (bool, error)
+	AddLeaf(context.Context, requests.Leaf, *string) (bool, error)
 }
 
 // Interface for the secondary node's api.
@@ -82,10 +83,10 @@ func (cli *Client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves [
 	return
 }
 
-func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf) (bool, error) {
+func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf, tokenHeader *string) (bool, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
-	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.LogURL), &buf); err != nil {
+	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.LogURL), tokenHeader, &buf); err != nil {
 		if errors.Is(err, HttpAccepted) {
 			return false, nil
 		}
@@ -103,10 +104,13 @@ func (cli *Client) get(ctx context.Context, url string,
 	return cli.do(req, parseBody)
 }
 
-func (cli *Client) post(ctx context.Context, url string, body io.Reader) error {
+func (cli *Client) post(ctx context.Context, url string, tokenHeader *string, body io.Reader) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return err
+	}
+	if tokenHeader != nil {
+		req.Header.Add(token.HeaderName, *tokenHeader)
 	}
 	return cli.do(req, nil)
 }
