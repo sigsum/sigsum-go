@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -13,15 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
+	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
-)
-
-var (
-	endpointAddTreeHead = types.Endpoint("add-tree-head")
-	endpointGetTreeSize = types.Endpoint("get-tree-size/")
 )
 
 type Settings struct {
@@ -67,8 +61,8 @@ func main() {
 		state:  &state,
 	}
 
-	http.HandleFunc("/"+endpointGetTreeSize.Path(settings.prefix), witness.GetTreeSize)
-	http.HandleFunc("/"+endpointAddTreeHead.Path(settings.prefix), witness.AddTreeHead)
+	http.HandleFunc("/"+types.EndpointGetTreeSize.Path(settings.prefix), witness.GetTreeSize)
+	http.HandleFunc("/"+types.EndpointAddTreeHead.Path(settings.prefix), witness.AddTreeHead)
 	log.Fatal(http.ListenAndServe(settings.hostAndPort, nil))
 }
 
@@ -94,38 +88,6 @@ func (s *Settings) parse(args []string, usage string) {
 		log.Fatal("Mandatory HOST:PORT argument missing")
 	}
 	s.hostAndPort = flags.Arg(0)
-}
-
-type TreeHeadRequest struct {
-	KeyHash  crypto.Hash
-	TreeHead types.SignedTreeHead
-	OldSize  uint64
-	Proof    types.ConsistencyProof
-}
-
-func (req *TreeHeadRequest) FromASCII(r io.Reader) error {
-	p := ascii.NewParser(r)
-	var err error
-	req.KeyHash, err = p.GetHash("key_hash")
-	if err != nil {
-		return err
-	}
-	if err := req.TreeHead.Parse(&p); err != nil {
-		return err
-	}
-	req.OldSize, err = p.GetInt("old_size")
-	if err != nil {
-		return err
-	}
-	if req.OldSize > req.TreeHead.Size {
-		return fmt.Errorf("invalid request, old_size(%d) > size(%d)",
-			req.OldSize, req.TreeHead.Size)
-	}
-	// Cases of trivial consistency.
-	if req.OldSize == 0 || req.OldSize == req.TreeHead.Size {
-		return p.GetEOF()
-	}
-	return req.Proof.Parse(&p)
 }
 
 type witness struct {
@@ -157,7 +119,7 @@ func (s *witness) AddTreeHead(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Only POST supported", http.StatusBadRequest)
 		return
 	}
-	var req TreeHeadRequest
+	var req requests.AddTreeHead
 	if err := req.FromASCII(r.Body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
