@@ -105,42 +105,46 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 		return proof.SigsumProof{}, fmt.Errorf("no logs defined in policy")
 	}
 	for _, entity := range logs {
-		pr, err := submitLeafToLog(ctx, &entity, config, req, &leafHash)
+		var tokenHeader *string
+		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
+			token, err := token.MakeToken(config.RateLimitSigner, &entity.PubKey)
+			if err != nil {
+				return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
+			}
+			s := fmt.Sprintf("%s %x", config.Domain, token)
+			tokenHeader = &s
+		}
+
+		client := client.New(client.Config{
+			UserAgent: config.getUserAgent(),
+			LogURL:    entity.Url,
+		})
+
+		logKeyHash := crypto.HashBytes(entity.PubKey[:])
+		pr, err := func() (proof.SigsumProof, error) {
+			ctx, cancel := context.WithTimeout(ctx, config.getTimeout())
+			defer cancel()
+			return submitLeafToLog(ctx, config.Policy, client, &logKeyHash, tokenHeader, config.sleep, req, &leafHash)
+		}()
 		if err == nil {
 			pr.Leaf = proof.NewShortLeaf(&leaf)
 			return pr, nil
 		}
-		log.Error("Submitting to log %q failed: ", entity.Url, err)
+		log.Error("Submitting to log %q failed: %v", entity.Url, err)
 	}
 	return proof.SigsumProof{}, fmt.Errorf("all logs failed, giving up")
 }
 
-func submitLeafToLog(ctx context.Context, entity *policy.Entity, config *Config,
+func submitLeafToLog(ctx context.Context, policy *policy.Policy,
+	cli client.LogClient, logKeyHash *crypto.Hash, tokenHeader *string, sleep func(context.Context) error,
 	req *requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
 	pr := proof.SigsumProof{
 		// Note: Leaves to caller to populate proof.Leaf.
-		LogKeyHash: crypto.HashBytes(entity.PubKey[:]),
+		LogKeyHash: *logKeyHash,
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, config.getTimeout())
-	defer cancel()
-
-	c := client.New(client.Config{
-		UserAgent: config.getUserAgent(),
-		LogURL:    entity.Url,
-	})
-
-	var tokenHeader *string
-	if config.RateLimitSigner != nil && len(config.Domain) > 0 {
-		token, err := token.MakeToken(config.RateLimitSigner, &entity.PubKey)
-		if err != nil {
-			return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
-		}
-		s := fmt.Sprintf("%s %x", config.Domain, token)
-		tokenHeader = &s
-	}
 	for {
-		persisted, err := c.AddLeaf(ctx, *req, tokenHeader)
+		persisted, err := cli.AddLeaf(ctx, *req, tokenHeader)
 
 		if err != nil {
 			return proof.SigsumProof{}, err
@@ -148,25 +152,25 @@ func submitLeafToLog(ctx context.Context, entity *policy.Entity, config *Config,
 		if persisted {
 			break
 		}
-		if err := config.sleep(ctx); err != nil {
+		if err := sleep(ctx); err != nil {
 			return proof.SigsumProof{}, err
 		}
 	}
 	// Leaf submitted, now get a signed tree head + inclusion proof.
 	for {
 		var err error
-		pr.TreeHead, err = c.GetTreeHead(ctx)
+		pr.TreeHead, err = cli.GetTreeHead(ctx)
 		if err != nil {
 			return proof.SigsumProof{}, err
 		}
-		if err := config.Policy.VerifyCosignedTreeHead(&pr.LogKeyHash, &pr.TreeHead); err != nil {
-			return proof.SigsumProof{}, fmt.Errorf("verifying tree head failed")
+		if err := policy.VerifyCosignedTreeHead(&pr.LogKeyHash, &pr.TreeHead); err != nil {
+			return proof.SigsumProof{}, fmt.Errorf("verifying tree head failed: %v", err)
 		}
 
 		// See if we can have an inclusion proof for this tree size.
 		if pr.TreeHead.Size == 0 {
 			// Certainly not included yet.
-			if err := config.sleep(ctx); err != nil {
+			if err := sleep(ctx); err != nil {
 				return proof.SigsumProof{}, err
 			}
 			continue
@@ -175,20 +179,20 @@ func submitLeafToLog(ctx context.Context, entity *policy.Entity, config *Config,
 		if pr.TreeHead.Size == 1 {
 			if pr.TreeHead.RootHash != *leafHash {
 				// Certainly not included yet.
-				if err := config.sleep(ctx); err != nil {
+				if err := sleep(ctx); err != nil {
 					return proof.SigsumProof{}, err
 				}
 				continue
 			}
 		} else {
-			pr.Inclusion, err = c.GetInclusionProof(ctx,
+			pr.Inclusion, err = cli.GetInclusionProof(ctx,
 				requests.InclusionProof{
 					Size:     pr.TreeHead.Size,
 					LeafHash: *leafHash,
 				})
 			if err == client.HttpNotFound {
 				log.Info("no inclusion proof yet, will retry")
-				if err := config.sleep(ctx); err != nil {
+				if err := sleep(ctx); err != nil {
 					return proof.SigsumProof{}, err
 				}
 				continue
