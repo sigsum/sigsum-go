@@ -12,6 +12,7 @@ package log
 import (
 	"fmt"
 	"log"
+	"os"
 	"sync/atomic"
 )
 
@@ -60,6 +61,15 @@ func SetLevelFromString(levelName string) error {
 	default:
 		return fmt.Errorf("invalid logging level %s", levelName)
 	}
+	return nil
+}
+
+func SetLogFile(logFile string) error {
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	log.SetOutput(f)
 	return nil
 }
 
