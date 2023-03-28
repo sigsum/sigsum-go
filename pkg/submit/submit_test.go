@@ -3,6 +3,7 @@ package submit
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -35,7 +36,7 @@ func TestSubmitSuccess(t *testing.T) {
 	}
 	tree := merkle.NewTree()
 
-	oneTest := func(i int) {
+	oneTest := func(t *testing.T, i int) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		client := mocks.NewMockLogClient(ctrl)
@@ -61,7 +62,7 @@ func TestSubmitSuccess(t *testing.T) {
 		}
 	}
 	for i := 1; i < 10; i++ {
-		oneTest(i)
+		t.Run(fmt.Sprintf("leaf %d", i), func(t *testing.T) { oneTest(t, i) })
 	}
 }
 
@@ -84,7 +85,7 @@ func TestSubmitFailure(t *testing.T) {
 	}
 	tree := merkle.NewTree()
 
-	oneTest := func(i int) {
+	oneTest := func(t *testing.T, i int) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		client := mocks.NewMockLogClient(ctrl)
@@ -123,7 +124,7 @@ func TestSubmitFailure(t *testing.T) {
 		}
 	}
 	for i := 1; i <= 7; i++ {
-		oneTest(i)
+		t.Run(fmt.Sprintf("leaf %d", i), func(t *testing.T) { oneTest(t, i) })
 	}
 }
 
