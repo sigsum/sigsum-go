@@ -16,15 +16,19 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-type Client interface {
-	GetNextTreeHead(context.Context) (types.SignedTreeHead, error)
+// Interface for log api.
+type LogClient interface {
 	GetTreeHead(context.Context) (types.CosignedTreeHead, error)
 	GetInclusionProof(context.Context, requests.InclusionProof) (types.InclusionProof, error)
 	GetConsistencyProof(context.Context, requests.ConsistencyProof) (types.ConsistencyProof, error)
 	GetLeaves(context.Context, requests.Leaves) ([]types.Leaf, error)
 
 	AddLeaf(context.Context, requests.Leaf) (bool, error)
-	AddCosignature(context.Context, types.Cosignature) error
+}
+
+// Interface for the secondary node's api.
+type SecondaryClient interface {
+	GetSecondaryTreeHead(context.Context) (types.SignedTreeHead, error)
 }
 
 var (
@@ -37,40 +41,40 @@ type Config struct {
 	LogURL    string
 }
 
-func New(cfg Config) Client {
-	return &client{
-		Config: cfg,
-		Client: http.Client{},
+func New(cfg Config) *Client {
+	return &Client{
+		config: cfg,
+		client: http.Client{},
 	}
 }
 
-type client struct {
-	Config
-	http.Client
+type Client struct {
+	config Config
+	client http.Client
 }
 
-func (cli *client) GetNextTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
-	err = cli.get(ctx, types.EndpointGetNextTreeHead.Path(cli.LogURL), sth.FromASCII)
+func (cli *Client) GetSecondaryTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
+	err = cli.get(ctx, types.EndpointGetSecondaryTreeHead.Path(cli.config.LogURL), sth.FromASCII)
 	return
 }
 
-func (cli *client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
-	err = cli.get(ctx, types.EndpointGetTreeHead.Path(cli.LogURL), cth.FromASCII)
+func (cli *Client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
+	err = cli.get(ctx, types.EndpointGetTreeHead.Path(cli.config.LogURL), cth.FromASCII)
 	return
 }
 
-func (cli *client) GetInclusionProof(ctx context.Context, req requests.InclusionProof) (proof types.InclusionProof, err error) {
-	err = cli.get(ctx, req.ToURL(types.EndpointGetInclusionProof.Path(cli.LogURL)), proof.FromASCII)
+func (cli *Client) GetInclusionProof(ctx context.Context, req requests.InclusionProof) (proof types.InclusionProof, err error) {
+	err = cli.get(ctx, req.ToURL(types.EndpointGetInclusionProof.Path(cli.config.LogURL)), proof.FromASCII)
 	return
 }
 
-func (cli *client) GetConsistencyProof(ctx context.Context, req requests.ConsistencyProof) (proof types.ConsistencyProof, err error) {
-	err = cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.LogURL)), proof.FromASCII)
+func (cli *Client) GetConsistencyProof(ctx context.Context, req requests.ConsistencyProof) (proof types.ConsistencyProof, err error) {
+	err = cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.config.LogURL)), proof.FromASCII)
 	return
 }
 
-func (cli *client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves []types.Leaf, err error) {
-	err = cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.LogURL)),
+func (cli *Client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves []types.Leaf, err error) {
+	err = cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.config.LogURL)),
 		func(r io.Reader) (err error) {
 			leaves, err = types.LeavesFromASCII(r)
 			return err
@@ -78,10 +82,10 @@ func (cli *client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves [
 	return
 }
 
-func (cli *client) AddLeaf(ctx context.Context, req requests.Leaf) (bool, error) {
+func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf) (bool, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
-	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.LogURL), &buf); err != nil {
+	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.LogURL), &buf); err != nil {
 		if errors.Is(err, HttpAccepted) {
 			return false, nil
 		}
@@ -90,11 +94,7 @@ func (cli *client) AddLeaf(ctx context.Context, req requests.Leaf) (bool, error)
 	return true, nil
 }
 
-func (cli *client) AddCosignature(ctx context.Context, req types.Cosignature) error {
-	return fmt.Errorf("TODO")
-}
-
-func (cli *client) get(ctx context.Context, url string,
+func (cli *Client) get(ctx context.Context, url string,
 	parseBody func(io.Reader) error) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -103,7 +103,7 @@ func (cli *client) get(ctx context.Context, url string,
 	return cli.do(req, parseBody)
 }
 
-func (cli *client) post(ctx context.Context, url string, body io.Reader) error {
+func (cli *Client) post(ctx context.Context, url string, body io.Reader) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return err
@@ -111,11 +111,11 @@ func (cli *client) post(ctx context.Context, url string, body io.Reader) error {
 	return cli.do(req, nil)
 }
 
-func (cli *client) do(req *http.Request, parseBody func(io.Reader) error) error {
+func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error) error {
 	// TODO: redirects, see go doc http.Client.CheckRedirect
-	req.Header.Set("User-Agent", cli.UserAgent)
+	req.Header.Set("User-Agent", cli.config.UserAgent)
 
-	rsp, err := cli.Client.Do(req)
+	rsp, err := cli.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("send request: %w", err)
 	}

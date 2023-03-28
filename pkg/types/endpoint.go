@@ -3,13 +3,15 @@ package types
 type Endpoint string
 
 const (
+	// Sigsum log api.
 	EndpointAddLeaf             = Endpoint("add-leaf")
-	EndpointAddCosignature      = Endpoint("add-cosignature")
-	EndpointGetNextTreeHead     = Endpoint("get-next-tree-head")
 	EndpointGetTreeHead         = Endpoint("get-tree-head")
 	EndpointGetInclusionProof   = Endpoint("get-inclusion-proof/")
 	EndpointGetConsistencyProof = Endpoint("get-consistency-proof/")
 	EndpointGetLeaves           = Endpoint("get-leaves/")
+
+	// For primary/secondary replication.
+	EndpointGetSecondaryTreeHead = Endpoint("get-secondary-tree-head")
 )
 
 // Path adds endpoint name to a service prefix.  If prefix is empty, nothing is added.
