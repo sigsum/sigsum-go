@@ -1,0 +1,27 @@
+#! /bin/sh
+
+set -e
+
+# Collect help messages from all tools, and verify that it is written
+# to stdout (not stderr), and that exit code is success.
+
+exec > test.help
+
+die() {
+    echo "$@" >&2
+    exit 1
+}
+
+test_one() {
+    echo "=== $@ ==="
+    if "$@" 2> test.stderr ; then true; else die "Exit code $? from: $@"; fi
+    if [ -s test.stderr ] ; then die "Stderr output from: $@" ; fi
+}
+
+test_one ./bin/sigsum-key --help
+test_one ./bin/sigsum-token --help
+test_one ./bin/sigsum-submit --help
+test_one ./bin/sigsum-verify --help
+test_one ./bin/sigsum-debug --help
+test_one ./bin/sigsum-debug leaf --help
+test_one ./bin/sigsum-debug head --help

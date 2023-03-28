@@ -3,16 +3,12 @@ package hash
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-func Main(args []string, optKeyHash, optSignature string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("trailing arguments: %s", strings.Join(args, ", "))
-	}
+func Main(optKeyHash, optSignature string) error {
 	keyHash, err := crypto.HashFromHex(optKeyHash)
 	if err != nil {
 		return fmt.Errorf("parse key hash: %w", err)

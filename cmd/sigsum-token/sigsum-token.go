@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+
+	getopt "github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/submit-token"
@@ -35,6 +36,9 @@ type verifySettings struct {
 func main() {
 	const usage = `sigsum-token sub commands:
 
+  sigsum-token help | --help
+    Display this help.
+
   sigsum-token create -k KEY-FILE --log PUBKEY [--domain DOMAIN] [-o OUTPUT-FILE]
     Create a token for submissions to the the given log, essentially
     a signature using the given private key. If --domain is given, output
@@ -57,16 +61,15 @@ func main() {
 		log.Fatal(usage)
 	}
 
-	cmd, args := os.Args[1], os.Args[2:]
-	switch cmd {
+	switch os.Args[1] {
 	default:
 		log.Fatal(usage)
-	case "help":
-		log.Print(usage)
+	case "help", "--help":
+		fmt.Print(usage)
 		os.Exit(0)
 	case "create":
 		var settings createSettings
-		settings.parse(args)
+		settings.parse(os.Args)
 		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal(err)
@@ -90,7 +93,7 @@ func main() {
 		})
 	case "record":
 		var settings recordSettings
-		settings.parse(args)
+		settings.parse(os.Args)
 		logKey, err := key.ReadPublicKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal(err)
@@ -101,7 +104,7 @@ func main() {
 		})
 	case "verify":
 		var settings verifySettings
-		settings.parse(args)
+		settings.parse(os.Args)
 		if settings.quiet {
 			log.SetOutput(nil)
 		}
@@ -155,48 +158,43 @@ func main() {
 	}
 }
 
+func newOptionSet(args []string) *getopt.Set {
+	set := getopt.New()
+	set.SetProgram(os.Args[0] + " " + os.Args[1])
+	set.SetParameters("")
+	return set
+}
+
+func parseNoArgs(set *getopt.Set, args []string) {
+	set.Parse(args[1:])
+	if set.NArgs() > 0 {
+		log.Fatal("Too many arguments.")
+	}
+}
+
 func (s *createSettings) parse(args []string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-
-	flags.StringVar(&s.keyFile, "k", "", "Private key file")
-	flags.StringVar(&s.outputFile, "o", "", "Output file")
-	flags.StringVar(&s.logKeyFile, "log", "", "Log public key file")
-	flags.StringVar(&s.domain, "domain", "", "Domain")
-
-	flags.Parse(args)
-
-	if len(s.keyFile) == 0 {
-		log.Fatalf("key file (-k option) missing")
-	}
-	if len(s.logKeyFile) == 0 {
-		log.Fatalf("log public key file (--log option) missing")
-	}
+	set := newOptionSet(args)
+	set.FlagLong(&s.keyFile, "key", 'k', "Private key file").Mandatory()
+	set.FlagLong(&s.outputFile, "output-file", 'o', "Output file")
+	set.FlagLong(&s.logKeyFile, "log", 0, "Log public key file").Mandatory()
+	set.FlagLong(&s.domain, "domain", 0, "Domain")
+	parseNoArgs(set, args)
 }
 
 func (s *recordSettings) parse(args []string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.keyFile, "k", "", "Private key file")
-	flags.StringVar(&s.outputFile, "o", "", "Output file")
-
-	flags.Parse(args)
-
-	if len(s.keyFile) == 0 {
-		log.Fatalf("key file (-k option) missing")
-	}
+	set := newOptionSet(args)
+	set.FlagLong(&s.keyFile, "key", 'k', "Private key file").Mandatory()
+	set.FlagLong(&s.outputFile, "output-file", 'o', "Output file")
+	parseNoArgs(set, args)
 }
 
 func (s *verifySettings) parse(args []string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.StringVar(&s.keyFile, "k", "", "Private key file")
-	flags.StringVar(&s.logKeyFile, "log", "", "Log public key file")
-	flags.StringVar(&s.domain, "domain", "", "Domain")
-	flags.BoolVar(&s.quiet, "q", false, "Quiet mode")
-
-	flags.Parse(args)
-
-	if len(s.logKeyFile) == 0 {
-		log.Fatalf("log public key file (--log option) missing")
-	}
+	set := newOptionSet(args)
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key file")
+	set.FlagLong(&s.logKeyFile, "log", 0, "Log public key file").Mandatory()
+	set.FlagLong(&s.domain, "domain", 0, "Domain")
+	set.FlagLong(&s.quiet, "quiet", 'q', "Quiet mode")
+	parseNoArgs(set, args)
 }
 
 // If outputFile is non-empty: open file, pass to f, and automatically
