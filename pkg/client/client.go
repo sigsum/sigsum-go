@@ -18,7 +18,7 @@ import (
 )
 
 // Interface for log api.
-type LogClient interface {
+type Log interface {
 	GetTreeHead(context.Context) (types.CosignedTreeHead, error)
 	GetInclusionProof(context.Context, requests.InclusionProof) (types.InclusionProof, error)
 	GetConsistencyProof(context.Context, requests.ConsistencyProof) (types.ConsistencyProof, error)
@@ -28,7 +28,7 @@ type LogClient interface {
 }
 
 // Interface for the secondary node's api.
-type SecondaryClient interface {
+type Secondary interface {
 	GetSecondaryTreeHead(context.Context) (types.SignedTreeHead, error)
 }
 
