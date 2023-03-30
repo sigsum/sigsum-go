@@ -136,7 +136,7 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 }
 
 func submitLeafToLog(ctx context.Context, policy *policy.Policy,
-	cli client.LogClient, logKeyHash *crypto.Hash, tokenHeader *string, sleep func(context.Context) error,
+	cli client.Log, logKeyHash *crypto.Hash, tokenHeader *string, sleep func(context.Context) error,
 	req *requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
 	pr := proof.SigsumProof{
 		// Note: Leaves to caller to populate proof.Leaf.
