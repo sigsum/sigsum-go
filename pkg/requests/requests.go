@@ -15,6 +15,11 @@ type Leaf struct {
 	Message   crypto.Hash
 	Signature crypto.Signature
 	PublicKey crypto.PublicKey
+
+	// Domain is non-empty if and only if request carries a
+	// Sigsum-Token header.
+	Domain string
+	Token  crypto.Signature
 }
 
 type Leaves struct {
@@ -40,6 +45,14 @@ func (req *Leaf) ToASCII(w io.Writer) error {
 		return err
 	}
 	return ascii.WriteLine(w, "public_key", req.PublicKey[:])
+}
+
+func (req *Leaf) ToTokenHeader() *string {
+	if len(req.Domain) == 0 {
+		return nil
+	}
+	header := fmt.Sprintf("%s %x", req.Domain, req.Token)
+	return &header
 }
 
 // Verifies the request signature, and creates a corresponding leaf on success.

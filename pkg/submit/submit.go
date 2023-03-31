@@ -25,8 +25,8 @@ const (
 )
 
 type Config struct {
-	// Domain and signer to use for rate limit sigsum-token: header.
-	Domain          string
+	// Signer to use for rate limit Sigsum-Token: header. Required
+	// if request's Domain is set.
 	RateLimitSigner crypto.Signer
 
 	// Timeout, before trying try next log. Zero implies a default
@@ -83,7 +83,7 @@ func (c *Config) sleep(ctx context.Context) error {
 	return sleepWithContext(ctx, c.getPollDelay())
 }
 
-func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, message *crypto.Hash) (proof.SigsumProof, error) {
+func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, message *crypto.Hash, domain string) (proof.SigsumProof, error) {
 	signature, err := signer.Sign(message[:])
 	if err != nil {
 		return proof.SigsumProof{}, err
@@ -92,10 +92,14 @@ func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, me
 		Message:   *message,
 		Signature: signature,
 		PublicKey: signer.Public(),
+		Domain:    domain,
 	})
 }
 
 func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) (proof.SigsumProof, error) {
+	if len(req.Domain) > 0 && config.RateLimitSigner == nil {
+		return proof.SigsumProof{}, fmt.Errorf("rate limit domain specified, but no signer")
+	}
 	leaf, err := req.Verify()
 	if err != nil {
 		return proof.SigsumProof{}, fmt.Errorf("verifying leaf request failed: %v", err)
@@ -107,26 +111,16 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 		return proof.SigsumProof{}, fmt.Errorf("no logs defined in policy")
 	}
 	for _, entity := range logs {
-		var tokenHeader *string
-		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
-			token, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
-			if err != nil {
-				return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
-			}
-			s := fmt.Sprintf("%s %x", config.Domain, token)
-			tokenHeader = &s
-		}
-
 		client := client.New(client.Config{
 			UserAgent: config.getUserAgent(),
 			URL:       entity.URL,
 		})
 
-		logKeyHash := crypto.HashBytes(entity.PublicKey[:])
 		pr, err := func() (proof.SigsumProof, error) {
 			ctx, cancel := context.WithTimeout(ctx, config.getTimeout())
 			defer cancel()
-			return submitLeafToLog(ctx, config.Policy, client, &logKeyHash, tokenHeader, config.sleep, req, &leafHash)
+			return submitLeafToLog(ctx, config.Policy, config.RateLimitSigner,
+				client, &entity.PublicKey, config.sleep, *req, &leafHash)
 		}()
 		if err == nil {
 			pr.Leaf = proof.NewShortLeaf(&leaf)
@@ -138,15 +132,25 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 }
 
 func submitLeafToLog(ctx context.Context, policy *policy.Policy,
-	cli client.Log, logKeyHash *crypto.Hash, tokenHeader *string, sleep func(context.Context) error,
-	req *requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
+	rateLimitSigner crypto.Signer,
+	cli client.Log, logKey *crypto.PublicKey, sleep func(context.Context) error,
+	req requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
+	if len(req.Domain) > 0 {
+		var err error
+		// Note that req is passed by value, so we have our own copy.
+		req.Token, err = token.MakeToken(rateLimitSigner, logKey)
+		if err != nil {
+			return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
+		}
+	}
+
 	pr := proof.SigsumProof{
 		// Note: Leaves to caller to populate proof.Leaf.
-		LogKeyHash: *logKeyHash,
+		LogKeyHash: crypto.HashBytes(logKey[:]),
 	}
 
 	for {
-		persisted, err := cli.AddLeaf(ctx, *req, tokenHeader)
+		persisted, err := cli.AddLeaf(ctx, req)
 
 		if err != nil {
 			return proof.SigsumProof{}, err

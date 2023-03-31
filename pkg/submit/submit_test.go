@@ -28,8 +28,6 @@ func TestSubmitSuccess(t *testing.T) {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
 
-	logKeyHash := crypto.HashBytes(logPub[:])
-
 	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
 	if err != nil {
 		t.Fatalf("creating policy failed: %v", err)
@@ -42,16 +40,16 @@ func TestSubmitSuccess(t *testing.T) {
 		client := mocks.NewMockLogClient(ctrl)
 
 		msg, sth, inclusionProof, req, leaf, leafHash := prepareResponse(t, submitSigner, logSigner, &tree, i)
-		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, nil)
-		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
+		client.EXPECT().AddLeaf(gomock.Any(), req).Return(false, nil)
+		client.EXPECT().AddLeaf(gomock.Any(), req).Return(true, nil)
 		client.EXPECT().GetTreeHead(gomock.Any()).Return(
 			types.CosignedTreeHead{SignedTreeHead: sth}, nil)
 		if len(inclusionProof.Path) > 0 {
 			client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
 		}
-		pr, err := submitLeafToLog(context.Background(), policy,
-			client, &logKeyHash, nil, func(_ context.Context) error { return nil },
-			&req, &leafHash)
+		pr, err := submitLeafToLog(context.Background(), policy, nil,
+			client, &logPub, func(_ context.Context) error { return nil },
+			req, &leafHash)
 		if err != nil {
 			t.Errorf("submit failed: %v", err)
 		} else {
@@ -76,8 +74,6 @@ func TestSubmitFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
-
-	logKeyHash := crypto.HashBytes(logPub[:])
 
 	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
 	if err != nil {
@@ -108,13 +104,13 @@ func TestSubmitFailure(t *testing.T) {
 		case 7:
 			getInclusionError = errors.New("mock error")
 		}
-		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, addError)
+		client.EXPECT().AddLeaf(gomock.Any(), req).Return(true, addError)
 		client.EXPECT().GetTreeHead(gomock.Any()).Return(
 			types.CosignedTreeHead{SignedTreeHead: sth}, getTHError).AnyTimes()
 		client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, getInclusionError).AnyTimes()
-		pr, err := submitLeafToLog(context.Background(), policy,
-			client, &logKeyHash, nil, func(_ context.Context) error { return nil },
-			&req, &leafHash)
+		pr, err := submitLeafToLog(context.Background(), policy, nil,
+			client, &logPub, func(_ context.Context) error { return nil },
+			req, &leafHash)
 		if err == nil {
 			pr.Leaf = proof.NewShortLeaf(&leaf)
 			err := pr.Verify(&msg, &submitPub, policy)

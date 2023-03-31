@@ -37,18 +37,18 @@ func (m *MockLogClient) EXPECT() *MockLogClientMockRecorder {
 }
 
 // AddLeaf mocks base method.
-func (m *MockLogClient) AddLeaf(arg0 context.Context, arg1 requests.Leaf, arg2 *string) (bool, error) {
+func (m *MockLogClient) AddLeaf(arg0 context.Context, arg1 requests.Leaf) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddLeaf", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "AddLeaf", arg0, arg1)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddLeaf indicates an expected call of AddLeaf.
-func (mr *MockLogClientMockRecorder) AddLeaf(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockLogClientMockRecorder) AddLeaf(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLeaf", reflect.TypeOf((*MockLogClient)(nil).AddLeaf), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLeaf", reflect.TypeOf((*MockLogClient)(nil).AddLeaf), arg0, arg1)
 }
 
 // GetConsistencyProof mocks base method.

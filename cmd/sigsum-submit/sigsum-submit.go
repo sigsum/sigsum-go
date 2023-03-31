@@ -87,21 +87,21 @@ func main() {
 			log.Fatal("%v", err)
 		}
 		config := submit.Config{Policy: policy,
-			Domain:        settings.tokenDomain,
 			PerLogTimeout: settings.timeout,
 		}
 		ctx := context.Background()
 
-		if len(config.Domain) > 0 {
+		if len(settings.tokenDomain) > 0 {
 			var err error
 			config.RateLimitSigner, err = key.ReadPrivateKeyFile(settings.tokenKeyFile)
 			if err != nil {
 				log.Fatal("reading token key file failed: %v", err)
 			}
 			// Warn if corresponding public key isn't registered for the domain.
-			if err := checkTokenDomain(ctx, config.Domain, config.RateLimitSigner.Public()); err != nil {
+			if err := checkTokenDomain(ctx, settings.tokenDomain, config.RateLimitSigner.Public()); err != nil {
 				log.Warning("warn: token domain and signer does not match DNS records: %v", err)
 			}
+			leaf.Domain = settings.tokenDomain
 		}
 		proof, err := submit.SubmitLeafRequest(ctx, &config, &leaf)
 		if err != nil {
