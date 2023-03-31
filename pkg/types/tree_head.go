@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -12,8 +13,8 @@ import (
 )
 
 const (
-	SignedTreeHeadNamespace   = "signed-tree-head:v0@sigsum.org"
 	CosignedTreeHeadNamespace = "cosigned-tree-head:v0@sigsum.org"
+	CheckpointNamePrefix      = "sigsum.org/v1/"
 )
 
 type TreeHead struct {
@@ -41,15 +42,16 @@ func NewEmptyTreeHead() TreeHead {
 	return TreeHead{Size: 0, RootHash: merkle.HashEmptyTree()}
 }
 
-func (th *TreeHead) toSignedData() []byte {
-	b := make([]byte, 40)
-	binary.BigEndian.PutUint64(b[:8], th.Size)
-	copy(b[8:40], th.RootHash[:])
-	return ssh.SignedData(SignedTreeHeadNamespace, b)
+func (th *TreeHead) toCheckpoint(pub *crypto.PublicKey) []byte {
+	return []byte(fmt.Sprintf("%s%x\n%d\n%s\n",
+		CheckpointNamePrefix,
+		crypto.HashBytes(pub[:]), th.Size,
+		base64.StdEncoding.EncodeToString(th.RootHash[:])))
 }
 
 func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
-	sig, err := signer.Sign(th.toSignedData())
+	pub := signer.Public()
+	sig, err := signer.Sign(th.toCheckpoint(&pub))
 	if err != nil {
 		return SignedTreeHead{}, fmt.Errorf("failed signing tree head: %w", err)
 	}
@@ -138,7 +140,15 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 }
 
 func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
-	return crypto.Verify(key, sth.toSignedData(), &sth.Signature)
+	return crypto.Verify(key, sth.toCheckpoint(key), &sth.Signature)
+}
+
+func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
+	b := make([]byte, 40)
+	binary.BigEndian.PutUint64(b[:8], sth.Size)
+	copy(b[8:40], sth.RootHash[:])
+	return crypto.Verify(key, ssh.SignedData("signed-tree-head:v0@sigsum.org", b),
+		&sth.Signature)
 }
 
 func (cs *Cosignature) Verify(key *crypto.PublicKey, logKeyHash *crypto.Hash, th *TreeHead) bool {
