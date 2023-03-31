@@ -1,4 +1,5 @@
 #! /bin/sh
 
+set -e
 GOBIN=$(pwd)/bin go install ../cmd/...
 GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.9.0

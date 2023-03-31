@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	getopt "github.com/pborman/getopt/v2"
 
@@ -22,26 +23,17 @@ type Settings struct {
 }
 
 func main() {
-	const usage = `sigsum-verify [OPTIONS] PROOF < INPUT
-    Options:
-      -h --help Display this help
-      --submit-key SUBMIT-KEY
-      --policy POLICY-FILE
-      --raw-hash
-
-    Verifies a sigsum proof, as produced by sigsum-submit. Proof file
-    specified on command line, data being verified is the hash of the
-    data on stdin (or if --raw-hash is given, input is the hash value,
-    of size exactly 32 octets).
-`
 	log.SetFlags(0)
 	var settings Settings
-	settings.parse(os.Args, usage)
+	settings.parse(os.Args)
 	submitKey, err := key.ReadPublicKeyFile(settings.submitKey)
 	if err != nil {
 		log.Fatal(err)
 	}
-	msg := readMessage(os.Stdin, settings.rawHash)
+	msg, err := readMessage(os.Stdin, settings.rawHash)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	f, err := os.Open(settings.proofFile)
 	if err != nil {
@@ -60,20 +52,25 @@ func main() {
 	}
 }
 
-func (s *Settings) parse(args []string, usage string) {
+func (s *Settings) parse(args []string) {
+	const usage = `
+    Verifies a sigsum proof, as produced by sigsum-submit. The proof
+    file is passed on the command line. The message being verified is
+    the hash of the data on stdin (or if --raw-hash is given, input is
+    the hash value, either exactly 32 octets, or a hex string).
+`
 	set := getopt.New()
-	set.SetParameters("")
-	set.SetUsage(func() { fmt.Print(usage) })
+	set.SetParameters("proof < input")
 
 	help := false
-	set.FlagLong(&s.rawHash, "raw-hash", 0, "Use raw hash input")
-	set.FlagLong(&s.submitKey, "submit-key", 0, "Public key file").Mandatory()
-	set.FlagLong(&s.policyFile, "policy", 0, "Policy file").Mandatory()
+	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input is already hashed")
+	set.FlagLong(&s.submitKey, "submit-key", 'k', "Submitter's public key", "file").Mandatory()
+	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file").Mandatory()
 	set.FlagLong(&help, "help", 0, "Display help")
 	err := set.Getopt(args, nil)
 	// Check help first; if seen, ignore errors about missing mandatory arguments.
 	if help {
-		// TODO: Let getopt package list options, and append further details.
+		set.PrintUsage(os.Stdout)
 		fmt.Print(usage)
 		os.Exit(0)
 	}
@@ -88,25 +85,18 @@ func (s *Settings) parse(args []string, usage string) {
 	s.proofFile = set.Arg(0)
 }
 
-func readMessage(r io.Reader, rawHash bool) crypto.Hash {
-	readHash := func(r io.Reader) (ret crypto.Hash) {
-		// One extra byte, to detect EOF.
-		msg := make([]byte, 33)
-		if readCount, err := io.ReadFull(os.Stdin, msg); err != io.ErrUnexpectedEOF || readCount != 32 {
-			if err != nil && err != io.ErrUnexpectedEOF {
-				log.Fatalf("reading message from stdin failed: %v", err)
-			}
-			log.Fatalf("sigsum message must be exactly 32 bytes, got %d", readCount)
-		}
-		copy(ret[:], msg)
-		return
+func readMessage(r io.Reader, rawHash bool) (crypto.Hash, error) {
+	if !rawHash {
+		return crypto.HashFile(r)
 	}
-	if rawHash {
-		return readHash(r)
-	}
-	msg, err := crypto.HashFile(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
-		log.Fatal(err)
+		return crypto.Hash{}, err
 	}
-	return msg
+	if len(data) == crypto.HashSize {
+		var msg crypto.Hash
+		copy(msg[:], data)
+		return msg, nil
+	}
+	return crypto.HashFromHex(strings.TrimSpace(string(data)))
 }
