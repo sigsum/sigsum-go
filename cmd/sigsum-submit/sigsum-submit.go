@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	getopt "github.com/pborman/getopt/v2"
 
@@ -26,53 +27,23 @@ type Settings struct {
 }
 
 func main() {
-	const usage = `sigsum-submit [OPTIONS] < INPUT
-    Options:
-      -h --help Display this help
-      -k PRIVATE-KEY-FILE
-      --policy POLICY-FILE
-      --diagnostics LEVEL
-      --raw-hash
-      -o OUTPUT-FILE
-    Creates and/or submits an add-leaf request.
-
-    If -k PRIVATE-KEY-FILE is provided, a new request is created based on
-    the SHA256 hash of INPUT (or, if --raw-hash is provided, INPUT is
-    treated as the hash value to be used, exactly 32 octets long).
-
-    If the -k option is missing, INPUT should instead be the body of an
-    add-leaf request, which is then parsed and verified.
-
-    If --policy is provided, the request is submitted to some log
-    specified by the policy, and a Sigsum proof is collected and
-    written to stdout. If there are multiple logs in the policy, they are
-    be tried in randomized order.
-
-    With -k but without --policy, the add-leaf request created is
-    written to stdout. With no -k and no --policy, the request syntax
-    and signature in INPUT are verified.
-
-    The --diagnostics option specifies level of diagnostig messages,
-    one of "fatal", "error", "warning", "info" (default), or "debug".
-
-    If no output file is provided with the -o option, output is sent to stdout.
-`
 	var settings Settings
-	settings.parse(os.Args, usage)
-	if len(settings.diagnostics) > 0 {
-		if err := log.SetLevelFromString(settings.diagnostics); err != nil {
-			log.Fatal("%v", err)
-		}
+	settings.parse(os.Args)
+	if err := log.SetLevelFromString(settings.diagnostics); err != nil {
+		log.Fatal("%v", err)
 	}
 	var leaf requests.Leaf
 	if len(settings.keyFile) > 0 {
 		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
 		if err != nil {
-			log.Fatal("%v", err)
+			log.Fatal("reading key file failed: %v", err)
 		}
 		publicKey := signer.Public()
 
-		msg := readMessage(os.Stdin, settings.rawHash)
+		msg, err := readMessage(os.Stdin, settings.rawHash)
+		if err != nil {
+			log.Fatal("reading message (stdin) failed: %v", err)
+		}
 
 		signature, err := types.SignLeafMessage(signer, msg[:])
 		if err != nil {
@@ -127,21 +98,46 @@ func main() {
 	}
 }
 
-func (s *Settings) parse(args []string, usage string) {
+func (s *Settings) parse(args []string) {
+	const usage = `
+    Creates and/or submits an add-leaf request.
+
+    If a signing key (-k option) is specified, a new request is
+    created by signing the the SHA256 hash of the input (or, if
+    --raw-hash is given, input is the hash value, either exactly 32
+    octets, or a hex string). The key file uses openssh format, it
+    must be either an unencrypted private key, or a public key, in
+    which case the corresponding private key is accessed via
+    ssh-agent.
+
+    If no signing key is provided, input should instead be the body of
+    an add-leaf request, which is parsed and verified.
+
+    If a Sigsum policy (-p option) is provided, the request is
+    submitted to the log specified by the policy, and a Sigsum proof
+    is collected and output. If there are multiple logs in
+    the policy, they are tried in randomized order.
+
+    With -k but without -p, the add-leaf request itself is output.
+    With no -k and no -p, the request syntax and signature of the
+    input request are verified, but there is no output.
+`
+	s.diagnostics = "info"
+
 	set := getopt.New()
-	set.SetParameters("")
+	set.SetParameters(" < input")
 	set.SetUsage(func() { fmt.Print(usage) })
 
 	help := false
-	set.FlagLong(&s.rawHash, "raw-hash", 0, "Use raw hash input")
-	set.FlagLong(&s.keyFile, "key", 'k', "Key file")
-	set.FlagLong(&s.policyFile, "policy", 0, "Policy file")
-	set.FlagLong(&s.outputFile, "output-file", 'o', "Output file")
-	set.FlagLong(&s.diagnostics, "diagnostics", 0, "Level of diagnostic messages")
+	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input is already hashed")
+	set.FlagLong(&s.keyFile, "signing-key", 'k', "Key for signing the leaf", "file")
+	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file")
+	set.Flag(&s.outputFile, 'o', "Write output to file, instead of stdout", "file")
+	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
 	set.FlagLong(&help, "help", 0, "Display help")
 	set.Parse(args)
 	if help {
-		// TODO: Let getopt package list options, and append further details.
+		set.PrintUsage(os.Stdout)
 		fmt.Print(usage)
 		os.Exit(0)
 	}
@@ -150,25 +146,18 @@ func (s *Settings) parse(args []string, usage string) {
 	}
 }
 
-func readMessage(r io.Reader, rawHash bool) crypto.Hash {
-	readHash := func(r io.Reader) (ret crypto.Hash) {
-		// One extra byte, to detect EOF.
-		msg := make([]byte, 33)
-		if readCount, err := io.ReadFull(os.Stdin, msg); err != io.ErrUnexpectedEOF || readCount != 32 {
-			if err != nil && err != io.ErrUnexpectedEOF {
-				log.Fatal("reading message from stdin failed: %v", err)
-			}
-			log.Fatal("sigsum message must be exactly 32 bytes, got %d", readCount)
-		}
-		copy(ret[:], msg)
-		return
+func readMessage(r io.Reader, rawHash bool) (crypto.Hash, error) {
+	if !rawHash {
+		return crypto.HashFile(r)
 	}
-	if rawHash {
-		return readHash(r)
-	}
-	msg, err := crypto.HashFile(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
-		log.Fatal("%v", err)
+		return crypto.Hash{}, err
 	}
-	return msg
+	if len(data) == crypto.HashSize {
+		var msg crypto.Hash
+		copy(msg[:], data)
+		return msg, nil
+	}
+	return crypto.HashFromHex(strings.TrimSpace(string(data)))
 }
