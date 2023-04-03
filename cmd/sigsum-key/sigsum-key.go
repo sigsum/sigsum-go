@@ -33,38 +33,40 @@ type SignSettings struct {
 }
 
 type ExportSettings struct {
-	keyFile string
+	keyFile    string
+	outputFile string
 }
 
 func main() {
 	const usage = `sigsum-key sub commands:
 
   sigsum-key help | --help
-    Display this help.
+    Display this help. All the below sub commands also accept the --help
+    option, to display help for that sub command.
 
-  sigsum-key gen -o KEY-FILE
+  sigsum-key gen -o file
     Generate a new key pair. Private key is stored in the given
-    KEY-FILE, hex-encoded. Corresponding public key file gets a ".pub"
-    suffix, and is written in OpenSSH format.
+    file, in OpenSSH private key format. Corresponding public key
+    file gets a ".pub" suffix, and is written in OpenSSH public
+    key format.
 
-  sigsum-key verify -k KEY -s SIGNATURE [-n NAMESPACE] < MSG
-    KEY and SIGNATURE are file names.
-    NAMESPACE is a string, default being "signed-tree-head:v0@sigsum.org"
+  sigsum-key verify [options] < msg
+    Verify a signature. For option details, see sigsum-key verify --help.
 
-  sigsum-key sign -k KEY [-o SIGNATURE] [-n NAMESPACE] [--ssh] < MSG
-    KEY and SIGNATURE are file names (by default, signature is written
-    to stdout). NAMESPACE is a string, default being
-    "tree-leaf:v0@sigsum.org". If --ssh is provided, produce an ssh
-    signature file, otherwise raw hex.
+  sigsum-key sign [options] < msg
+    Create a signature. For option details, see sigsum-key sign --help.
 
-  sigsum-key hash -k KEY
-    KEY is filename of a public key. Outputs hex-encoded key hash.
+  sigsum-key hash [-k file] [-o output]
+    Reads public key from file (by default, stdin) and writes key hash
+    to output (by default, stdout).
 
-  sigsum-key hex -k KEY
-    KEY is filename of a public key. Outputs hex-encoded raw key.
+  sigsum-key hex [-k file] [-o output]
+    Reads public key from file (by default, stdin) and writes hex key
+    to output (by default, stdout).
 
-  sigsum-key hex-to-pub KEY
-    Converts raw hex public key (provided on the command line) to OpenSSH format.
+  sigsum-key hex-to-pub [-k file] [-o output]
+    Reads hex public key from file (by default, stdin) and writes
+    OpenSSH format public key to output (by default, stdout).
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -129,42 +131,63 @@ func main() {
 		// stdout.
 	case "hash":
 		var settings ExportSettings
-		settings.parse(os.Args)
-		publicKey, err := key.ReadPublicKeyFile(settings.keyFile)
+		settings.parse(os.Args, false)
+		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%x\n", crypto.HashBytes(publicKey[:]))
+		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
+			_, err := fmt.Fprintf(f, "%x\n", crypto.HashBytes(publicKey[:]))
+			return err
+		})
 	case "hex":
 		var settings ExportSettings
-		settings.parse(os.Args)
-		publicKey, err := key.ReadPublicKeyFile(settings.keyFile)
+		settings.parse(os.Args, false)
+		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%x\n", publicKey[:])
+		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
+			_, err := fmt.Fprintf(f, "%x\n", publicKey[:])
+			return err
+		})
 	case "hex-to-pub":
-		if len(os.Args) != 3 {
-			log.Fatalf("hex key argument missing")
-		}
-		pub, err := crypto.PublicKeyFromHex(os.Args[2])
+		var settings ExportSettings
+		settings.parse(os.Args, true)
+		pub, err := crypto.PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
 		if err != nil {
 			log.Fatalf("invalid key: %v", err)
 		}
-
-		fmt.Print(ssh.FormatPublicEd25519(&pub))
+		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
+			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&pub))
+			return err
+		})
 	}
 }
 
 func newOptionSet(args []string) *getopt.Set {
 	set := getopt.New()
-	set.SetProgram(os.Args[0] + " " + os.Args[1])
+	set.SetProgram(args[0] + " " + args[1])
 	set.SetParameters("")
 	return set
 }
 
+// Also adds and processes the help option.
 func parseNoArgs(set *getopt.Set, args []string) {
-	set.Parse(args[1:])
+	help := false
+	set.FlagLong(&help, "help", 0, "Display help")
+	err := set.Getopt(args[1:], nil)
+	// Check help first; if seen, ignore errors about missing mandatory arguments.
+	if help {
+		set.PrintUsage(os.Stdout)
+		fmt.Printf("\nFor general information on this tool, see %s help.", args[0])
+		os.Exit(0)
+	}
+	if err != nil {
+		log.Printf("err: %v\n", err)
+		set.PrintUsage(log.Writer())
+		os.Exit(1)
+	}
 	if set.NArgs() > 0 {
 		log.Fatal("Too many arguments.")
 	}
@@ -172,7 +195,7 @@ func parseNoArgs(set *getopt.Set, args []string) {
 
 func (s *GenSettings) parse(args []string) {
 	set := newOptionSet(args)
-	set.FlagLong(&s.outputFile, "output-file", 'o', "Output File").Mandatory()
+	set.Flag(&s.outputFile, 'o', "Output", "file").Mandatory()
 	parseNoArgs(set, args)
 }
 
@@ -181,8 +204,8 @@ func (s *VerifySettings) parse(args []string) {
 	s.namespace = types.SignedTreeHeadNamespace
 
 	set := newOptionSet(args)
-	set.FlagLong(&s.keyFile, "key", 'k', "Public key file").Mandatory()
-	set.FlagLong(&s.signatureFile, "signature", 's', "Signature file").Mandatory()
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
+	set.FlagLong(&s.signatureFile, "signature", 's', "Signature", "file").Mandatory()
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
 	parseNoArgs(set, args)
 }
@@ -192,17 +215,21 @@ func (s *SignSettings) parse(args []string) {
 	s.namespace = types.TreeLeafNamespace
 
 	set := newOptionSet(args)
-	set.FlagLong(&s.keyFile, "key", 'k', "Public key file").Mandatory()
-	set.FlagLong(&s.outputFile, "output-file", 'o', "Signature output file")
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
+	set.Flag(&s.outputFile, 'o', "Signature output", "file")
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
-	set.FlagLong(&s.sshFormat, "ssh", 0, "Use OpenSSH format for public key")
+	set.FlagLong(&s.sshFormat, "ssh", 0, "Use OpenSSH format for output signature")
 	parseNoArgs(set, args)
 }
 
-func (s *ExportSettings) parse(args []string) {
+func (s *ExportSettings) parse(args []string, hex bool) {
 	set := newOptionSet(args)
-	set.FlagLong(&s.keyFile, "key", 'k', "Public key file").Mandatory()
-	set.Parse(args[1:])
+	if hex {
+		set.FlagLong(&s.keyFile, "key", 'k', "Hex public key", "file")
+	} else {
+		set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
+	}
+	set.Flag(&s.outputFile, 'o', "Output", "file")
 	parseNoArgs(set, args)
 }
 
@@ -266,4 +293,19 @@ func readSignatureFile(fileName string,
 		log.Fatal(err)
 	}
 	return signature
+}
+
+// Reads given file, or stdin.
+func readInput(fileName string) string {
+	var contents []byte
+	var err error
+	if len(fileName) > 0 {
+		contents, err = os.ReadFile(fileName)
+	} else {
+		contents, err = io.ReadAll(os.Stdin)
+	}
+	if err != nil {
+		log.Fatalf("Reading input failed: %v", err)
+	}
+	return string(contents)
 }
