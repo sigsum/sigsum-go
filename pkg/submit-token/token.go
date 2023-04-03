@@ -36,9 +36,9 @@ func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token string) 
 
 // Verifier can verify that a domain name is aware of a public key.
 // Name and signature corresponds to the value of the submit-token:
-// header, so signature is still hex-encoded.
+// header.
 type Verifier interface {
-	Verify(ctx context.Context, name, signature string) error
+	Verify(ctx context.Context, name string, signature *crypto.Signature) error
 }
 
 // DnsResolver implements the Verifier interface by querying DNS.
@@ -56,11 +56,7 @@ func NewDnsVerifier(logKey *crypto.PublicKey) Verifier {
 	}
 }
 
-func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) error {
-	signature, err := crypto.SignatureFromHex(signatureHex)
-	if err != nil {
-		return fmt.Errorf("failed decoding hex signature: %v", err)
-	}
+func (dv *DnsVerifier) Verify(ctx context.Context, name string, signature *crypto.Signature) error {
 	rsps, err := dv.lookupTXT(ctx, Label+"."+name)
 	if err != nil {
 		return fmt.Errorf("token: dns look-up failed: %v", err)
@@ -78,7 +74,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) er
 			badKeys++
 			continue
 		}
-		if crypto.Verify(&key, signedData, &signature) {
+		if crypto.Verify(&key, signedData, signature) {
 			return nil
 		}
 	}
