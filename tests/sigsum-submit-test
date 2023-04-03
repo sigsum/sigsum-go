@@ -5,6 +5,9 @@ set -e
 ./bin/sigsum-key gen -o test.log.key
 ./bin/sigsum-key gen -o test.submit.key
 
+# Reading private key files still supports raw hex.
+printf '%064x' 1 > test.token.key
+
 # Start sigsum log server
 rm -f test.log.sth
 echo "startup=empty" > test.log.sth.startup
@@ -29,7 +32,7 @@ for x in $(seq 5); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
     printf "%31s\n" foo-$x \
-	| ./bin/sigsum-submit --diagnostics=warning --raw-hash -o test.$x.proof -k test.submit.key --policy test.policy
+	| ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-key-file test.token.key --raw-hash -o test.$x.proof -k test.submit.key --policy test.policy
 done
 
 for x in $(seq 5); do

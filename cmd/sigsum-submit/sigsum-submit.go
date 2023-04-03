@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strings"
 
@@ -15,15 +16,18 @@ import (
 	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/submit"
+	"sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
 type Settings struct {
-	rawHash     bool
-	keyFile     string
-	policyFile  string
-	diagnostics string
-	outputFile  string
+	rawHash      bool
+	keyFile      string
+	policyFile   string
+	diagnostics  string
+	outputFile   string
+	tokenDomain  string
+	tokenKeyFile string
 }
 
 func main() {
@@ -80,7 +84,21 @@ func main() {
 		if err != nil {
 			log.Fatal("%v", err)
 		}
-		proof, err := submit.SubmitLeafRequest(context.Background(), &submit.Config{Policy: policy}, &leaf)
+		config := submit.Config{Policy: policy, Domain: settings.tokenDomain}
+		ctx := context.Background()
+
+		if len(config.Domain) > 0 {
+			var err error
+			config.RateLimitSigner, err = key.ReadPrivateKeyFile(settings.tokenKeyFile)
+			if err != nil {
+				log.Fatal("reading token key file failed: %v", err)
+			}
+			// Warn if corresponding public key isn't registered for the domain.
+			if err := checkTokenDomain(ctx, config.Domain, config.RateLimitSigner.Public()); err != nil {
+				log.Warning("warn: token domain and signer does not match DNS records: %v", err)
+			}
+		}
+		proof, err := submit.SubmitLeafRequest(ctx, &config, &leaf)
 		if err != nil {
 			log.Fatal("%v", err)
 		}
@@ -134,6 +152,8 @@ func (s *Settings) parse(args []string) {
 	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file")
 	set.Flag(&s.outputFile, 'o', "Write output to file, instead of stdout", "file")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
+	set.FlagLong(&s.tokenDomain, "token-domain", 0, "Create a Sigsum-Token: header for this domain")
+	set.FlagLong(&s.tokenKeyFile, "token-key-file", 0, "Key for signing Sigsum-Token: header", "file")
 	set.FlagLong(&help, "help", 0, "Display help")
 	set.Parse(args)
 	if help {
@@ -160,4 +180,27 @@ func readMessage(r io.Reader, rawHash bool) (crypto.Hash, error) {
 		return msg, nil
 	}
 	return crypto.HashFromHex(strings.TrimSpace(string(data)))
+}
+
+// Warn if corresponding public key isn't registered for the domain.
+func checkTokenDomain(ctx context.Context, domain string, pubkey crypto.PublicKey) error {
+	resolver := net.Resolver{}
+	rsps, err := resolver.LookupTXT(ctx, token.Label+"."+domain)
+	if err != nil {
+		return err
+	}
+	var badKeys int
+	for _, keyHex := range rsps {
+		key, err := crypto.PublicKeyFromHex(keyHex)
+
+		if err != nil {
+			badKeys++
+			continue
+		}
+		if key == pubkey {
+			return nil
+		}
+	}
+	return fmt.Errorf("key not registered (%d records found, syntactically bad: %d)",
+		len(rsps), badKeys)
 }
