@@ -60,6 +60,9 @@ func (req *Leaf) FromTokenHeader(header string) error {
 	if n := len(parts); n != 2 {
 		return fmt.Errorf("expected 2 parts, got %d", n)
 	}
+	if len(parts[0]) == 0 {
+		return fmt.Errorf("malformed header, domain part empty")
+	}
 	var err error
 	req.Token, err = crypto.SignatureFromHex(parts[1])
 	if err == nil {

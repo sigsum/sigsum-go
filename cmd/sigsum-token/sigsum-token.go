@@ -10,6 +10,7 @@ import (
 
 	getopt "github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/submit-token"
 )
@@ -135,9 +136,13 @@ func main() {
 				domain = &settings.domain
 			}
 		}
+		signature, err := crypto.SignatureFromHex(signatureHex)
+		if err != nil {
+			log.Fatalf("Invalid hex signature: %v", err)
+		}
 		if domain != nil {
 			if err := token.NewDnsVerifier(&logKey).Verify(
-				context.Background(), *domain, signatureHex); err != nil {
+				context.Background(), *domain, &signature); err != nil {
 				log.Fatalf("Verifying with domain %q failed: %v", *domain, err)
 			}
 		}
