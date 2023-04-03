@@ -55,6 +55,19 @@ func (req *Leaf) ToTokenHeader() *string {
 	return &header
 }
 
+func (req *Leaf) FromTokenHeader(header string) error {
+	parts := strings.Split(header, " ")
+	if n := len(parts); n != 2 {
+		return fmt.Errorf("expected 2 parts, got %d", n)
+	}
+	var err error
+	req.Token, err = crypto.SignatureFromHex(parts[1])
+	if err == nil {
+		req.Domain = parts[0]
+	}
+	return err
+}
+
 // Verifies the request signature, and creates a corresponding leaf on success.
 func (req *Leaf) Verify() (types.Leaf, error) {
 	if !types.VerifyLeafMessage(&req.PublicKey, req.Message[:], &req.Signature) {
