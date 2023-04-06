@@ -9,6 +9,7 @@ import (
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/key"
 )
 
 const (
@@ -105,7 +106,7 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 	}
 }
 
-func TestSignedTreeHeadVerify(t *testing.T) {
+func TestTreeHeadSignAndVerify(t *testing.T) {
 	th := validTreeHead(t)
 	pub, signer := newKeyPair(t)
 
@@ -114,6 +115,26 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if !sth.Verify(&pub) {
+		t.Errorf("failed verifying a valid signed tree head")
+	}
+
+	sth.Size += 1
+	if sth.Verify(&pub) {
+		t.Errorf("succeeded verifying an invalid signed tree head")
+	}
+}
+
+func TestSignedTreeHeadVerify(t *testing.T) {
+	// Example based on a sun of tests/sigsum-submit-test
+	pub := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICLAkeP3VJfvGQFcXa8UORDiDNpylbD9Hd+DglaG7+ym")
+	sth := SignedTreeHead{
+		TreeHead: TreeHead{
+			Size: 4,
+			RootHash: mustHashFromHex(t, "84ec3e1ba5433358988ac74bed33a30bda42cc983b87e4940a423c2d84890f0f"),
+		},
+		Signature: mustSignatureFromHex(t, "7e2084ded0f7625136e6c811ac7eae2cb79613cadb12a6437b391cdae3a5c915dcd30b5b5fe4fbf417a2d607a4cfcb3612d7fd4ffe9453c0d29ec002a6d47709"),
+	}
 	if !sth.Verify(&pub) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
@@ -357,4 +378,26 @@ func validCosignedTreeHeadASCII(t *testing.T) string {
 		"cosignature", crypto.Hash{}, 0, crypto.Signature{},
 		"cosignature", newHashBufferInc(t)[:], 1, newSigBufferInc(t)[:],
 	)
+}
+
+func mustParsePublicKey(t *testing.T, sshKey string) crypto.PublicKey {
+	pub, err := key.ParsePublicKey(sshKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pub
+}
+func mustHashFromHex(t *testing.T, hex string) crypto.Hash {
+	h, err := crypto.HashFromHex(hex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h
+}
+func mustSignatureFromHex(t *testing.T, hex string) crypto.Signature {
+	s, err := crypto.SignatureFromHex(hex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
 }
