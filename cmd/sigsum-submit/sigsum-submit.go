@@ -143,7 +143,7 @@ func (s *Settings) parse(args []string) {
 	s.diagnostics = "info"
 
 	set := getopt.New()
-	set.SetParameters(" < input")
+	set.SetParameters("< input")
 	set.SetUsage(func() { fmt.Print(usage) })
 
 	help := false
