@@ -16,11 +16,11 @@ const (
 	testCosignTimestamp = 72623859790382856
 )
 
-func TestTreeHeadToSignedData(t *testing.T) {
+func TestTreeHeadToCheckpoint(t *testing.T) {
 	desc := "valid"
-	if got, want := validTreeHead(t).toSignedData(),
-		validTreeHeadSignedData(t); !bytes.Equal(got, want) {
-		t.Errorf("got tree head signed data\n\t%x\nbut wanted\n\t%x\nin test %q\n", got, want, desc)
+	if got, want := validTreeHead(t).toCheckpoint(&crypto.PublicKey{}),
+		validTreeHeadCheckpoint(t); !bytes.Equal(got, want) {
+		t.Errorf("got tree head checkpoint\n\t%q\nbut wanted\n\t%q\nin test %q\n", got, want, desc)
 	}
 }
 
@@ -125,7 +125,7 @@ func TestTreeHeadSignAndVerify(t *testing.T) {
 	}
 }
 
-func TestSignedTreeHeadVerify(t *testing.T) {
+func TestSignedTreeHeadVerifyVersion0(t *testing.T) {
 	// Example based on a run of tests/sigsum-submit-test
 	pub := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICLAkeP3VJfvGQFcXa8UORDiDNpylbD9Hd+DglaG7+ym")
 	sth := SignedTreeHead{
@@ -135,12 +135,12 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 		},
 		Signature: mustSignatureFromHex(t, "7e2084ded0f7625136e6c811ac7eae2cb79613cadb12a6437b391cdae3a5c915dcd30b5b5fe4fbf417a2d607a4cfcb3612d7fd4ffe9453c0d29ec002a6d47709"),
 	}
-	if !sth.Verify(&pub) {
+	if !sth.VerifyVersion0(&pub) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
 
 	sth.Size += 1
-	if sth.Verify(&pub) {
+	if sth.VerifyVersion0(&pub) {
 		t.Errorf("succeeded verifying an invalid signed tree head")
 	}
 }
@@ -298,19 +298,12 @@ func validTreeHead(t *testing.T) *TreeHead {
 	}
 }
 
-func validTreeHeadSignedData(t *testing.T) []byte {
-	msg := bytes.Join([][]byte{
-		[]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01},
-		newHashBufferInc(t)[:],
-	}, nil)
-	checksum := crypto.HashBytes(msg)
-	return bytes.Join([][]byte{
-		[]byte("SSHSIG"),
-		[]byte{0, 0, 0, 30}, []byte("signed-tree-head:v0@sigsum.org"),
-		[]byte{0, 0, 0, 0},
-		[]byte{0, 0, 0, 6}, []byte("sha256"),
-		[]byte{0, 0, 0, 32}, checksum[:],
-	}, nil)
+func validTreeHeadCheckpoint(t *testing.T) []byte {
+	return []byte(`
+sigsum.org/v1/66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925
+257
+AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+`)[1:]
 }
 
 func validSignedTreeHead(t *testing.T) *SignedTreeHead {

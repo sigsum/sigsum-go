@@ -201,7 +201,7 @@ func (s *GenSettings) parse(args []string) {
 
 func (s *VerifySettings) parse(args []string) {
 	// Default value.
-	s.namespace = types.SignedTreeHeadNamespace
+	s.namespace = types.TreeLeafNamespace
 
 	set := newOptionSet(args)
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
