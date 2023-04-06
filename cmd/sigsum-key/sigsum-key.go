@@ -165,10 +165,14 @@ func main() {
 	}
 }
 
-func newOptionSet(args []string) *getopt.Set {
+func newOptionSet(args []string, useStdin bool) *getopt.Set {
 	set := getopt.New()
 	set.SetProgram(args[0] + " " + args[1])
-	set.SetParameters("")
+	if useStdin {
+		set.SetParameters("< msg")
+	} else {
+		set.SetParameters("")
+	}
 	return set
 }
 
@@ -180,7 +184,7 @@ func parseNoArgs(set *getopt.Set, args []string) {
 	// Check help first; if seen, ignore errors about missing mandatory arguments.
 	if help {
 		set.PrintUsage(os.Stdout)
-		fmt.Printf("\nFor general information on this tool, see %s help.", args[0])
+		fmt.Printf("\nFor general information on this tool, see %s help.\n", args[0])
 		os.Exit(0)
 	}
 	if err != nil {
@@ -194,7 +198,7 @@ func parseNoArgs(set *getopt.Set, args []string) {
 }
 
 func (s *GenSettings) parse(args []string) {
-	set := newOptionSet(args)
+	set := newOptionSet(args, false)
 	set.Flag(&s.outputFile, 'o', "Output", "file").Mandatory()
 	parseNoArgs(set, args)
 }
@@ -203,7 +207,7 @@ func (s *VerifySettings) parse(args []string) {
 	// Default value.
 	s.namespace = types.TreeLeafNamespace
 
-	set := newOptionSet(args)
+	set := newOptionSet(args, true)
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
 	set.FlagLong(&s.signatureFile, "signature", 's', "Signature", "file").Mandatory()
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
@@ -214,7 +218,7 @@ func (s *SignSettings) parse(args []string) {
 	// Default value.
 	s.namespace = types.TreeLeafNamespace
 
-	set := newOptionSet(args)
+	set := newOptionSet(args, true)
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Signature output", "file")
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
@@ -223,7 +227,7 @@ func (s *SignSettings) parse(args []string) {
 }
 
 func (s *ExportSettings) parse(args []string, hex bool) {
-	set := newOptionSet(args)
+	set := newOptionSet(args, false)
 	if hex {
 		set.FlagLong(&s.keyFile, "key", 'k', "Hex public key", "file")
 	} else {
