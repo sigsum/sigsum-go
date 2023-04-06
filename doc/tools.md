@@ -40,8 +40,9 @@ ssh-ed25519 <base64> [optional comment]
 ```
 where the base64 blob in turn represent [SSH wire
 format](https://www.rfc-editor.org/rfc/rfc8709#name-public-key-format).
-In certain places, in particular, in the policy file, public keys are used in "raw" form, without this wrapping.
-Then an ED25519 public key is 32 octets in the format defined by [RFC
+In certain places, in particular, in the policy file, public keys are
+used in "raw" form, without this wrapping. Then an ED25519 public key
+is 32 octets in the format defined by [RFC
 8032](https://www.rfc-editor.org/rfc/rfc8032.html#section-5.1.2).
 
 The `sigsum-key` tool can be used to convert between these two forms.
@@ -49,9 +50,9 @@ The `sigsum-key` tool can be used to convert between these two forms.
 ### Private keys
 
 Private keys are stored as unencrypted OpenSSH private key files
-(i.e., PEM-like files with a tag OPENSSH PRIVATE KEY, and contents
+(i.e., PEM files with a tag OPENSSH PRIVATE KEY, and contents
 defined by [OpenSSH key
-format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key).
+format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key)).
 
 Using unencrypted private keys on disk may be adequate fro some use
 cases, e.g., for the key used for signing the submit tokens used for
@@ -78,25 +79,47 @@ and convert between different key formats.
 
 To generate a new key pair, run
 ```
-sigsum-key gen -o key-file
+sigsum-key gen -o KEY-FILE
 ```
 This generates a new ED25519 keypair (with key material provided by
 the crypto/rand module in the golang standard library). The private
-key is stored to the given output file ("key-file" in the example),
-in OpenSSH format. The private key is *not* encrypted, but stored with
-restrictive file permissions. The corresponding public key is written
-to a file with a ".pub" suffix, ("key-file.pub" in the example), in
-OpenSSH format.
+key is stored to the given output KEY-FILE, in OpenSSH format. The
+private key is *not* encrypted, but stored with restrictive file
+permissions. The corresponding public key is written to a file with an
+added ".pub" suffix, in OpenSSH format.
 
 Behavoir is similar to the OpenSSH key generation utility, if invoked
 like
 ```
-ssh-keygen -q -N '' -t ed25519 -f key-file
+ssh-keygen -q -N '' -t ed25519 -f KEY-FILE
 ```
 
 ## Public key conversion
 
-TODO: ssh-keygen hex/hash/pub-to-hex
+As explained above, OpenSSH format is the main representation for
+public Sigsum keys, when stored in key files. Such a public key can be
+converted to a raw form using
+```
+sigsum-key hex -k KEY-FILE
+```
+The hex representation is used in the Sigsum policy file, and in
+messages on the wire. For the opposite conversion, use
+
+```
+sigsum-key hex-to-pub -k HEX-FILE
+```
+
+Occasionally, also the key hash is needed; it is used in certain
+messages on the wire, and in the Sigsum log server's [rate
+limit](https://git.glasklar.is/sigsum/core/log-go/-/blob/main/doc/rate-limit.md)
+configuration. The key hash can be computed using
+```
+sigsum-key hash -k KEY-FILE
+```
+
+These three conversion tools read stdin and write stdout by default,
+it's optional to specify an input file, with `-k`, or output file,
+with `-o`.
 
 ## Sign and verify operations
 
@@ -104,7 +127,34 @@ The sigsum-key tool can also create and verify signatures using
 [OpenSSH signature
 format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.sshsig).
 
-TODO: Details
+Signing a message is done using
+```
+sigsum-key sign -k KEY-FILE [-n NAMESPACE] [-o FILE] [--ssh] < MSG
+```
+
+The `-k` option is required, and specifies the key to use for signing
+(either an unencrypted private key, or a public key, if corresponding
+private key is acessible via ssh-agent). The message to sign is read
+from stdin. The default namespace (a feature of OpenSSH format
+signatures) is the one used for a signatures in a Sigsum leaf. The
+create dsignature is written to stdout, if no output file is specified
+with the `-o` option.
+
+By default, the signature is a raw hex representation of a 64-octet
+ED25519 signature. With the `--ssh` option, the signatures is wrapped
+in an OpenSSH signature file, a PEM file with the tag "SSH SIGNATURE".
+
+Signatures can be verified using
+```
+sigsum-key verify -k KEY-FILE -s SIGNATURE-FILE [-n NAMESPACE] < MSG
+```
+The `-k `and `-s` options, specifying the public key and the
+signature, are required. The namespace must match the namespace used
+when the signature was created. The message signed is read from stdin.
+
+The use of OpenSSH signature formats in the Sigsum protocols is under
+discussion. If usage is dropped in version 1 of the Sigsum protocols,
+these sub commands are likely to change.
 
 # The `sigsum-submit` tool
 
