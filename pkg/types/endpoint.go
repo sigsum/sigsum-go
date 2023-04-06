@@ -12,6 +12,10 @@ const (
 
 	// For primary/secondary replication.
 	EndpointGetSecondaryTreeHead = Endpoint("get-secondary-tree-head")
+
+	// Sigsum witness api.
+	EndpointAddTreeHead = Endpoint("add-tree-head")
+	EndpointGetTreeSize = Endpoint("get-tree-size/")
 )
 
 // Path adds endpoint name to a service prefix.  If prefix is empty, nothing is added.

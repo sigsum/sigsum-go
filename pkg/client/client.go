@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 
+	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -32,9 +33,15 @@ type Secondary interface {
 	GetSecondaryTreeHead(context.Context) (types.SignedTreeHead, error)
 }
 
+type Witness interface {
+	GetTreeSize(context.Context, requests.GetTreeSize) (uint64, error)
+	AddTreeHead(context.Context, requests.AddTreeHead) (types.Cosignature, error)
+}
+
 var (
-	HttpNotFound = errors.New("404 Not Found")
-	HttpAccepted = errors.New("202 Accepted")
+	HttpNotFound            = errors.New("404 Not Found")
+	HttpAccepted            = errors.New("202 Accepted")
+	HttpUnprocessableEntity = errors.New("422 Unprocessable Entity")
 )
 
 type Config struct {
@@ -86,13 +93,40 @@ func (cli *Client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves [
 func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf, tokenHeader *string) (bool, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
-	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.URL), tokenHeader, &buf); err != nil {
+	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.URL), tokenHeader, &buf, nil); err != nil {
 		if errors.Is(err, HttpAccepted) {
 			return false, nil
 		}
 		return false, err
 	}
 	return true, nil
+}
+
+func (cli *Client) GetTreeSize(ctx context.Context, req requests.GetTreeSize) (uint64, error) {
+	var size uint64
+	if err := cli.get(ctx, req.ToURL(types.EndpointGetTreeSize.Path(cli.config.URL)),
+		func(body io.Reader) error {
+			p := ascii.NewParser(body)
+			var err error
+			size, err = p.GetInt("size")
+			if err != nil {
+				return err
+			}
+			return p.GetEOF()
+		}); err != nil {
+		return 0, err
+	}
+	return size, nil
+}
+
+func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (types.Cosignature, error) {
+	buf := bytes.Buffer{}
+	req.ToASCII(&buf)
+	var cs types.Cosignature
+	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf, cs.FromASCII); err != nil {
+		return types.Cosignature{}, err
+	}
+	return cs, nil
 }
 
 func (cli *Client) get(ctx context.Context, url string,
@@ -104,15 +138,15 @@ func (cli *Client) get(ctx context.Context, url string,
 	return cli.do(req, parseBody)
 }
 
-func (cli *Client) post(ctx context.Context, url string, tokenHeader *string, body io.Reader) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+func (cli *Client) post(ctx context.Context, url string, tokenHeader *string, requestBody io.Reader, parseResponse func(io.Reader) error) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, requestBody)
 	if err != nil {
 		return err
 	}
 	if tokenHeader != nil {
 		req.Header.Add(token.HeaderName, *tokenHeader)
 	}
-	return cli.do(req, nil)
+	return cli.do(req, parseResponse)
 }
 
 func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error) error {
@@ -137,6 +171,8 @@ func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error) error 
 		return HttpNotFound
 	case http.StatusAccepted:
 		return HttpAccepted
+	case http.StatusUnprocessableEntity:
+		return HttpUnprocessableEntity
 	case http.StatusOK:
 		return nil
 	default:

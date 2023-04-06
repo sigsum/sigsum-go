@@ -19,9 +19,6 @@ type ConsistencyProof struct {
 }
 
 func hashesToASCII(w io.Writer, hashes []crypto.Hash) error {
-	if len(hashes) == 0 {
-		return fmt.Errorf("internal error, empty path")
-	}
 	for _, hash := range hashes {
 		err := ascii.WriteHash(w, "node_hash", &hash)
 		if err != nil {
@@ -77,12 +74,15 @@ func (pr *ConsistencyProof) ToASCII(w io.Writer) error {
 	return hashesToASCII(w, pr.Path)
 }
 
+func (pr *ConsistencyProof) Parse(p *ascii.Parser) error {
+	var err error
+	pr.Path, err = hashesFromASCII(p)
+	return err
+}
+
 func (pr *ConsistencyProof) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
-	var err error
-
-	pr.Path, err = hashesFromASCII(&p)
-	return err
+	return pr.Parse(&p)
 }
 
 func (pr *ConsistencyProof) Verify(oldTree, newTree *TreeHead) error {
