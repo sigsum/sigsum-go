@@ -71,6 +71,41 @@ to appropriate users via the ssh-agent protocol.
 
 # The `sigsum-key` tool
 
+The `sigsum-key` can generate new keys, create and verify signatures,
+and convert between different key formats.
+
+## Key generation
+
+To generate a new key pair, run
+```
+sigsum-key gen -o key-file
+```
+This generates a new ED25519 keypair (with key material provided by
+the crypto/rand module in the golang standard library). The private
+key is stored to the given output file ("key-file" in the example),
+in OpenSSH format. The private key is *not* encrypted, but stored with
+restrictive file permissions. The corresponding public key is written
+to a file with a ".pub" suffix, ("key-file.pub" in the example), in
+OpenSSH format.
+
+Behavoir is similar to the OpenSSH key generation utility, if invoked
+like
+```
+ssh-keygen -q -N '' -t ed25519 -f key-file
+```
+
+## Public key conversion
+
+TODO: ssh-keygen hex/hash/pub-to-hex
+
+## Sign and verify operations
+
+The sigsum-key tool can also create and verify signatures using
+[OpenSSH signature
+format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.sshsig).
+
+TODO: Details
+
 # The `sigsum-submit` tool
 
 # The `sigsum-verify` tool
