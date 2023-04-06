@@ -37,24 +37,19 @@ func main() {
 	const usage = `sigsum-token sub commands:
 
   sigsum-token help | --help
-    Display this help.
+    Display this help. All the below sub commands also accept the --help
+    option, to display help for that sub command.
 
-  sigsum-token create -k KEY-FILE --log PUBKEY [--domain DOMAIN] [-o OUTPUT-FILE]
+  sigsum-token create [options]
     Create a token for submissions to the the given log, essentially
-    a signature using the given private key. If --domain is given, output
-    a complete HTTP header.
+    a signature on the log's public key.
 
-  sigsum-token record -k PUBKEY-FILE [-o OUTPUT-FILE]
-    Format the public key as a TXT record in zone file format.
+  sigsum-token record [options]
+    Format a public key as a TXT record in zone file format.
 
-  sigsum-token verify --log PUBKEY [-k PUBKEY] [--domain DOMAIN] [-q] < TOKEN
+  sigsum-token verify [options] < token
     Verifies a submit token. The input on stdin is either a raw hex
-    token or a HTTP header. For a raw token, one of -k or --domain is required. For
-    a HTTP header --key and --domain are optional, but validation
-    fails if they are inconsistent with what{s looked up from the HTTP
-    header. The -q (quiet) option suppresses output on validation
-    errors, with result only reflected in the exit code.
-
+    token or a HTTP header.
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -165,8 +160,22 @@ func newOptionSet(args []string) *getopt.Set {
 	return set
 }
 
-func parseNoArgs(set *getopt.Set, args []string) {
-	set.Parse(args[1:])
+// Also adds and processes the help option.
+func parseNoArgs(set *getopt.Set, args []string, usage string) {
+	help := false
+	set.FlagLong(&help, "help", 0, "Display help")
+	err := set.Getopt(args[1:], nil)
+	// Check help first; if seen, ignore errors about missing mandatory arguments.
+	if help {
+		set.PrintUsage(os.Stdout)
+		fmt.Print(usage)
+		os.Exit(0)
+	}
+	if err != nil {
+		log.Printf("err: %v\n", err)
+		set.PrintUsage(log.Writer())
+		os.Exit(1)
+	}
 	if set.NArgs() > 0 {
 		log.Fatal("Too many arguments.")
 	}
@@ -174,27 +183,40 @@ func parseNoArgs(set *getopt.Set, args []string) {
 
 func (s *createSettings) parse(args []string) {
 	set := newOptionSet(args)
-	set.FlagLong(&s.keyFile, "key", 'k', "Private key file").Mandatory()
-	set.FlagLong(&s.outputFile, "output-file", 'o', "Output file")
-	set.FlagLong(&s.logKeyFile, "log", 0, "Log public key file").Mandatory()
+	set.FlagLong(&s.keyFile, "key", 'k', "Private key", "file").Mandatory()
+	set.Flag(&s.outputFile, 'o', "Output", "file")
+	set.FlagLong(&s.logKeyFile, "log", 0, "Log's public key", "file").Mandatory()
 	set.FlagLong(&s.domain, "domain", 0, "Domain")
-	parseNoArgs(set, args)
+	parseNoArgs(set, args, `
+    Create a token for submissions to the the given log, essentially a
+    signature on the log's public key. If --domain is given, output a
+    complete HTTP header.
+`)
 }
 
 func (s *recordSettings) parse(args []string) {
 	set := newOptionSet(args)
-	set.FlagLong(&s.keyFile, "key", 'k', "Private key file").Mandatory()
-	set.FlagLong(&s.outputFile, "output-file", 'o', "Output file")
-	parseNoArgs(set, args)
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
+	set.Flag(&s.outputFile, 'o', "Output", "file")
+	parseNoArgs(set, args, `
+    Format the public key as a TXT record in zone file format.
+`)
 }
 
 func (s *verifySettings) parse(args []string) {
 	set := newOptionSet(args)
-	set.FlagLong(&s.keyFile, "key", 'k', "Public key file")
-	set.FlagLong(&s.logKeyFile, "log", 0, "Log public key file").Mandatory()
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
+	set.FlagLong(&s.logKeyFile, "log", 0, "Log's public key", "file").Mandatory()
 	set.FlagLong(&s.domain, "domain", 0, "Domain")
 	set.FlagLong(&s.quiet, "quiet", 'q', "Quiet mode")
-	parseNoArgs(set, args)
+	parseNoArgs(set, args, `
+    Verifies a submit token. The input on stdin is either a raw hex
+    token or a HTTP header. For a raw token, one of -k or --domain is
+    required. For a HTTP header --key and --domain are optional, but
+    validation fails if they are inconsistent with what's looked up
+    from the HTTP header. The -q (quiet) option suppresses output on
+    validation errors, with result only reflected in the exit code.
+`)
 }
 
 // If outputFile is non-empty: open file, pass to f, and automatically
