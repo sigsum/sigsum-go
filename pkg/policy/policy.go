@@ -9,8 +9,8 @@ import (
 )
 
 type Entity struct {
-	PubKey crypto.PublicKey
-	Url    string
+	PublicKey crypto.PublicKey
+	URL       string
 }
 
 // The method gets a set of witnesses for which a cosignature was
@@ -31,14 +31,14 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 	if !ok {
 		return fmt.Errorf("unknown log")
 	}
-	if !cth.Verify(&log.PubKey) {
+	if !cth.Verify(&log.PublicKey) {
 		return fmt.Errorf("invalid log signature")
 	}
 	verified := make(map[crypto.Hash]struct{})
 	failed := 0
 	for _, cs := range cth.Cosignatures {
 		if witness, ok := p.witnesses[cs.KeyHash]; ok {
-			if cs.Verify(&witness.PubKey, logKeyHash, &cth.TreeHead) {
+			if cs.Verify(&witness.PublicKey, logKeyHash, &cth.TreeHead) {
 				verified[cs.KeyHash] = struct{}{}
 			} else {
 				failed++
@@ -83,18 +83,18 @@ func newEmptyPolicy() *Policy {
 }
 
 func (p *Policy) addLog(log *Entity) (crypto.Hash, error) {
-	h := crypto.HashBytes(log.PubKey[:])
+	h := crypto.HashBytes(log.PublicKey[:])
 	if _, dup := p.logs[h]; dup {
-		return crypto.Hash{}, fmt.Errorf("duplicate log: %x\n", log.PubKey)
+		return crypto.Hash{}, fmt.Errorf("duplicate log: %x\n", log.PublicKey)
 	}
 	p.logs[h] = *log
 	return h, nil
 }
 
 func (p *Policy) addWitness(witness *Entity) (crypto.Hash, error) {
-	h := crypto.HashBytes(witness.PubKey[:])
+	h := crypto.HashBytes(witness.PublicKey[:])
 	if _, dup := p.witnesses[h]; dup {
-		return crypto.Hash{}, fmt.Errorf("duplicate witness: %x\n", witness.PubKey)
+		return crypto.Hash{}, fmt.Errorf("duplicate witness: %x\n", witness.PublicKey)
 	}
 	p.witnesses[h] = *witness
 	return h, nil
@@ -103,7 +103,7 @@ func (p *Policy) addWitness(witness *Entity) (crypto.Hash, error) {
 func randomizeEntities(m map[crypto.Hash]Entity) []Entity {
 	entities := make([]Entity, 0, len(m))
 	for _, entity := range m {
-		if len(entity.Url) > 0 {
+		if len(entity.URL) > 0 {
 			entities = append(entities, entity)
 		}
 	}
@@ -129,7 +129,7 @@ func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
 	p := newEmptyPolicy()
 
 	for _, l := range logs {
-		if _, err := p.addLog(&Entity{PubKey: l}); err != nil {
+		if _, err := p.addLog(&Entity{PublicKey: l}); err != nil {
 			return nil, err
 		}
 	}
@@ -137,7 +137,7 @@ func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
 	subQuorums := []Quorum{}
 
 	for _, w := range witnesses {
-		h, err := p.addWitness(&Entity{PubKey: w})
+		h, err := p.addWitness(&Entity{PublicKey: w})
 		if err != nil {
 			return nil, err
 		}

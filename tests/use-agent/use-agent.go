@@ -19,7 +19,7 @@ func main() {
 	if !strings.HasPrefix(ascii, "ssh-ed25519 ") {
 		log.Fatalf("reading key input doesn't look like an openssh public key: %q", ascii)
 	}
-	pubKey, err := key.ParsePublicKey(ascii)
+	publicKey, err := key.ParsePublicKey(ascii)
 	if err != nil {
 		log.Fatalf("parsing public key failed: %v", err)
 	}
@@ -27,16 +27,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("parsing key failed: %v", err)
 	}
-	if signer.Public() != pubKey {
+	if signer.Public() != publicKey {
 		log.Fatalf("internal error, public key inconsistency\n  %x\n  %x\n",
-			pubKey, signer.Public())
+			publicKey, signer.Public())
 	}
 	msg := []byte("squemish ossifrage")
 	signature, err := signer.Sign(msg)
 	if err != nil {
 		log.Fatalf("signing failed: %v", err)
 	}
-	if !crypto.Verify(&pubKey, msg, &signature) {
+	if !crypto.Verify(&publicKey, msg, &signature) {
 		log.Fatal("signature appears invalid!")
 	}
 }

@@ -47,7 +47,7 @@ func (c *config) parseLog(args []string) error {
 	if len(args) > 1 {
 		url = args[1]
 	}
-	_, err = c.policy.addLog(&Entity{PubKey: key, Url: url})
+	_, err = c.policy.addLog(&Entity{PublicKey: key, URL: url})
 	return err
 }
 
@@ -67,7 +67,7 @@ func (c *config) parseWitness(args []string) error {
 	if len(args) > 2 {
 		url = args[2]
 	}
-	h, err := c.policy.addWitness(&Entity{PubKey: key, Url: url})
+	h, err := c.policy.addWitness(&Entity{PublicKey: key, URL: url})
 	if err != nil {
 		return err
 	}
