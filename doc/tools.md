@@ -173,7 +173,7 @@ Signs a message.
 ```
 echo Hello | sigsum-key verify -s hello.sign -k example.key.pub
 echo Helloo | sigsum-key verify -s hello.sign -k example.key.pub
-==>signature is not valid
+==> signature is not valid
 ```
 Successful and failing signature verification.
 
