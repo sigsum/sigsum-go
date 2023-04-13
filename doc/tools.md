@@ -206,7 +206,7 @@ the quorum.
 If the policy file specifies URLs for more than one log, they are
 tried in random order.
 
-If the log(s) used are configured to apply domain-based rate-limiting
+If the log(s) used are configured to apply domain-based rate limiting
 (as publicly accessible logs are expected to do), the
 `--token-key-file` option must be used to specify the private key used
 for signing a submit token, and the `--token-domain` option specifies
@@ -257,3 +257,50 @@ The proof is considered valid if
 4. the inclusion proof ties the leaf to the signed tree head.
 
 # The `sigsum-token` tool
+
+The `sigsum-token` tool is used to manage the Sigsum "submit tokens"
+that are used for domain based rate limiting. There are three sub
+commands, `create`, `record` and `verify`.
+
+## Creating a submit token
+
+To create a submit token, one first needs a key pair (it is
+recommended to create a key used exclusively for this purpose).
+A token is a fix string, to be included in the "sigsum-token:" header
+in `add-leaf` requests sent to a log. One can use the same rate limit
+key with multiple logs, but tokens will be distinct, since they're
+essentially a signature on the log's public key.
+
+To create a token, use `sigsum-token create`. There are two mandatory
+opions, `-k` to specify the signing key, i.e., the private half of the
+rate limit keypair, and `--log`, to specify the file with the log's
+public key. If no other options are used, the output is the token in
+the form of a hex string (representing an ed25519 signature).
+
+If the `--domain` option is used, the argument to this option is the
+domain where the corresponding public key is registered, and then the
+command outputs a complete HTTP header line.
+
+Note that when using `sigsum-submit`, you don't need `sigsum-token` to
+create any tokens; `sigsum-submit` creates appropriate tokens for each
+log if you pass the `--token-key-file` and `--token-domain` options.
+
+## Creating a DNS record for a key
+
+To use submit tokens, the corresponding public key must be registered
+in DNS. The `sigsum-token record` sub command formats an appropriate
+TXT record, in zone file format.
+
+There's one mandatory argument, `-k`, specifying the public key to
+use. The TXT record is written to standard output, or to the file
+specified with the `-o` option.
+
+## Verifying a submit token
+
+The `sigsum-token verify` sub command reads the token to validate from
+standard input, and it handles both raw hex tokens, and complete http
+headers. For a raw token, one of `-k` (public key) or `--domain` is
+required. For a HTTP header, `--key` and `--domain` are optional, but
+validation fails if they are inconsistent with what's looked up from
+the HTTP header. The `-q` (quiet) option suppresses output on
+validation errors, with result only reflected in the exit code.
