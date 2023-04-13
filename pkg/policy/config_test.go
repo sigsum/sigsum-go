@@ -44,16 +44,16 @@ witness W4 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 	logs := policy.GetLogsWithUrl()
 	if got, want := len(logs), 1; got != want {
 		t.Errorf("Unexpected number of logs with url in policy, got %d, expected %d", got, want)
-	} else if got, want := logs[0].Url, "http://sigsum.example.org"; got != want {
+	} else if got, want := logs[0].URL, "http://sigsum.example.org"; got != want {
 		t.Errorf("Unexpected log url, got %q, expected %q", got, want)
 	}
 
 	witnesses := policy.GetWitnessesWithUrl()
 	if got, want := len(witnesses), 2; got != want {
 		t.Errorf("Unexpected number of witnesses with url in policy, got %d, expected %d", got, want)
-	} else if !((witnesses[0].Url == "http://w1" && witnesses[1].Url == "http://w3") ||
-		(witnesses[1].Url == "http://w1" && witnesses[0].Url == "http://w3")) {
-		t.Errorf("Unexpected witness urls, got %v, %v", witnesses[0].Url, witnesses[1].Url)
+	} else if !((witnesses[0].URL == "http://w1" && witnesses[1].URL == "http://w3") ||
+		(witnesses[1].URL == "http://w1" && witnesses[0].URL == "http://w3")) {
+		t.Errorf("Unexpected witness urls, got %v, %v", witnesses[0].URL, witnesses[1].URL)
 	}
 
 	if policy.quorum == nil {

@@ -107,7 +107,7 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 	for _, entity := range logs {
 		var tokenHeader *string
 		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
-			token, err := token.MakeToken(config.RateLimitSigner, &entity.PubKey)
+			token, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
 			if err != nil {
 				return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
 			}
@@ -117,10 +117,10 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 
 		client := client.New(client.Config{
 			UserAgent: config.getUserAgent(),
-			LogURL:    entity.Url,
+			URL:       entity.URL,
 		})
 
-		logKeyHash := crypto.HashBytes(entity.PubKey[:])
+		logKeyHash := crypto.HashBytes(entity.PublicKey[:])
 		pr, err := func() (proof.SigsumProof, error) {
 			ctx, cancel := context.WithTimeout(ctx, config.getTimeout())
 			defer cancel()
@@ -130,7 +130,7 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 			pr.Leaf = proof.NewShortLeaf(&leaf)
 			return pr, nil
 		}
-		log.Error("Submitting to log %q failed: %v", entity.Url, err)
+		log.Error("Submitting to log %q failed: %v", entity.URL, err)
 	}
 	return proof.SigsumProof{}, fmt.Errorf("all logs failed, giving up")
 }

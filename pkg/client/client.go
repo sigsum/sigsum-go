@@ -39,7 +39,7 @@ var (
 
 type Config struct {
 	UserAgent string
-	LogURL    string
+	URL       string
 }
 
 func New(cfg Config) *Client {
@@ -55,27 +55,27 @@ type Client struct {
 }
 
 func (cli *Client) GetSecondaryTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
-	err = cli.get(ctx, types.EndpointGetSecondaryTreeHead.Path(cli.config.LogURL), sth.FromASCII)
+	err = cli.get(ctx, types.EndpointGetSecondaryTreeHead.Path(cli.config.URL), sth.FromASCII)
 	return
 }
 
 func (cli *Client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead, err error) {
-	err = cli.get(ctx, types.EndpointGetTreeHead.Path(cli.config.LogURL), cth.FromASCII)
+	err = cli.get(ctx, types.EndpointGetTreeHead.Path(cli.config.URL), cth.FromASCII)
 	return
 }
 
 func (cli *Client) GetInclusionProof(ctx context.Context, req requests.InclusionProof) (proof types.InclusionProof, err error) {
-	err = cli.get(ctx, req.ToURL(types.EndpointGetInclusionProof.Path(cli.config.LogURL)), proof.FromASCII)
+	err = cli.get(ctx, req.ToURL(types.EndpointGetInclusionProof.Path(cli.config.URL)), proof.FromASCII)
 	return
 }
 
 func (cli *Client) GetConsistencyProof(ctx context.Context, req requests.ConsistencyProof) (proof types.ConsistencyProof, err error) {
-	err = cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.config.LogURL)), proof.FromASCII)
+	err = cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.config.URL)), proof.FromASCII)
 	return
 }
 
 func (cli *Client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves []types.Leaf, err error) {
-	err = cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.config.LogURL)),
+	err = cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.config.URL)),
 		func(r io.Reader) (err error) {
 			leaves, err = types.LeavesFromASCII(r)
 			return err
@@ -86,7 +86,7 @@ func (cli *Client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves [
 func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf, tokenHeader *string) (bool, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
-	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.LogURL), tokenHeader, &buf); err != nil {
+	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.URL), tokenHeader, &buf); err != nil {
 		if errors.Is(err, HttpAccepted) {
 			return false, nil
 		}
