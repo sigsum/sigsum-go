@@ -2,9 +2,6 @@
 
 set -e
 
-echo >&2 Temporarily disabled, needs log server updated with new signature format
-exit 77
-
 ./bin/sigsum-key gen -o test.log.key
 ./bin/sigsum-key gen -o test.submit.key
 ./bin/sigsum-key gen -o test.witness.key

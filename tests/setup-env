@@ -2,4 +2,4 @@
 
 set -e
 GOBIN=$(pwd)/bin go install ../cmd/...
-GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@d6cb0672c52975e48cab2ab73bae40fd8835a585 # witness-client
+GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@43391b37a306d2056a6f637ce9c442b956da8a1f # witness-client
