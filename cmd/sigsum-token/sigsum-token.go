@@ -153,10 +153,10 @@ func main() {
 	}
 }
 
-func newOptionSet(args []string) *getopt.Set {
+func newOptionSet(args []string, parameters string) *getopt.Set {
 	set := getopt.New()
 	set.SetProgram(os.Args[0] + " " + os.Args[1])
-	set.SetParameters("")
+	set.SetParameters(parameters)
 	return set
 }
 
@@ -182,7 +182,7 @@ func parseNoArgs(set *getopt.Set, args []string, usage string) {
 }
 
 func (s *createSettings) parse(args []string) {
-	set := newOptionSet(args)
+	set := newOptionSet(args, "")
 	set.FlagLong(&s.keyFile, "key", 'k', "Private key", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Output", "file")
 	set.FlagLong(&s.logKeyFile, "log", 0, "Log's public key", "file").Mandatory()
@@ -195,7 +195,7 @@ func (s *createSettings) parse(args []string) {
 }
 
 func (s *recordSettings) parse(args []string) {
-	set := newOptionSet(args)
+	set := newOptionSet(args, "")
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Output", "file")
 	parseNoArgs(set, args, `
@@ -204,7 +204,7 @@ func (s *recordSettings) parse(args []string) {
 }
 
 func (s *verifySettings) parse(args []string) {
-	set := newOptionSet(args)
+	set := newOptionSet(args, "< token")
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
 	set.FlagLong(&s.logKeyFile, "log", 0, "Log's public key", "file").Mandatory()
 	set.FlagLong(&s.domain, "domain", 0, "Domain")
@@ -212,7 +212,7 @@ func (s *verifySettings) parse(args []string) {
 	parseNoArgs(set, args, `
     Verifies a submit token. The input on stdin is either a raw hex
     token or a HTTP header. For a raw token, one of -k or --domain is
-    required. For a HTTP header --key and --domain are optional, but
+    required. For a HTTP header, --key and --domain are optional, but
     validation fails if they are inconsistent with what's looked up
     from the HTTP header. The -q (quiet) option suppresses output on
     validation errors, with result only reflected in the exit code.
