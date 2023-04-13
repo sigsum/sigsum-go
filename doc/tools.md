@@ -123,7 +123,7 @@ or output file, with `-o`.
 
 ## Sign and verify operations
 
-The sigsum-key tool can also create and verify signatures using
+The `sigsum-key` tool can also create and verify signatures using
 [OpenSSH signature
 format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.sshsig).
 
@@ -137,7 +137,7 @@ The `-k` option is required, and specifies the key to use for signing
 private key is acessible via ssh-agent). The message to sign is read
 from standard input. The default namespace (a feature of OpenSSH
 format signatures) is the one used for a signatures in a Sigsum leaf.
-The create dsignature is written to standard output, if no output file
+The created signature is written to standard output, if no output file
 is specified with the `-o` option.
 
 By default, the signature is a raw hex representation of a 64-octet
@@ -178,8 +178,8 @@ signing key to use for signing the leaf. The leaf message is read from
 standard input. By default, the message is the SHA256 hash of the
 input. To use the input as is, without hashing, pass the `--raw-hash`
 option. In this case, the data on standard input must either be
-exactly 32 octets, or a hex string (64 digits, possibly with some
-leading and trailing whitespace).
+exactly 32 octets, or a hex string representing 32 octets (64 digits,
+possibly with some leading and trailing whitespace).
 
 If the request is not to be submitted right away, as described below,
 the request is written to standard output, or to the file specified
@@ -216,10 +216,9 @@ header is created and attached to the add-leaf request.
 
 When submitting a request, `sigsum-submit` repeats the request until
 it is acknowledged by the log. It keeps polling the log until it has
-collected all the pieces for a [Sigsum proof](./sigsum-proof.md) can
-collect a sigsum proof, i.e., a cosigned tree head, with cosignatures
-satisfying quorum requirements, and an inclusion proof for the
-submitted leaf.
+collected all the pieces for a [Sigsum proof](./sigsum-proof.md),
+i.e., a cosigned tree head, with cosignatures satisfying quorum
+requirements, and an inclusion proof for the submitted leaf.
 
 If submission to the first log fails, or polling for the required proof
 material times out, `sigsum-submit` tries the next log.
@@ -234,5 +233,27 @@ If neither a signing key (`-k`) or policy file (`-p`) is provided,
 the syntax and signature, but there is no output.
 
 # The `sigsum-verify` tool
+
+The `sigsum-verify` tool verifies a Sigsum proof, as created by
+`sigsum-submit`.
+
+The message to be verified is read from standard input. Like for
+`sigsum-submit`, by default the message is the SHA256 hash of the
+input data. If the `--raw-hash` options is provided, the input is used
+as is, without hashing, and in this case, it must be either exactly 32
+octets, or a hex string representing 32 octets.
+
+The submitters public key (`-k` option) and a policy file (`-p`
+option) must be provided, and the name of the proof file the only
+non-option argument.
+
+The proof is considered valid if
+
+1. the submitter's signature on the message is valid,
+2. the tree head is signed by one of the logs listed in the
+   policy,
+3. there are enough cosignatures to satisfy the policy's quorum
+   requirement, and
+4. the inclusion proof ties the leaf to the signed tree head.
 
 # The `sigsum-token` tool
