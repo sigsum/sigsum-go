@@ -157,6 +157,32 @@ The use of OpenSSH signature formats in the Sigsum protocols is under
 discussion. If usage is dropped in version 1 of the Sigsum protocols,
 these sub commands are likely to change.
 
+## Examples
+
+```
+sigsum-key gen -o example.key
+```
+Creates a new private key file "example.key" and corresponding public
+key file "example.key.pub".
+
+```
+echo Hello | sigsum-key sign  -k example.key -o hello.sign
+```
+Signs a message.
+
+```
+echo Hello | sigsum-key verify -s hello.sign -k example.key.pub
+echo Helloo | sigsum-key verify -s hello.sign -k example.key.pub
+==>signature is not valid
+```
+Successful and failing signature verification.
+
+```
+sigsum-key hex -k example.key.pub
+==> e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
+```
+Key conversion.
+
 # The `sigsum-submit` tool
 
 The `sigsum-submit` tool is used to create and/or submit an add-leaf
@@ -232,6 +258,53 @@ If neither a signing key (`-k`) or policy file (`-p`) is provided,
 `sigsum-submit` reads a leaf request from standard input, and verifies
 the syntax and signature, but there is no output.
 
+## Examples
+
+```
+echo "Hello old friend" | sigsum-submit -k example.key -p example.policy
+==> version=0
+==> log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
+==> leaf=9c30 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc 40160c833571c121bfdc6a02006053a80d3e91a8b73abb4dd0e07cc3098d8e58a41921d8f5649e9fb81c9b7c6b458747c4c3b49cc08c869867100a7f7be78902
+==>
+==> size=3
+==> root_hash=5b0cc467f86fdd57b371e434843b571a4cb47c6a64dad4bc80d96dd7d15c63a9
+==> signature=f6a87ce27a6df207eaaee6589ab73ac8cb5bead7bd0c0fea65556d847d11f3baea8ebdc686730f64e38000c77f5327048e73e08b7dc4de04b91f65930bedc100
+==>
+==> leaf_index=2
+==> node_hash=ede77b77a3bba27ea0af640d37e58281aef4459d71afdf5cf442cee8f9bebf5d
+```
+Submitting a message to poc.sigsum.org, using a policy file with the two lines
+```
+log 154f49976b59ff09a123675f58cb3e346e0455753c3c3b15d465dcb4f6512b0b https://poc.sigsum.org/jellyfish
+quorum none
+```
+
+```
+echo "Hello again" | sigsum-submit -k example.key |tee example.leaf
+==> message=07305a3200629a7b8a04f77008fa1b1f719fec3b60d4fdf2683ba60cf2956381
+==> signature=aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
+==> public_key=e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
+
+sigsum-submit -p example.policy < example.leaf
+==> version=0
+==> log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
+==> leaf=a2ee 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
+==>
+==> size=4
+==> root_hash=fd23842c67ba396cbabaa22226f3cd7737a4cc9f36c897f4fce2cc5070925dc2
+==> signature=fb573c4365ddc71110724f40dcbda62324d5c9b8e92d9e7cbda056f4c8e45e17018e72484c9d5af6e7c38b9705ed504375c3a03c7acc5abc3827dd042d1fe100
+==>
+==> leaf_index=3
+==> node_hash=4b3f8b78ae7fb7e6f6925d8a6f66af4d30de9b3e3a3f66cd4b0dba2c6b5b8725
+==> node_hash=ede77b77a3bba27ea0af640d37e58281aef4459d71afdf5cf442cee8f9bebf5d
+```
+Doing the submission as two steps.
+
+```
+sigsum-submit  < example.leaf
+```
+Verifying the signature on the leaf request created above.
+
 # The `sigsum-verify` tool
 
 The `sigsum-verify` tool verifies a Sigsum proof, as created by
@@ -255,6 +328,14 @@ The proof is considered valid if
 3. there are enough cosignatures to satisfy the policy's quorum
    requirement, and
 4. the inclusion proof ties the leaf to the signed tree head.
+
+## Example
+
+```
+echo "Hello old friend" | sigsum-verify -k example.key.pub -p example.policy example.proof
+```
+Verifying the proof from the first `sigsum-submit` example above,
+assuming the proof has been saved to the file "example.proof".
 
 # The `sigsum-token` tool
 
@@ -304,3 +385,16 @@ required. For a HTTP header, `--key` and `--domain` are optional, but
 validation fails if they are inconsistent with what's looked up from
 the HTTP header. The `-q` (quiet) option suppresses output on
 validation errors, with result only reflected in the exit code.
+
+## Examples
+
+```
+sigsum-token record -k example.key.pub
+==> _sigsum_v0 IN TXT "e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92"
+```
+Formatting a TXT record.
+```
+sigsum-token create -k example.key --log poc.key.pub --domain test.example.org
+==> sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e938f1b99dcc9333954c9eab1dfaf89643679a47c7a33fa2182c8f8cb8eb1222f90c55355a8b5b300
+```
+Creating a token, formatted as a http header.
