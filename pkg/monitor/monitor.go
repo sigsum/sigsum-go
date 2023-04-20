@@ -117,13 +117,19 @@ func (m *Monitor) Update(ctx context.Context) ([]types.Leaf, *types.SignedTreeHe
 		}
 		leaf := leaves[0]
 		leafHash := leaf.ToHash()
-		proof, err := m.client.GetInclusionProof(ctx,
-			requests.InclusionProof{Size: cth.Size, LeafHash: leafHash})
-		if err != nil {
-			return nil, nil, newAlert(AlertLogError, "get-inclusion-proof failed")
-		}
-		if err := proof.Verify(&leafHash, &cth.TreeHead); err != nil {
-			return nil, nil, newAlert(AlertLogError, "inclusion proof not valid")
+		if cth.Size == 1 {
+			if leafHash != cth.RootHash {
+				return nil, nil, newAlert(AlertLogError, "tree size = 1, but leaf hash != root hash")
+			}
+		} else {
+			proof, err := m.client.GetInclusionProof(ctx,
+				requests.InclusionProof{Size: cth.Size, LeafHash: leafHash})
+			if err != nil {
+				return nil, nil, newAlert(AlertLogError, "get-inclusion-proof failed: %v", err)
+			}
+			if err := proof.Verify(&leafHash, &cth.TreeHead); err != nil {
+				return nil, nil, newAlert(AlertLogError, "inclusion proof not valid")
+			}
 		}
 		if m.submitKeys != nil {
 			if key, ok := m.submitKeys[leaf.KeyHash]; ok {
