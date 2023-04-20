@@ -67,7 +67,9 @@ type Callbacks interface {
 // expected to have one instance and one goroutine per log it
 // monitors.
 type Monitor struct {
-	logKey     crypto.PublicKey // Identifies the log monitored.
+	logKey crypto.PublicKey // Identifies the log monitored.
+	// Keys of interest. If nil, all keys are of interest (but no
+	// signatures are verified(.
 	submitKeys map[crypto.Hash]crypto.PublicKey
 
 	client client.Log
@@ -93,13 +95,15 @@ func (m *Monitor) Update(ctx context.Context) ([]types.Leaf, *types.SignedTreeHe
 	if cth.Size == m.treeHead.Size {
 		return nil, nil, nil
 	}
-	proof, err := m.client.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: m.treeHead.Size, NewSize: cth.Size})
-	if err != nil {
-		return nil, nil, newAlert(AlertLogError, "get-consistency-proof failed: %v", err)
-	}
+	if m.treeHead.Size > 0 {
+		proof, err := m.client.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: m.treeHead.Size, NewSize: cth.Size})
+		if err != nil {
+			return nil, nil, newAlert(AlertLogError, "get-consistency-proof failed: %v", err)
+		}
 
-	if err := proof.Verify(&m.treeHead, &cth.TreeHead); err != nil {
-		return nil, nil, newAlert(AlertInconsistentTreeHead, "consistency proof not valid: %v", err)
+		if err := proof.Verify(&m.treeHead, &cth.TreeHead); err != nil {
+			return nil, nil, newAlert(AlertInconsistentTreeHead, "consistency proof not valid: %v", err)
+		}
 	}
 	var matchedLeaves []types.Leaf = nil
 	// TODO: Get leaves in batches, and verify them all based on a single inclusion proof.
@@ -121,11 +125,15 @@ func (m *Monitor) Update(ctx context.Context) ([]types.Leaf, *types.SignedTreeHe
 		if err := proof.Verify(&leafHash, &cth.TreeHead); err != nil {
 			return nil, nil, newAlert(AlertLogError, "inclusion proof not valid")
 		}
-		if key, ok := m.submitKeys[leaf.KeyHash]; ok {
-			if !leaf.Verify(&key) {
-				// Indicates log is misbehaving.
-				return nil, nil, newAlert(AlertLogError, "invalid leaf signature, keyhash %x", leaf.KeyHash)
+		if m.submitKeys != nil {
+			if key, ok := m.submitKeys[leaf.KeyHash]; ok {
+				if !leaf.Verify(&key) {
+					// Indicates log is misbehaving.
+					return nil, nil, newAlert(AlertLogError, "invalid leaf signature, keyhash %x", leaf.KeyHash)
+				}
+				matchedLeaves = append(matchedLeaves, leaf)
 			}
+		} else {
 			matchedLeaves = append(matchedLeaves, leaf)
 		}
 	}
@@ -149,15 +157,13 @@ func (m *Monitor) Run(ctx context.Context, interval time.Duration, callbacks Cal
 			}
 		}
 		// Waits until end of interval
-		select {
-		case <-updateCtx.Done():
-		}
+		<-updateCtx.Done()
 	}
 }
 
 // Runs monitor in the background, until ctx is cancelled.
 func StartMonitoring(
-	ctx context.Context, p policy.Policy,
+	ctx context.Context, p *policy.Policy,
 	interval time.Duration,
 	submitKeys map[crypto.Hash]crypto.PublicKey,
 	state map[crypto.Hash]types.SignedTreeHead,
