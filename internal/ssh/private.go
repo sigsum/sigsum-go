@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 
@@ -17,6 +18,8 @@ import (
 // This implementation supports only unencrypted ed25519 keys.
 
 const pemPrivateKeyTag = "OPENSSH PRIVATE KEY"
+
+var NoPEMError = errors.New("not a PEM file")
 
 var opensshPrivateKeyPrefix = bytes.Join([][]byte{
 	[]byte("openssh-key-v1"), []byte{0},

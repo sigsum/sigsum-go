@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -12,7 +13,6 @@ import (
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
-	"sigsum.org/sigsum-go/pkg/types"
 )
 
 type GenSettings struct {
@@ -29,7 +29,6 @@ type SignSettings struct {
 	keyFile    string
 	outputFile string
 	namespace  string
-	sshFormat  bool
 }
 
 type ExportSettings struct {
@@ -94,16 +93,9 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		signature := readSignatureFile(settings.signatureFile,
-			&publicKey, settings.namespace)
-		hash, err := crypto.HashFile(os.Stdin)
-		if err != nil {
-			log.Fatalf("failed to read stdin: %v\n", err)
-		}
-
-		if !crypto.Verify(&publicKey,
-			ssh.SignedDataFromHash(settings.namespace, &hash),
-			&signature) {
+		signature := readSignatureFile(settings.signatureFile)
+		msg := readMessage(settings.namespace)
+		if !crypto.Verify(&publicKey, msg, &signature) {
 			log.Fatalf("signature is not valid\n")
 		}
 	case "sign":
@@ -113,17 +105,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		hash, err := crypto.HashFile(os.Stdin)
-		if err != nil {
-			log.Fatalf("failed to read stdin: %v\n", err)
-		}
-		signature, err := signer.Sign(ssh.SignedDataFromHash(settings.namespace, &hash))
+		msg := readMessage(settings.namespace)
+		signature, err := signer.Sign(msg)
 		if err != nil {
 			log.Fatalf("signing failed: %v", err)
 		}
-		public := signer.Public()
-		writeSignatureFile(settings.outputFile, settings.sshFormat,
-			&public, settings.namespace, &signature)
+		writeSignatureFile(settings.outputFile, &signature)
 
 		// TODO: Change all subcommands hash, hex, hex-to-pub
 		// to take an optional filename arguments for input
@@ -204,8 +191,8 @@ func (s *GenSettings) parse(args []string) {
 }
 
 func (s *VerifySettings) parse(args []string) {
-	// Default value.
-	s.namespace = types.TreeLeafNamespace
+	// By default, no namespace.
+	s.namespace = ""
 
 	set := newOptionSet(args, true)
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
@@ -215,14 +202,13 @@ func (s *VerifySettings) parse(args []string) {
 }
 
 func (s *SignSettings) parse(args []string) {
-	// Default value.
-	s.namespace = types.TreeLeafNamespace
+	// By default, no namespace.
+	s.namespace = ""
 
 	set := newOptionSet(args, true)
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Signature output", "file")
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
-	set.FlagLong(&s.sshFormat, "ssh", 0, "Use OpenSSH format for output signature")
 	parseNoArgs(set, args)
 }
 
@@ -272,31 +258,37 @@ func writeKeyFiles(outputFile string, pub *crypto.PublicKey, signer *crypto.Ed25
 	}
 }
 
-func writeSignatureFile(outputFile string, sshFormat bool,
-	public *crypto.PublicKey, namespace string, signature *crypto.Signature) {
+func writeSignatureFile(outputFile string, signature *crypto.Signature) {
 	withOutput(outputFile, 0644, func(f io.Writer) error {
-		if sshFormat {
-			return ssh.WriteSignatureFile(f, public, namespace, signature)
-		}
 		_, err := fmt.Fprintf(f, "%x\n", signature[:])
 		return err
 	})
 }
 
-func readSignatureFile(fileName string,
-	pub *crypto.PublicKey, namespace string) crypto.Signature {
+func readSignatureFile(fileName string) crypto.Signature {
 	contents, err := os.ReadFile(fileName)
 	if err != nil {
 		log.Fatalf("reading file %q failed: %v", fileName, err)
 	}
-	signature, err := ssh.ParseSignatureFile(contents, pub, namespace)
-	if err == ssh.NoPEMError {
-		signature, err = crypto.SignatureFromHex(strings.TrimSpace(string(contents)))
-	}
+	signature, err := crypto.SignatureFromHex(strings.TrimSpace(string(contents)))
 	if err != nil {
 		log.Fatal(err)
 	}
 	return signature
+}
+
+// Read message being signed from stdin. Prepend namespace if it is nonempty.
+func readMessage(namespace string) []byte {
+	var buf bytes.Buffer
+	if len(namespace) > 0 {
+		buf.Write(crypto.AttachNameSpace(namespace, []byte{}))
+	}
+
+	_, err := io.Copy(&buf, os.Stdin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return buf.Bytes()
 }
 
 // Reads given file, or stdin.

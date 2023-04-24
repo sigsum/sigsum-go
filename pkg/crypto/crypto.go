@@ -2,6 +2,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -126,4 +127,8 @@ func SignerFromHex(s string) (*Ed25519Signer, error) {
 		return nil, err
 	}
 	return NewEd25519Signer(&secret), nil
+}
+
+func AttachNameSpace(namespace string, msg []byte) []byte {
+	return bytes.Join([][]byte{[]byte(namespace), msg}, []byte{0})
 }

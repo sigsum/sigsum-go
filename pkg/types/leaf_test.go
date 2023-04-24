@@ -16,7 +16,10 @@ import (
 func TestLeafSignedData(t *testing.T) {
 	desc := "valid: checksum 0x00,0x01,..."
 	if got, want := leafSignedData(validChecksum(t)), validLeafSignedDataBytes(t); !bytes.Equal(got, want) {
-		t.Errorf("got statement\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
+		t.Errorf("got\n\t%x\nbut wanted\n\t%x\nin test %q\n", got, want, desc)
+	}
+	if got, want := validLeafSignedDataBytes(t), 56; len(got) != want {
+		t.Errorf("got len %d\n\t%x\nbut wanted %d in test %q\n", len(got), got, want, desc)
 	}
 }
 
@@ -231,11 +234,8 @@ func validChecksum(t *testing.T) *crypto.Hash {
 func validLeafSignedDataBytes(t *testing.T) []byte {
 	hash := crypto.HashBytes(newHashBufferInc(t)[:])
 	return bytes.Join([][]byte{
-		[]byte("SSHSIG"),
-		[]byte{0, 0, 0, 23}, []byte("tree-leaf:v0@sigsum.org"),
-		[]byte{0, 0, 0, 0},
-		[]byte{0, 0, 0, 6}, []byte("sha256"),
-		[]byte{0, 0, 0, 32}, hash[:],
+		[]byte("sigsum.org/v1/tree-leaf"),
+		[]byte{0}, hash[:],
 	}, nil)
 }
 

@@ -97,3 +97,19 @@ func (s *Signer) Sign(message []byte) (crypto.Signature, error) {
 func (s *Signer) Public() crypto.PublicKey {
 	return s.publicKey
 }
+
+func parseSignature(blob []byte) (crypto.Signature, error) {
+	signature := skipPrefix(blob, bytes.Join([][]byte{
+		serializeUint32(83), // length of signature
+		serializeString("ssh-ed25519"),
+		serializeUint32(crypto.SignatureSize)}, nil))
+	if signature == nil {
+		return crypto.Signature{}, fmt.Errorf("invalid signature blob")
+	}
+	if len(signature) != crypto.SignatureSize {
+		return crypto.Signature{}, fmt.Errorf("bad signature length: %d", len(signature))
+	}
+	var ret crypto.Signature
+	copy(ret[:], signature)
+	return ret, nil
+}
