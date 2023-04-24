@@ -18,7 +18,7 @@ const (
 
 // TODO: Return hex string, for consistency with VerifyToken ?
 func MakeToken(signer crypto.Signer, logKey *crypto.PublicKey) (crypto.Signature, error) {
-	return signer.Sign(crypto.AttachNameSpace(namespace, logKey[:]))
+	return signer.Sign(crypto.AttachNamespace(namespace, logKey[:]))
 }
 
 // Verify a token using a given key, with no DNS loookup.
@@ -27,7 +27,7 @@ func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token string) 
 	if err != nil {
 		return fmt.Errorf("failed decoding hex signature: %v", err)
 	}
-	if !crypto.Verify(key, crypto.AttachNameSpace(namespace, logKey[:]), &signature) {
+	if !crypto.Verify(key, crypto.AttachNamespace(namespace, logKey[:]), &signature) {
 		return fmt.Errorf("invalid token signature")
 	}
 	return nil
@@ -70,7 +70,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) er
 		ignoredKeys = len(rsps) - maxNumberOfKeys
 		rsps = rsps[:maxNumberOfKeys]
 	}
-	signedData := crypto.AttachNameSpace(namespace, dv.logKey[:])
+	signedData := crypto.AttachNamespace(namespace, dv.logKey[:])
 	for _, keyHex := range rsps {
 		key, err := crypto.PublicKeyFromHex(keyHex)
 		if err != nil {

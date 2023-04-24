@@ -20,7 +20,7 @@ type Leaf struct {
 }
 
 func leafSignedData(checksum *crypto.Hash) []byte {
-	return crypto.AttachNameSpace(TreeLeafNamespace, checksum[:])
+	return crypto.AttachNamespace(TreeLeafNamespace, checksum[:])
 }
 
 func SignLeafChecksum(signer crypto.Signer, checksum *crypto.Hash) (crypto.Signature, error) {

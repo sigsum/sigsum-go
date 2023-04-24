@@ -129,6 +129,6 @@ func SignerFromHex(s string) (*Ed25519Signer, error) {
 	return NewEd25519Signer(&secret), nil
 }
 
-func AttachNameSpace(namespace string, msg []byte) []byte {
+func AttachNamespace(namespace string, msg []byte) []byte {
 	return bytes.Join([][]byte{[]byte(namespace), msg}, []byte{0})
 }

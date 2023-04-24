@@ -281,7 +281,7 @@ func readSignatureFile(fileName string) crypto.Signature {
 func readMessage(namespace string) []byte {
 	var buf bytes.Buffer
 	if len(namespace) > 0 {
-		buf.Write(crypto.AttachNameSpace(namespace, []byte{}))
+		buf.Write(crypto.AttachNamespace(namespace, []byte{}))
 	}
 
 	_, err := io.Copy(&buf, os.Stdin)

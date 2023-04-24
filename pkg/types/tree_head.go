@@ -74,7 +74,7 @@ func (th *TreeHead) toCosignedData(logKeyHash *crypto.Hash, timestamp uint64) []
 	copy(b[40:72], logKeyHash[:])
 	binary.BigEndian.PutUint64(b[72:80], timestamp)
 
-	return crypto.AttachNameSpace(CosignedTreeHeadNamespace, b)
+	return crypto.AttachNamespace(CosignedTreeHeadNamespace, b)
 }
 
 func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
