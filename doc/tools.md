@@ -10,7 +10,7 @@ TODO: Add a table of contents?
 There are several tools, some of which have sub commands, e.g.,
 `sigsum-key gen`. The aim is that each command should address one
 task, e.g., `sigsum-submit` is the tool to use to submit new items to
-be a Sigsum log, and collect proof of public logging, and
+a Sigsum log, and collect proof of public logging, and
 `sigsum-verify` is the tool to do offline verification of such a
 proof.
 
@@ -29,8 +29,8 @@ configuration files read by default.
 
 ## Key handling
 
-The ED25519 digital signature scheme is used for all Sigsum
-signatures, hence all keys are ED25519 keys.
+The Ed25519 digital signature scheme is used for all Sigsum
+signatures, hence all keys are Ed25519 keys.
 
 ### Public keys
 
@@ -41,7 +41,7 @@ ssh-ed25519 <base64> [optional comment]
 where the base64 blob in turn represent [SSH wire
 format](https://www.rfc-editor.org/rfc/rfc8709#name-public-key-format).
 In certain places, in particular, in the policy file, public keys are
-used in "raw" form, without this wrapping. Then an ED25519 public key
+used in "raw" form, without this wrapping. Then an Ed25519 public key
 is 32 octets in the format defined by [RFC
 8032](https://www.rfc-editor.org/rfc/rfc8032.html#section-5.1.2).
 
@@ -81,7 +81,7 @@ To generate a new key pair, run
 ```
 sigsum-key gen -o KEY-FILE
 ```
-This generates a new ED25519 keypair (with key material provided by
+This generates a new Ed25519 keypair (with key material provided by
 the crypto/rand module in the golang standard library). The private
 key is stored to the given output KEY-FILE, in OpenSSH format. The
 private key is *not* encrypted, but stored with restrictive file
@@ -141,7 +141,7 @@ The created signature is written to standard output, if no output file
 is specified with the `-o` option.
 
 By default, the signature is a raw hex representation of a 64-octet
-ED25519 signature. With the `--ssh` option, the signatures is wrapped
+Ed25519 signature. With the `--ssh` option, the signatures is wrapped
 in an OpenSSH signature file, a PEM file with the tag "SSH SIGNATURE".
 
 Signatures can be verified using
@@ -356,7 +356,7 @@ To create a token, use `sigsum-token create`. There are two mandatory
 opions, `-k` to specify the signing key, i.e., the private half of the
 rate limit keypair, and `--log`, to specify the file with the log's
 public key. If no other options are used, the output is the token in
-the form of a hex string (representing an ed25519 signature).
+the form of a hex string (representing an Ed25519 signature).
 
 If the `--domain` option is used, the argument to this option is the
 domain where the corresponding public key is registered, and then the
