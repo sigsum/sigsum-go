@@ -104,7 +104,6 @@ sigsum-key hex -k KEY-FILE
 ```
 The hex representation is used in the Sigsum policy file, and in
 messages on the wire. For the opposite conversion, use
-
 ```
 sigsum-key hex-to-pub -k HEX-FILE
 ```
@@ -159,34 +158,46 @@ these sub commands are likely to change.
 
 ## Examples
 
-```
-sigsum-key gen -o example.key
-```
-Creates a new private key file "example.key" and corresponding public
+Create a new private key file "example.key" and corresponding public
 key file "example.key.pub".
+```
+$ sigsum-key gen -o example.key
+```
 
+Sign a mesage using that key.
 ```
-echo Hello | sigsum-key sign  -k example.key -o hello.sign
+$ echo Hello | sigsum-key sign  -k example.key -o hello.sign
 ```
-Signs a message.
 
+Verify the signature, with exit code indicating success or failure. On
+success, there is no output.
 ```
-echo Hello | sigsum-key verify -s hello.sign -k example.key.pub
-echo Helloo | sigsum-key verify -s hello.sign -k example.key.pub
-==> signature is not valid
+$ echo Hello | sigsum-key verify -s hello.sign -k example.key.pub
+$ echo Helloo | sigsum-key verify -s hello.sign -k example.key.pub
+signature is not valid
 ```
-Successful and failing signature verification.
 
+Convert key to raw hex format.
 ```
-sigsum-key hex -k example.key.pub
-==> e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
+$ sigsum-key hex -k example.key.pub
+e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
 ```
-Key conversion.
 
 # The `sigsum-submit` tool
 
 The `sigsum-submit` tool is used to create and/or submit an add-leaf
-request to a Sigsum log.
+request to a Sigsum log (as defined in the [Sigsum
+spec](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md).
+
+To create and immediately submit a request, pass both of the `-k`
+(signing key) and `-p` (policy) options, described below.
+
+To separate these two parts of the process (e.g., if the machine with
+access to the private signing does not have Internet connectivity),
+first run `sigsum-submit -k` to create and sign the request. Collect
+the output, which in this case is the body of a Sigsum add-leaf
+request, and pass that as input input to `sigsum -p` later on, to
+submit it to a log.
 
 ## Options controlling output
 
@@ -199,9 +210,9 @@ an argument that can be one of "fatal", "error", "warning", "info", or
 
 ## Creating a request
 
-To create a new an add-leaf request, use the `-k` option to pass a
-signing key to use for signing the leaf. The leaf message is read from
-standard input. By default, the message is the SHA256 hash of the
+To create, and sign, a new an add-leaf request, use the `-k` option to
+pass a signing key. The message to log is read from standard input. By
+default, the message submitted to the log is the SHA256 hash of the
 input. To use the input as is, without hashing, pass the `--raw-hash`
 option. In this case, the data on standard input must either be
 exactly 32 octets, or a hex string representing 32 octets (64 digits,
@@ -260,50 +271,57 @@ the syntax and signature, but there is no output.
 
 ## Examples
 
-```
-echo "Hello old friend" | sigsum-submit -k example.key -p example.policy
-==> version=0
-==> log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
-==> leaf=9c30 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc 40160c833571c121bfdc6a02006053a80d3e91a8b73abb4dd0e07cc3098d8e58a41921d8f5649e9fb81c9b7c6b458747c4c3b49cc08c869867100a7f7be78902
-==>
-==> size=3
-==> root_hash=5b0cc467f86fdd57b371e434843b571a4cb47c6a64dad4bc80d96dd7d15c63a9
-==> signature=f6a87ce27a6df207eaaee6589ab73ac8cb5bead7bd0c0fea65556d847d11f3baea8ebdc686730f64e38000c77f5327048e73e08b7dc4de04b91f65930bedc100
-==>
-==> leaf_index=2
-==> node_hash=ede77b77a3bba27ea0af640d37e58281aef4459d71afdf5cf442cee8f9bebf5d
-```
-Submitting a message to poc.sigsum.org, using a policy file with the two lines
+To submit to the log server at `poc.sigsum.org`, we first need a
+policy file with the following two lines.
 ```
 log 154f49976b59ff09a123675f58cb3e346e0455753c3c3b15d465dcb4f6512b0b https://poc.sigsum.org/jellyfish
 quorum none
 ```
 
+Submit a message to this log.
 ```
-echo "Hello again" | sigsum-submit -k example.key | tee example.leaf
-==> message=07305a3200629a7b8a04f77008fa1b1f719fec3b60d4fdf2683ba60cf2956381
-==> signature=aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
-==> public_key=e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
+$ echo "Hello old friend" | sigsum-submit -k example.key -p example.policy
+version=0
+log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
+leaf=9c30 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc 40160c833571c121bfdc6a02006053a80d3e91a8b73abb4dd0e07cc3098d8e58a41921d8f5649e9fb81c9b7c6b458747c4c3b49cc08c869867100a7f7be78902
 
-sigsum-submit -p example.policy < example.leaf
-==> version=0
-==> log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
-==> leaf=a2ee 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
-==>
-==> size=4
-==> root_hash=fd23842c67ba396cbabaa22226f3cd7737a4cc9f36c897f4fce2cc5070925dc2
-==> signature=fb573c4365ddc71110724f40dcbda62324d5c9b8e92d9e7cbda056f4c8e45e17018e72484c9d5af6e7c38b9705ed504375c3a03c7acc5abc3827dd042d1fe100
-==>
-==> leaf_index=3
-==> node_hash=4b3f8b78ae7fb7e6f6925d8a6f66af4d30de9b3e3a3f66cd4b0dba2c6b5b8725
-==> node_hash=ede77b77a3bba27ea0af640d37e58281aef4459d71afdf5cf442cee8f9bebf5d
-```
-Doing the submission as two steps.
+size=3
+root_hash=5b0cc467f86fdd57b371e434843b571a4cb47c6a64dad4bc80d96dd7d15c63a9
+signature=f6a87ce27a6df207eaaee6589ab73ac8cb5bead7bd0c0fea65556d847d11f3baea8ebdc686730f64e38000c77f5327048e73e08b7dc4de04b91f65930bedc100
 
+leaf_index=2
+node_hash=ede77b77a3bba27ea0af640d37e58281aef4459d71afdf5cf442cee8f9bebf5d
 ```
-sigsum-submit  < example.leaf
+
+We can also do the submission in two steps. First create a requests,
+saving it to "example.leaf".
 ```
-Verifying the signature on the leaf request created above.
+$ echo "Hello again" | sigsum-submit -k example.key | tee example.leaf
+message=07305a3200629a7b8a04f77008fa1b1f719fec3b60d4fdf2683ba60cf2956381
+signature=aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
+public_key=e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
+```
+
+Then submit it to the log.
+```
+$ sigsum-submit -p example.policy < example.leaf
+version=0
+log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
+leaf=a2ee 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
+
+size=4
+root_hash=fd23842c67ba396cbabaa22226f3cd7737a4cc9f36c897f4fce2cc5070925dc2
+signature=fb573c4365ddc71110724f40dcbda62324d5c9b8e92d9e7cbda056f4c8e45e17018e72484c9d5af6e7c38b9705ed504375c3a03c7acc5abc3827dd042d1fe100
+
+leaf_index=3
+node_hash=4b3f8b78ae7fb7e6f6925d8a6f66af4d30de9b3e3a3f66cd4b0dba2c6b5b8725
+node_hash=ede77b77a3bba27ea0af640d37e58281aef4459d71afdf5cf442cee8f9bebf5d
+```
+
+We can also verify the signature on the leaf request created above.
+```
+$ sigsum-submit < example.leaf
+```
 
 # The `sigsum-verify` tool
 
@@ -331,17 +349,21 @@ The proof is considered valid if
 
 ## Example
 
-```
-echo "Hello old friend" | sigsum-verify -k example.key.pub -p example.policy example.proof
-```
-Verifying the proof from the first `sigsum-submit` example above,
+Verify the proof from the first `sigsum-submit` example above,
 assuming the proof has been saved to the file "example.proof".
+```
+$ echo "Hello old friend" | sigsum-verify -k example.key.pub -p example.policy example.proof
+```
 
 # The `sigsum-token` tool
 
 The `sigsum-token` tool is used to manage the Sigsum "submit tokens"
-that are used for domain based rate limiting. There are three sub
-commands, `create`, `record` and `verify`.
+that are used for domain based rate limiting (as defined in the
+[Sigsum
+spec](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md),
+see also [rate limit
+configuration](https://git.glasklar.is/sigsum/core/log-go/-/blob/main/doc/rate-limit.md)).
+There are three sub commands, `create`, `record` and `verify`.
 
 ## Creating a submit token
 
@@ -388,13 +410,14 @@ validation errors, with result only reflected in the exit code.
 
 ## Examples
 
+Format a public key as a TXT record.
 ```
-sigsum-token record -k example.key.pub
-==> _sigsum_v0 IN TXT "e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92"
+$ sigsum-token record -k example.key.pub
+_sigsum_v0 IN TXT "e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92"
 ```
-Formatting a TXT record.
+
+Create a token, formatted as a http header.
 ```
-sigsum-token create -k example.key --log poc.key.pub --domain test.example.org
-==> sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e938f1b99dcc9333954c9eab1dfaf89643679a47c7a33fa2182c8f8cb8eb1222f90c55355a8b5b300
+$ sigsum-token create -k example.key --log poc.key.pub --domain test.example.org
+sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e938f1b99dcc9333954c9eab1dfaf89643679a47c7a33fa2182c8f8cb8eb1222f90c55355a8b5b300
 ```
-Creating a token, formatted as a http header.
