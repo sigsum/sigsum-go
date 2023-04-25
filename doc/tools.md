@@ -1,15 +1,15 @@
 # Sigsum command line tools
 
-Documentation of Sigsum the command line tools, including `sigsum-key`,
+Documentation of the Sigsum command line tools, including `sigsum-key`,
 `sigsum-submit` and `sigsum-verify`.
 
 TODO: Add a table of contents?
 
 # General conventions
 
-There are several commands, some of which have sub commands, e.g.,
+There are several tools, some of which have sub commands, e.g.,
 `sigsum-key gen`. The aim is that each command should address one
-role, e.g., `sigsum-submit` is the tool to use to submit new items to
+task, e.g., `sigsum-submit` is the tool to use to submit new items to
 be a Sigsum log, and collect proof of public logging, and
 `sigsum-verify` is the tool to do offline verification of such a
 proof.
@@ -54,8 +54,8 @@ Private keys are stored as unencrypted OpenSSH private key files
 defined by [OpenSSH key
 format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key)).
 
-Using unencrypted private keys on disk may be adequate fro some use
-cases, e.g., for the key used for signing the submit tokens used for
+Using unencrypted private keys on disk may be adequate for some use
+cases, e.g., for the key used to sign the submit tokens used for
 domain-based rate limiting.
 
 To support other kinds of key storage, the key can be made available
@@ -280,7 +280,7 @@ quorum none
 ```
 
 ```
-echo "Hello again" | sigsum-submit -k example.key |tee example.leaf
+echo "Hello again" | sigsum-submit -k example.key | tee example.leaf
 ==> message=07305a3200629a7b8a04f77008fa1b1f719fec3b60d4fdf2683ba60cf2956381
 ==> signature=aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
 ==> public_key=e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
@@ -317,7 +317,7 @@ as is, without hashing, and in this case, it must be either exactly 32
 octets, or a hex string representing 32 octets.
 
 The submitters public key (`-k` option) and a policy file (`-p`
-option) must be provided, and the name of the proof file the only
+option) must be provided, and the name of the proof file is the only
 non-option argument.
 
 The proof is considered valid if
