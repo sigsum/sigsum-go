@@ -51,6 +51,9 @@ func newAlert(t AlertType, msg string, args ...interface{}) *Alert {
 	return &Alert{Type: t, Err: fmt.Errorf(msg, args...)}
 }
 
+// TODO: Figure out the proper interface to the monitor. Are callbacks
+// the right way, or should we instead have one or more channels to
+// pass new data items and alerts?
 type Callbacks interface {
 	// Called when a log (identified by key hash) has a new tree
 	// head; application can use this to persist the tree head.
@@ -59,6 +62,7 @@ type Callbacks interface {
 	// Called when there are new leaves with submit key of
 	// interest. Includes only leaves with a known submit key, and
 	// where signature and inclusion proof are valid.
+	// TODO: Also pass along index for each leaf?
 	NewLeaves(logKeyHash crypto.Hash, leaves []types.Leaf)
 	Alert(logKeyHash crypto.Hash, e error)
 }
@@ -69,11 +73,17 @@ type Callbacks interface {
 type Monitor struct {
 	logKey crypto.PublicKey // Identifies the log monitored.
 	// Keys of interest. If nil, all keys are of interest (but no
-	// signatures are verified(.
+	// signatures are verified).
 	submitKeys map[crypto.Hash]crypto.PublicKey
 
 	client client.Log
 	// Latest processed valid tree head.
+	// TODO: This mutated field implies that this struct isn't
+	// concurrency safe. Which is no big problem, since it is used
+	// only by the goroutine spawned by the Run method. But
+	// consider removing the field here, and handle the the latest
+	// tree head as an input argument, and return value, for the
+	// Update method.
 	treeHead types.TreeHead
 }
 
