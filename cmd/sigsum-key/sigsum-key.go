@@ -219,7 +219,7 @@ func (s *SignSettings) parse(args []string) {
 	s.namespace = types.TreeLeafNamespace
 
 	set := newOptionSet(args, true)
-	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
+	set.FlagLong(&s.keyFile, "key", 'k', "Private key", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Signature output", "file")
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
 	set.FlagLong(&s.sshFormat, "ssh", 0, "Use OpenSSH format for output signature")
