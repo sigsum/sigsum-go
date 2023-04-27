@@ -18,7 +18,9 @@ import (
 
 const (
 	defaultPollDelay = 2 * time.Second
-	defaultTimeout   = 30 * time.Second
+	// Default log server publishing interval is 30 seconds, so
+	// use something longer.
+	defaultTimeout   = 45 * time.Second
 	defaultUserAgent = "sigsum-go submit"
 )
 

@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	getopt "github.com/pborman/getopt/v2"
 
@@ -28,6 +29,7 @@ type Settings struct {
 	outputFile   string
 	tokenDomain  string
 	tokenKeyFile string
+	timeout      time.Duration
 }
 
 func main() {
@@ -84,7 +86,10 @@ func main() {
 		if err != nil {
 			log.Fatal("%v", err)
 		}
-		config := submit.Config{Policy: policy, Domain: settings.tokenDomain}
+		config := submit.Config{Policy: policy,
+			Domain:        settings.tokenDomain,
+			PerLogTimeout: settings.timeout,
+		}
 		ctx := context.Background()
 
 		if len(config.Domain) > 0 {
@@ -154,6 +159,7 @@ func (s *Settings) parse(args []string) {
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
 	set.FlagLong(&s.tokenDomain, "token-domain", 0, "Create a Sigsum-Token: header for this domain")
 	set.FlagLong(&s.tokenKeyFile, "token-key-file", 0, "Key for signing Sigsum-Token: header", "file")
+	set.FlagLong(&s.timeout, "timeout", 0, "Per-log submission timeout. Zero means library default, currently 45s", "duration")
 	set.FlagLong(&help, "help", 0, "Display help")
 	set.Parse(args)
 	if help {
