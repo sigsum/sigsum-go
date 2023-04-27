@@ -3,7 +3,12 @@
 Documentation of the Sigsum command line tools, including `sigsum-key`,
 `sigsum-submit` and `sigsum-verify`.
 
-TODO: Add a table of contents?
+## Table of contents
+  * [General conventions tool](#general-conventions)
+  * [The sigsum-key tool](#the-sigsum-key-tool)
+  * [The sigsum-submit tool](#the-sigsum-submit-tool)
+  * [The sigsum-verify tool](#the-sigsum-verify-tool)
+  * [The sigsum-token tool](#the-sigsum-token-tool)
 
 # General conventions
 
