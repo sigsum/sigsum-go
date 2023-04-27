@@ -4,11 +4,11 @@ Documentation of the Sigsum command line tools, including `sigsum-key`,
 `sigsum-submit` and `sigsum-verify`.
 
 ## Table of contents
-  * [General conventions](#general-conventions)
-  * [sigsum-key](#the-sigsum-key-tool)
-  * [sigsum-submit](#the-sigsum-submit-tool)
-  * [sigsum-verify](#the-sigsum-verify-tool)
-  * [sigsum-token](#the-sigsum-token-tool)
+  * [General conventions tool](#general-conventions)
+  * [The sigsum-key tool](#the-sigsum-key-tool)
+  * [The sigsum-submit tool](#the-sigsum-submit-tool)
+  * [The sigsum-verify tool](#the-sigsum-verify-tool)
+  * [The sigsum-token tool](#the-sigsum-token-tool)
 
 # General conventions
 
