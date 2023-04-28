@@ -1,0 +1,56 @@
+#! /bin/sh
+
+set -e
+
+./bin/sigsum-key gen -o test.log.key
+./bin/sigsum-key gen -o test.submit.key
+
+# Reading private key files still supports raw hex.
+printf '%064x' 1 > test.token.key
+
+# Start sigsum log server
+rm -f test.log.sth
+echo "startup=empty" > test.log.sth.startup
+./bin/sigsum-log-primary --key-file test.log.key \
+    --interval=1s --log-level=error --backend=ephemeral --sth-file test.log.sth &
+
+SIGSUM_PID=$!
+MONITOR_PID=
+
+cleanup () {
+    kill ${SIGSUM_PID}
+    [ -z ${MONITOR_PID} ] || kill ${MONITOR_PID}
+}
+
+trap cleanup EXIT
+
+# Give log server some time to get ready.
+sleep 2
+
+echo "log $(./bin/sigsum-key hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "quorum none" >> test.policy
+
+./bin/sigsum-monitor -p test.policy --interval=2s test.submit.key.pub > test.monitor.out &
+
+MONITOR_PID=$!
+
+die() {
+    echo "$@" >&2
+    exit 1
+}
+
+search_output() {
+    for f in $(seq 10) ; do
+	if grep -- "$1" test.monitor.out >/dev/null ; then
+	    return 0
+	fi
+	sleep 2
+    done
+    return 1
+}
+for x in $(seq 5); do
+    echo >&2 "submit $x"
+    echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-key-file test.token.key -o /dev/null -k test.submit.key --policy test.policy
+    echo >&2 "waiting on monitor $x"
+    search_output $(echo "msg $x" | go run ./sha256-n/sha256-n.go 2) || die "Monitor not finding leaf $x"
+done
