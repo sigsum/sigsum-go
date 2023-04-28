@@ -87,13 +87,13 @@ To generate a new key pair, run
 sigsum-key gen -o KEY-FILE
 ```
 This generates a new Ed25519 keypair (with key material provided by
-the crypto/rand module in the golang standard library). The private
+the `crypto/rand` module in the golang standard library). The private
 key is stored to the given output KEY-FILE, in OpenSSH format. The
 private key is *not* encrypted, but stored with restrictive file
 permissions. The corresponding public key is written to a file with an
 added ".pub" suffix, in OpenSSH format.
 
-Behavoir is similar to the OpenSSH key generation utility, if invoked
+Behavior is similar to the OpenSSH key generation utility, if invoked
 like
 ```
 ssh-keygen -q -N '' -t ed25519 -f KEY-FILE
@@ -160,7 +160,7 @@ key file "example.key.pub".
 $ sigsum-key gen -o example.key
 ```
 
-Sign a mesage using that key.
+Sign a message using that key.
 ```
 $ echo Hello | sigsum-key sign  -k example.key -o hello.sign
 ```
@@ -233,7 +233,7 @@ Internet.
 The policy file must specify public key and URL for at least one log.
 If the policy file specifies a quorum different from "none" and
 corresponding witness public keys, `sigsum-submit` will not be
-satisfied until it has retreieved enough valid cosignatures to satisfy
+satisfied until it has retrieved enough valid cosignatures to satisfy
 the quorum.
 
 If the policy file specifies URLs for more than one log, they are
@@ -330,7 +330,7 @@ input data. If the `--raw-hash` options is provided, the input is used
 as is, without hashing, and in this case, it must be either exactly 32
 octets, or a hex string representing 32 octets.
 
-The submitters public key (`-k` option) and a policy file (`-p`
+The submitter's public key (`-k` option) and a policy file (`-p`
 option) must be provided, and the name of the proof file is the only
 non-option argument.
 
@@ -371,7 +371,7 @@ key with multiple logs, but tokens will be distinct, since they're
 essentially a signature on the log's public key.
 
 To create a token, use `sigsum-token create`. There are two mandatory
-opions, `-k` to specify the signing key, i.e., the private half of the
+options, `-k` to specify the signing key, i.e., the private half of the
 rate limit keypair, and `--log`, to specify the file with the log's
 public key. If no other options are used, the output is the token in
 the form of a hex string (representing an Ed25519 signature).
@@ -397,7 +397,7 @@ specified with the `-o` option.
 ## Verifying a submit token
 
 The `sigsum-token verify` sub command reads the token to validate from
-standard input, and it handles both raw hex tokens, and complete http
+standard input, and it handles both raw hex tokens, and complete HTTP
 headers. For a raw token, one of `-k` (public key) or `--domain` is
 required. For a HTTP header, `--key` and `--domain` are optional, but
 validation fails if they are inconsistent with what's looked up from
@@ -412,7 +412,7 @@ $ sigsum-token record -k example.key.pub
 _sigsum_v0 IN TXT "e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92"
 ```
 
-Create a token, formatted as a http header.
+Create a token, formatted as a HTTP header.
 ```
 $ sigsum-token create -k example.key --log poc.key.pub --domain test.example.org
 sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e938f1b99dcc9333954c9eab1dfaf89643679a47c7a33fa2182c8f8cb8eb1222f90c55355a8b5b300
