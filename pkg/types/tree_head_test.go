@@ -300,7 +300,7 @@ func validTreeHead(t *testing.T) *TreeHead {
 
 func validTreeHeadCheckpoint(t *testing.T) []byte {
 	return []byte(`
-sigsum.org/v1/66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925
+sigsum.org/v1/tree/66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925
 257
 AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
 `)[1:]

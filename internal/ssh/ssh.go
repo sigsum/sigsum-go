@@ -45,7 +45,7 @@ func serializeString[T bytesOrString](s T) []byte {
 	return buffer
 }
 
-func SignedDataFromHash(namespace string, hash *crypto.Hash) []byte {
+func signedDataFromHash(namespace string, hash *crypto.Hash) []byte {
 	return bytes.Join([][]byte{
 		[]byte("SSHSIG"),
 		serializeString(namespace),
@@ -54,9 +54,10 @@ func SignedDataFromHash(namespace string, hash *crypto.Hash) []byte {
 		serializeString(hash[:])}, nil)
 }
 
+// Deprecated; only for backwards compatibility in SignedTreeHead.VerifyVersion0.
 func SignedData(namespace string, msg []byte) []byte {
 	hash := crypto.HashBytes(msg)
-	return SignedDataFromHash(namespace, &hash)
+	return signedDataFromHash(namespace, &hash)
 }
 
 // Skips prefix, if present, otherwise return nil.

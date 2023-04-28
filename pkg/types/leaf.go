@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"io"
 
-	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
 const (
-	TreeLeafNamespace = "tree-leaf:v0@sigsum.org"
+	TreeLeafNamespace = "sigsum.org/v1/tree-leaf"
 )
 
 type Leaf struct {
@@ -21,7 +20,7 @@ type Leaf struct {
 }
 
 func leafSignedData(checksum *crypto.Hash) []byte {
-	return ssh.SignedDataFromHash(TreeLeafNamespace, checksum)
+	return crypto.AttachNamespace(TreeLeafNamespace, checksum[:])
 }
 
 func SignLeafChecksum(signer crypto.Signer, checksum *crypto.Hash) (crypto.Signature, error) {
