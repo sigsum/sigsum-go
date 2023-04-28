@@ -127,26 +127,21 @@ or output file, with `-o`.
 
 ## Sign and verify operations
 
-The `sigsum-key` tool can also create and verify signatures using
-[OpenSSH signature
-format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.sshsig).
+The `sigsum-key` tool can also create and verify signatures.
 
 Signing a message is done using
 ```
-sigsum-key sign -k KEY-FILE [-n NAMESPACE] [-o FILE] [--ssh] < MSG
+sigsum-key sign -k KEY-FILE [-n NAMESPACE] [-o FILE] < MSG
 ```
 
 The `-k` option is required, and specifies the key to use for signing
 (either an unencrypted private key, or a public key, if corresponding
-private key is acessible via ssh-agent). The message to sign is read
-from standard input. The default namespace (a feature of OpenSSH
-format signatures) is the one used for a signatures in a Sigsum leaf.
-The created signature is written to standard output, if no output file
-is specified with the `-o` option.
-
-By default, the signature is a raw hex representation of a 64-octet
-Ed25519 signature. With the `--ssh` option, the signatures is wrapped
-in an OpenSSH signature file, a PEM file with the tag "SSH SIGNATURE".
+private key is accessible via ssh-agent). The message to sign is read
+from standard input. If a non-empty namespace is provided, the
+namespace string and a NUL character is prepended to the message
+before it is signed with Ed25519. The created signature, in hex
+representation, is written to standard output, if no output file is
+specified with the `-o` option.
 
 Signatures can be verified using
 ```
@@ -156,10 +151,6 @@ The `-k `and `-s` options, specifying the public key and the
 signature, are required. The namespace must match the namespace used
 when the signature was created. The message signed is read from
 standard input.
-
-The use of OpenSSH signature formats in the Sigsum protocols is under
-discussion. If usage is dropped in version 1 of the Sigsum protocols,
-these sub commands are likely to change.
 
 ## Examples
 
