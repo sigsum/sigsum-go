@@ -82,7 +82,7 @@ func (s *Settings) parse(args []string) {
 	s.interval = 10 * time.Minute
 
 	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file").Mandatory()
-	set.FlagLong(&s.interval, "interval", 0, "Monitoring interval").Mandatory()
+	set.FlagLong(&s.interval, "interval", 0, "Monitoring interval")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
 	set.FlagLong(&help, "help", 0, "Display help")
 	err := set.Getopt(args, nil)
