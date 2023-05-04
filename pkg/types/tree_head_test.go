@@ -26,6 +26,16 @@ func TestTreeHeadToCheckpoint(t *testing.T) {
 	}
 }
 
+func TestTreeHeadToCosignedData(t *testing.T) {
+	desc := "valid"
+	pub := crypto.PublicKey{}
+	keyHash := crypto.HashBytes(pub[:])
+	if got, want := validTreeHead(t).toCosignedData(&keyHash, testCosignTimestamp),
+		validTreeHeadCosignedData(t); got != want {
+		t.Errorf("got tree head checkpoint\n\t%q\nbut wanted\n\t%q\nin test %q\n", got, want, desc)
+	}
+}
+
 func TestTreeHeadSign(t *testing.T) {
 	for _, table := range []struct {
 		desc    string
@@ -302,6 +312,16 @@ func validTreeHead(t *testing.T) *TreeHead {
 
 func validTreeHeadCheckpoint(t *testing.T) string {
 	return `
+sigsum.org/v1/tree/66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925
+257
+AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+`[1:]
+}
+
+func validTreeHeadCosignedData(t *testing.T) string {
+	return `
+cosignature/v1
+time 72623859790382856
 sigsum.org/v1/tree/66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925
 257
 AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
