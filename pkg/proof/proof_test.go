@@ -57,29 +57,28 @@ node_hash=eb94766b094058835d61c551a8ef581e8242ea419b665a2d2043291b98524e14
 }
 
 func TestVerifyNoCosignatures(t *testing.T) {
-	t.Skip("Temporarily disabled, a valid example needs log server updated with new signature format")
 	// Example from running sigsum-submit-test.
 	proofASCII := `version=0
-log=947ef68893e458918550859800b83a93ef791407a02d9d8a8dbc3d9caf7ed919
-leaf=7e28 780765ac034b0f022def1eace931195c776de4b004ce32b07e5c52e1c445050d eb0a6d660310530289b47258c421f73b2b72878a5dac0c201d2ce286fd80a2aa8c521b5f07048d9382d699162d1cb1ea4628751cc1d4c2253526a79c2ec1b906
+log=1f8d4547082a5985ad0e59ffe219f7a065e09c6b77a0012daf276e5dd1805b4b
+leaf=7e28 69512577a0f3c2695011ddc549756099017b7e2c8390341cbb24c57e886775f1 262737d935123272b9e3265fe2e38a014a9c1b13951e864737666251ada26dabbc6e699a4e527ec52a0be970e158abef35f087766d18d560853a44855119cf01
 
 size=4
-root_hash=8039e00b22b95b1df1a7497c81dfa647e8a0d929ff8902b8002b6a1fc19919d9
-signature=0d457dbbbc88af6daacb1ffab60d990f8cff5c17f1a26a6f319967498ca7d0cd5ea1e1607a4bc172bfc1bd216304bce8f322b46626c62105b246eed877bc6d00
+root_hash=7bca01e88737999fde5c1d6ecac27ae3cb49e14f21bcd3e7245c276877b899c9
+signature=c60e5151b9d0f0efaf57022c0ec306c0f0275afef69333cc89df4fda328c87949fcfa44564f35020938a4cd6c1c50bc0349b2f54b82f5f6104b9cd52be2cd90e
 
 leaf_index=3
-node_hash=1092e51e6750536d117dd874f19df075029587e4306d3f39157299563b391f9c
-node_hash=b4ad0a68e842b521ad3a74ed6fd84ae90daf5c54253ca1f50ecd737360af6db9
+node_hash=e7d222a285ca81fdc76bfcd5513408c87dd42a18e03d6c3b672a05982163c01b
+node_hash=15cdc42440689a6f7599e09f61a4d638420cb58662f5994def1624ea4d923879
 `
 	msg := crypto.Hash{
 		' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
 		' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'o', 'o', '-', '4', '\n',
 	}
-	logKey, err := key.ParsePublicKey("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICBVgsiuRsJ9WlYWR8lXK7F/nI68Uy28fv7Azq/ip6Dq")
+	logKey, err := key.ParsePublicKey("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN6kw3w2BWjlKLdrtnv4IaN+zg8/RpKGA98AbbTwjpdQ")
 	if err != nil {
 		t.Fatal(err)
 	}
-	submitKey, err := key.ParsePublicKey("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJhfPyRI4WS3ZN0+po5gL5A2MDUijGvMMeqnqogd5K7/")
+	submitKey, err := key.ParsePublicKey("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMCMTGNMNe1HP2us/dR5dBpyrSPDgPQ9mX5j9iqbLIS+")
 	if err != nil {
 		t.Fatal(err)
 	}
