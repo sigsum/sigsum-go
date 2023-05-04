@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	CosignedTreeHeadNamespace = "sigsum.org/v1/cosigned-tree-head"
-	CheckpointNamePrefix      = "sigsum.org/v1/tree/"
+	CosignatureNamespace = "cosignature/v1"
+	CheckpointNamePrefix = "sigsum.org/v1/tree/"
 )
 
 type TreeHead struct {
@@ -42,20 +42,21 @@ func NewEmptyTreeHead() TreeHead {
 	return TreeHead{Size: 0, RootHash: merkle.HashEmptyTree()}
 }
 
-func (th *TreeHead) formatCheckpoint(prefix string, pub *crypto.PublicKey) []byte {
-	return []byte(fmt.Sprintf("%s%x\n%d\n%s\n",
+func (th *TreeHead) formatCheckpoint(prefix string, keyHash *crypto.Hash) string {
+	return fmt.Sprintf("%s%x\n%d\n%s\n",
 		prefix,
-		crypto.HashBytes(pub[:]), th.Size,
-		base64.StdEncoding.EncodeToString(th.RootHash[:])))
+		*keyHash, th.Size,
+		base64.StdEncoding.EncodeToString(th.RootHash[:]))
 }
 
-func (th *TreeHead) toCheckpoint(pub *crypto.PublicKey) []byte {
-	return th.formatCheckpoint(CheckpointNamePrefix, pub)
+func (th *TreeHead) toCheckpoint(keyHash *crypto.Hash) string {
+	return th.formatCheckpoint(CheckpointNamePrefix, keyHash)
 }
 
 func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
 	pub := signer.Public()
-	sig, err := signer.Sign(th.toCheckpoint(&pub))
+	keyHash := crypto.HashBytes(pub[:])
+	sig, err := signer.Sign([]byte(th.toCheckpoint(&keyHash)))
 	if err != nil {
 		return SignedTreeHead{}, fmt.Errorf("failed signing tree head: %w", err)
 	}
@@ -67,18 +68,14 @@ func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
 }
 
 // TODO: Should the Cosign method be attached to SignedTreeHead instead?
-func (th *TreeHead) toCosignedData(logKeyHash *crypto.Hash, timestamp uint64) []byte {
-	b := make([]byte, 80)
-	binary.BigEndian.PutUint64(b[:8], th.Size)
-	copy(b[8:40], th.RootHash[:])
-	copy(b[40:72], logKeyHash[:])
-	binary.BigEndian.PutUint64(b[72:80], timestamp)
-
-	return crypto.AttachNamespace(CosignedTreeHeadNamespace, b)
+func (th *TreeHead) toCosignedData(logKeyHash *crypto.Hash, timestamp uint64) string {
+	return fmt.Sprintf("%s\ntime %d\n%s",
+		CosignatureNamespace, timestamp,
+		th.toCheckpoint(logKeyHash))
 }
 
 func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
-	signature, err := signer.Sign(th.toCosignedData(logKeyHash, timestamp))
+	signature, err := signer.Sign([]byte(th.toCosignedData(logKeyHash, timestamp)))
 	if err != nil {
 		return Cosignature{}, fmt.Errorf("failed co-signing tree head: %w", err)
 	}
@@ -144,12 +141,14 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 }
 
 func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
-	return crypto.Verify(key, sth.toCheckpoint(key), &sth.Signature)
+	keyHash := crypto.HashBytes(key[:])
+	return crypto.Verify(key, []byte(sth.toCheckpoint(&keyHash)), &sth.Signature)
 }
 
 func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 	// Prefix used temporarily, for version v0.1.15 and v0.2.0.
-	if crypto.Verify(key, sth.formatCheckpoint("sigsum.org/v1/", key), &sth.Signature) {
+	keyHash := crypto.HashBytes(key[:])
+	if crypto.Verify(key, []byte(sth.formatCheckpoint("sigsum.org/v1/", &keyHash)), &sth.Signature) {
 		return true
 	}
 	b := make([]byte, 40)
@@ -160,7 +159,7 @@ func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 }
 
 func (cs *Cosignature) Verify(key *crypto.PublicKey, logKeyHash *crypto.Hash, th *TreeHead) bool {
-	return crypto.Verify(key, th.toCosignedData(logKeyHash, cs.Timestamp), &cs.Signature)
+	return crypto.Verify(key, []byte(th.toCosignedData(logKeyHash, cs.Timestamp)), &cs.Signature)
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer) error {
