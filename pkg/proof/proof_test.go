@@ -7,6 +7,7 @@ import (
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
+	"sigsum.org/sigsum-go/pkg/policy"
 )
 
 func TestASCII(t *testing.T) {
@@ -74,20 +75,59 @@ node_hash=15cdc42440689a6f7599e09f61a4d638420cb58662f5994def1624ea4d923879
 		' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
 		' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'o', 'o', '-', '4', '\n',
 	}
-	logKey, err := key.ParsePublicKey("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN6kw3w2BWjlKLdrtnv4IaN+zg8/RpKGA98AbbTwjpdQ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	submitKey, err := key.ParsePublicKey("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMCMTGNMNe1HP2us/dR5dBpyrSPDgPQ9mX5j9iqbLIS+")
-	if err != nil {
-		t.Fatal(err)
-	}
+	logKey := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN6kw3w2BWjlKLdrtnv4IaN+zg8/RpKGA98AbbTwjpdQ")
+	submitKey := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMCMTGNMNe1HP2us/dR5dBpyrSPDgPQ9mX5j9iqbLIS+")
 	var proof SigsumProof
 	if err := proof.FromASCII(bytes.NewBufferString(proofASCII)); err != nil {
 		t.Fatal(err)
 	}
 	if err := proof.VerifyNoCosignatures(&msg, &submitKey, &logKey); err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	// TODO: Test invalidating proof in different ways.
+}
+
+func TestVerify(t *testing.T) {
+	// Example from running sigsum-submit-witness-test.
+	proofASCII := `version=0
+log=7c5fafc796c201e0fcd7567c5033a2777ec28363f54ea0ba97b57bece0d96acd
+leaf=7e28 8a578b9649ba01b7d29dd557906975d68a3aec50e3f9c08690420b8c6426856d 79b489a38548a67d78f06221b014d41be58b703237d17b4f203f0dd4ead9e2597149c2f118894581ce7473a61fa880716af6ff2138bade2cecc4b297099bf104
+
+size=4
+root_hash=3ddc56fd46e71e517b6936b977a457da7d398108141fcdf5c8386cdd724ab7a8
+signature=ccbdd8c784726b732b8edd2039fbad5506e4acccd56e3e5d86c0ee109b3d2662e6881fe3d09fc48f9ddd31494463c5ec44926ff9158785ad1dd9b5d6434b0804
+cosignature=bd8385aa82e07c3e1e297a1600c12bb25ce7a9490b5c1287ec30e09ac4c8b884 1683202758 e8d6c447d7847d5c1431ef86f8c60fa0cbacd975388b2a8f202fe4b0f9d0d544989c9d9351752d86aae2df72b9d7135b6b09de2ccaa6d68edf638105d69be609
+
+leaf_index=3
+node_hash=61010ae798308f5b97237615ab8c1b14f2c782c37616e97d0a170b617bc7a4ce
+node_hash=a5c3752be610d605ce5c64ee2e28ee5b94a1cc0a68742f18f24c9b5c82d07298
+`
+	msg := crypto.Hash{
+		' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',
+		' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'o', 'o', '-', '4', '\n',
+	}
+	logKey := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKwmwKhVrEUaZTlHjhoWA4jwJLOF8TY+/NpHAXAHbAHl")
+	submitKey := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMdLcxVjCAQUHbD4jCfFP+f8v1nmyjWkq6rXiexrK8II")
+	witnessKey := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMvjV+a0ZASecDt75siSARk6zCoYwJWwaRqvULmx4VeK")
+
+	var proof SigsumProof
+	if err := proof.FromASCII(bytes.NewBufferString(proofASCII)); err != nil {
+		t.Fatal(err)
+	}
+	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logKey}, []crypto.PublicKey{witnessKey}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := proof.Verify(&msg, &submitKey, policy); err != nil {
+		t.Error(err)
+	}
+	// TODO: Test invalidating proof in different ways.
+}
+
+func mustParsePublicKey(t *testing.T, ascii string) crypto.PublicKey {
+	key, err := key.ParsePublicKey(ascii)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
 }
