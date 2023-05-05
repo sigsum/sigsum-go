@@ -19,7 +19,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				err = cth.ToASCII(w)
 			}
 			if err != nil {
-				reportErrorCode(w, r.URL, http.StatusInternalServerError, err)
+				reportError(w, r.URL, err)
 			}
 		}))
 	server.register(types.EndpointGetInclusionProof, http.MethodGet,
@@ -39,12 +39,11 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				return
 			}
 			proof, err := log.GetInclusionProof(r.Context(), req)
+			if err == nil {
+				err = proof.ToASCII(w)
+			}
 			if err != nil {
 				reportError(w, r.URL, err)
-				return
-			}
-			if err := proof.ToASCII(w); err != nil {
-				reportErrorCode(w, r.URL, http.StatusInternalServerError, err)
 			}
 		}))
 	server.register(types.EndpointGetConsistencyProof, http.MethodGet,
@@ -68,12 +67,11 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				return
 			}
 			proof, err := log.GetConsistencyProof(r.Context(), req)
+			if err == nil {
+				err = proof.ToASCII(w)
+			}
 			if err != nil {
 				reportError(w, r.URL, err)
-				return
-			}
-			if err := proof.ToASCII(w); err != nil {
-				reportErrorCode(w, r.URL, http.StatusInternalServerError, err)
 			}
 		}))
 	server.register(types.EndpointGetConsistencyProof, http.MethodGet,
@@ -121,12 +119,11 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				return
 			}
 			leaves, err := log.GetLeaves(r.Context(), req)
+			if err == nil {
+				err = types.LeavesToASCII(w, leaves)
+			}
 			if err != nil {
 				reportError(w, r.URL, err)
-				return
-			}
-			if err := types.LeavesToASCII(w, leaves); err != nil {
-				reportErrorCode(w, r.URL, http.StatusInternalServerError, err)
 			}
 		}))
 
