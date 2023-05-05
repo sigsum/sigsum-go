@@ -3,10 +3,18 @@ package api
 
 import (
 	"context"
+	"errors"
 
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
+)
+
+var (
+	HttpNotFound            = errors.New("404 Not Found")
+	HttpAccepted            = errors.New("202 Accepted")
+	HttpConflict            = errors.New("409 Conflict")
+	HttpUnprocessableEntity = errors.New("422 Unprocessable Entity")
 )
 
 // Interface for log api.
