@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	getopt "github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
@@ -27,20 +28,9 @@ type Settings struct {
 }
 
 func main() {
-	const usage = `sigsum-witness [OPTIONS] HOST:PORT
-  Options:
-      -h --help Display this help
-      -k PRIVATE-KEY
-      --log-key LOG-PUBLIC-KEY
-      --state-file FILE
-      --url-prefix PREFIX
-
-  Provides a service for cosigning a sigsum log (currently, only a
-  single log), listening on the given host and port.
-`
 	log.SetFlags(0)
 	var settings Settings
-	settings.parse(os.Args[1:], usage)
+	settings.parse(os.Args)
 
 	signer, err := key.ReadPrivateKeyFile(settings.keyFile)
 	if err != nil {
@@ -66,28 +56,39 @@ func main() {
 	log.Fatal(http.ListenAndServe(settings.hostAndPort, nil))
 }
 
-func (s *Settings) parse(args []string, usage string) {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
-	flags.Usage = func() { fmt.Print(usage) }
+func (s *Settings) parse(args []string) {
+	const usage = `
+  Provides a service for cosigning a sigsum log (currently, only a
+  single log), listening on the given host and port.
+`
+	set := getopt.New()
+	set.SetParameters("host:port")
+	set.SetUsage(func() { fmt.Print(usage) })
 
-	flags.StringVar(&s.keyFile, "k", "", "Witness private key")
-	flags.StringVar(&s.logKey, "log-key", "", "Log public key")
-	flags.StringVar(&s.stateFile, "state-file", "", "Name of state file")
-	flags.StringVar(&s.prefix, "url-prefix", "", "Prefix preceding the endpoint names")
-	flags.Parse(args)
-	if len(s.keyFile) == 0 {
-		log.Fatal("Mandatory -k flag missing")
+	help := false
+
+	set.Flag(&s.keyFile, 'k', "Witness private key", "file").Mandatory()
+	set.FlagLong(&s.logKey, "log-key", 0, "Log public key", "file").Mandatory()
+	// TODO: Better name?
+	set.FlagLong(&s.stateFile, "state-file", 0, "Name of state file", "file").Mandatory()
+	set.FlagLong(&s.prefix, "url-prefix", 0, "Prefix preceding the endpoint names", "string")
+	set.FlagLong(&help, "help", 0, "Display help")
+	err := set.Getopt(args, nil)
+	// Check help first; if seen, ignore errors about missing mandatory arguments.
+	if help {
+		set.PrintUsage(os.Stdout)
+		fmt.Print(usage)
+		os.Exit(0)
 	}
-	if len(s.logKey) == 0 {
-		log.Fatal("Mandatory --log-keyFile flag missing")
+	if err != nil {
+		fmt.Printf("err: %v\n", err)
+		fmt.Fprint(os.Stderr, usage)
+		os.Exit(1)
 	}
-	if len(s.stateFile) == 0 {
-		log.Fatal("Mandatory --state-file flag missing")
-	}
-	if len(flags.Args()) != 1 {
+	if set.NArgs() != 1 {
 		log.Fatal("Mandatory HOST:PORT argument missing")
 	}
-	s.hostAndPort = flags.Arg(0)
+	s.hostAndPort = set.Arg(0)
 }
 
 type witness struct {
