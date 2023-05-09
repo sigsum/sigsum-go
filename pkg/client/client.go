@@ -25,7 +25,7 @@ type Log interface {
 	GetConsistencyProof(context.Context, requests.ConsistencyProof) (types.ConsistencyProof, error)
 	GetLeaves(context.Context, requests.Leaves) ([]types.Leaf, error)
 
-	AddLeaf(context.Context, requests.Leaf, *string) (bool, error)
+	AddLeaf(context.Context, requests.Leaf, *token.SubmitToken) (bool, error)
 }
 
 // Interface for the secondary node's api.
@@ -90,9 +90,14 @@ func (cli *Client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves [
 	return
 }
 
-func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf, tokenHeader *string) (bool, error) {
+func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf, submitToken *token.SubmitToken) (bool, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
+	var tokenHeader *string
+	if submitToken != nil {
+		s := submitToken.ToHeader()
+		tokenHeader = &s
+	}
 	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.URL), tokenHeader, &buf, nil); err != nil {
 		if errors.Is(err, HttpAccepted) {
 			return false, nil

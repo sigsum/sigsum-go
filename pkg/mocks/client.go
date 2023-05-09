@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	requests "sigsum.org/sigsum-go/pkg/requests"
+	token "sigsum.org/sigsum-go/pkg/submit-token"
 	types "sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -37,7 +38,7 @@ func (m *MockLogClient) EXPECT() *MockLogClientMockRecorder {
 }
 
 // AddLeaf mocks base method.
-func (m *MockLogClient) AddLeaf(arg0 context.Context, arg1 requests.Leaf, arg2 *string) (bool, error) {
+func (m *MockLogClient) AddLeaf(arg0 context.Context, arg1 requests.Leaf, arg2 *token.SubmitToken) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddLeaf", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
