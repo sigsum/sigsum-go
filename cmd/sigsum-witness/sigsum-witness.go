@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -159,7 +158,7 @@ type state struct {
 func (s *state) Load(pub, logPub *crypto.PublicKey) error {
 	f, err := os.Open(s.fileName)
 	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
+		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 		s.th = types.TreeHead{
