@@ -137,6 +137,25 @@ func TestTreeHeadSignAndVerify(t *testing.T) {
 	}
 }
 
+func TestSignedTreeHeadVerify(t *testing.T) {
+	pub := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN6kw3w2BWjlKLdrtnv4IaN+zg8/RpKGA98AbbTwjpdQ")
+	sth := SignedTreeHead{
+		TreeHead: TreeHead{
+			Size:     4,
+			RootHash: mustHashFromHex(t, "7bca01e88737999fde5c1d6ecac27ae3cb49e14f21bcd3e7245c276877b899c9"),
+		},
+		Signature: mustSignatureFromHex(t, "c60e5151b9d0f0efaf57022c0ec306c0f0275afef69333cc89df4fda328c87949fcfa44564f35020938a4cd6c1c50bc0349b2f54b82f5f6104b9cd52be2cd90e"),
+	}
+	if !sth.Verify(&pub) {
+		t.Errorf("failed verifying a valid signed tree head")
+	}
+
+	sth.Size += 1
+	if sth.Verify(&pub) {
+		t.Errorf("succeeded verifying an invalid signed tree head")
+	}
+}
+
 func TestSignedTreeHeadVerifyVersion0(t *testing.T) {
 	// Example based on a run of tests/sigsum-submit-test
 	pub := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICLAkeP3VJfvGQFcXa8UORDiDNpylbD9Hd+DglaG7+ym")
