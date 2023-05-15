@@ -50,7 +50,7 @@ func TestVerify(t *testing.T) {
 		check func(err error) error) {
 		t.Helper()
 		if err := check(verifierWithResponses(&logKey, registeredDomain, records).Verify(
-			context.Background(), &SubmitToken{Domain: tokenDomain, Token: *signature})); err != nil {
+			context.Background(), &SubmitHeader{Domain: tokenDomain, Token: *signature})); err != nil {
 			t.Errorf("%s: %v", desc, err)
 		}
 	}

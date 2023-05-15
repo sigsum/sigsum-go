@@ -107,13 +107,13 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 		return proof.SigsumProof{}, fmt.Errorf("no logs defined in policy")
 	}
 	for _, entity := range logs {
-		var submitToken *token.SubmitToken
+		var header *token.SubmitHeader
 		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
 			signature, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
 			if err != nil {
 				return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
 			}
-			submitToken = &token.SubmitToken{Domain: config.Domain, Token: signature}
+			header = &token.SubmitHeader{Domain: config.Domain, Token: signature}
 		}
 
 		client := client.New(client.Config{
@@ -125,7 +125,7 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 		pr, err := func() (proof.SigsumProof, error) {
 			ctx, cancel := context.WithTimeout(ctx, config.getTimeout())
 			defer cancel()
-			return submitLeafToLog(ctx, config.Policy, client, &logKeyHash, submitToken, config.sleep, req, &leafHash)
+			return submitLeafToLog(ctx, config.Policy, client, &logKeyHash, header, config.sleep, req, &leafHash)
 		}()
 		if err == nil {
 			pr.Leaf = proof.NewShortLeaf(&leaf)
@@ -137,7 +137,7 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 }
 
 func submitLeafToLog(ctx context.Context, policy *policy.Policy,
-	cli client.Log, logKeyHash *crypto.Hash, submitToken *token.SubmitToken, sleep func(context.Context) error,
+	cli client.Log, logKeyHash *crypto.Hash, header *token.SubmitHeader, sleep func(context.Context) error,
 	req *requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
 	pr := proof.SigsumProof{
 		// Note: Leaves to caller to populate proof.Leaf.
@@ -145,7 +145,7 @@ func submitLeafToLog(ctx context.Context, policy *policy.Policy,
 	}
 
 	for {
-		persisted, err := cli.AddLeaf(ctx, *req, submitToken)
+		persisted, err := cli.AddLeaf(ctx, *req, header)
 
 		if err != nil {
 			return proof.SigsumProof{}, err

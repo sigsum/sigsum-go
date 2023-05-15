@@ -143,7 +143,7 @@ func main() {
 		if domain != nil {
 			if err := token.NewDnsVerifier(&logKey).Verify(
 				context.Background(),
-				&token.SubmitToken{Domain: *domain, Token: signature}); err != nil {
+				&token.SubmitHeader{Domain: *domain, Token: signature}); err != nil {
 				log.Fatalf("Verifying with domain %q failed: %v", *domain, err)
 			}
 		}

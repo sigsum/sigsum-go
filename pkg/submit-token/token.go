@@ -17,16 +17,17 @@ const (
 	maxNumberOfKeys = 10
 )
 
-type SubmitToken struct {
+// Represents the contents of the HTTP Sigsum-Submit: header-
+type SubmitHeader struct {
 	Domain string
 	Token  crypto.Signature
 }
 
-func (s *SubmitToken) ToHeader() string {
+func (s *SubmitHeader) ToHeader() string {
 	return fmt.Sprintf("%s %x", s.Domain, s.Token)
 }
 
-func (s *SubmitToken) FromHeader(header string) error {
+func (s *SubmitHeader) FromHeader(header string) error {
 	parts := strings.Split(header, " ")
 	if n := len(parts); n != 2 {
 		return fmt.Errorf("expected 2 parts, got %d", n)
@@ -56,7 +57,7 @@ func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token *crypto.
 
 // Verifier can verify that a domain name is aware of a public key.
 type Verifier interface {
-	Verify(ctx context.Context, submitToken *SubmitToken) error
+	Verify(ctx context.Context, submitToken *SubmitHeader) error
 }
 
 // DnsResolver implements the Verifier interface by querying DNS.
@@ -74,8 +75,8 @@ func NewDnsVerifier(logKey *crypto.PublicKey) Verifier {
 	}
 }
 
-func (dv *DnsVerifier) Verify(ctx context.Context, submitToken *SubmitToken) error {
-	rsps, err := dv.lookupTXT(ctx, Label+"."+submitToken.Domain)
+func (dv *DnsVerifier) Verify(ctx context.Context, header *SubmitHeader) error {
+	rsps, err := dv.lookupTXT(ctx, Label+"."+header.Domain)
 	if err != nil {
 		return fmt.Errorf("token: dns look-up failed: %v", err)
 	}
@@ -92,7 +93,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, submitToken *SubmitToken) err
 			badKeys++
 			continue
 		}
-		if crypto.Verify(&key, signedData, &submitToken.Token) {
+		if crypto.Verify(&key, signedData, &header.Token) {
 			return nil
 		}
 	}
