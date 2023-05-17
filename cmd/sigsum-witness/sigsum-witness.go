@@ -8,16 +8,17 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	getopt "github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/requests"
+	"sigsum.org/sigsum-go/pkg/server"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -53,10 +54,9 @@ func main() {
 		state:  &state,
 	}
 
-	http.HandleFunc("/"+types.EndpointGetTreeSize.Path(settings.prefix), witness.GetTreeSize)
-	http.HandleFunc("/"+types.EndpointAddTreeHead.Path(settings.prefix), witness.AddTreeHead)
-	server := http.Server{
+	httpServer := http.Server{
 		Addr: settings.hostAndPort,
+		Handler: server.NewWitness(&server.Config{Prefix: settings.prefix}, &witness),
 	}
 
 	var wg sync.WaitGroup
@@ -65,7 +65,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := server.ListenAndServe()
+		err := httpServer.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Fatal(err)
 		}
@@ -77,7 +77,7 @@ func main() {
 
 	shutdownCtx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
-	server.Shutdown(shutdownCtx)
+	httpServer.Shutdown(shutdownCtx)
 }
 
 func (s *Settings) parse(args []string) {
@@ -121,64 +121,26 @@ type witness struct {
 	state  *state
 }
 
-func (s *witness) GetTreeSize(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		// TODO: Allowed header?
-		http.Error(w, "Only GET supported", http.StatusBadRequest)
-		return
+func (s *witness) GetTreeSize(_ context.Context, req requests.GetTreeSize) (uint64, error) {
+	if req.KeyHash != crypto.HashBytes(s.logPub[:]) {
+		return 0, api.ErrNotFound
 	}
-	slash := strings.LastIndex(r.URL.Path, "/")
-	if slash < 0 {
-		http.Error(w, "Invalid url", http.StatusBadRequest)
-		return
-	}
-	keyHash, err := crypto.HashFromHex(r.URL.Path[slash+1:])
-	if err != nil {
-		http.Error(w, "Invalid keyhash url argument", http.StatusBadRequest)
-		return
-	}
-	if keyHash != crypto.HashBytes(s.logPub[:]) {
-		http.Error(w, "Unknown log keyhash", http.StatusNotFound)
-		return
-	}
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	if _, err := fmt.Fprintf(w, "size=%d\n", s.state.GetSize()); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	return s.state.GetSize(), nil
 }
 
-func (s *witness) AddTreeHead(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		// TODO: Allowed header?
-		http.Error(w, "Only POST supported", http.StatusBadRequest)
-		return
-	}
-	var req requests.AddTreeHead
-	if err := req.FromASCII(r.Body); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (types.Cosignature, error) {
 	logKeyHash := crypto.HashBytes(s.logPub[:])
 	if req.KeyHash != logKeyHash {
-		http.Error(w, "Unknown log keyhash", http.StatusNotFound)
-		return
+		return types.Cosignature{}, api.ErrNotFound
 	}
 	if !req.TreeHead.Verify(&s.logPub) {
-		http.Error(w, "Invalid log signature", http.StatusForbidden)
-		return
+		return types.Cosignature{}, api.ErrForbidden
 	}
 
-	cs, status, err := s.state.Update(&req.TreeHead, req.OldSize, &req.Proof,
+	return s.state.Update(&req.TreeHead, req.OldSize, &req.Proof,
 		func() (types.Cosignature, error) {
 			return req.TreeHead.Cosign(s.signer, &logKeyHash, uint64(time.Now().Unix()))
 		})
-	if err != nil {
-		http.Error(w, err.Error(), status)
-		return
-	}
-	if err := cs.ToASCII(w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 }
 
 type state struct {
@@ -256,31 +218,31 @@ func (s *state) Store(cth *types.CosignedTreeHead) error {
 
 // On success, returns stored cosignature. On failure, returns HTTP status code and error.
 func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, proof *types.ConsistencyProof,
-	cosign func() (types.Cosignature, error)) (types.Cosignature, int, error) {
+	cosign func() (types.Cosignature, error)) (types.Cosignature, error) {
 
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	if s.th.Size != oldSize {
-		return types.Cosignature{}, http.StatusConflict, fmt.Errorf("incorrect old_size")
+		return types.Cosignature{}, api.ErrConflict
 	}
 
 	if err := proof.Verify(&s.th, &sth.TreeHead); err != nil {
-		return types.Cosignature{}, 422, fmt.Errorf("not consistent")
+		return types.Cosignature{}, api.ErrUnprocessableEntity
 	}
 
 	cs, err := cosign()
 	if err != nil {
-		return types.Cosignature{}, http.StatusInternalServerError, err
+		return types.Cosignature{}, err
 	}
 	cth := types.CosignedTreeHead{
 		SignedTreeHead: *sth,
 		Cosignatures:   []types.Cosignature{cs},
 	}
 	if err := s.Store(&cth); err != nil {
-		return types.Cosignature{}, http.StatusInternalServerError, err
+		return types.Cosignature{}, err
 	}
 	s.th = sth.TreeHead
 
-	return cs, 0, nil
+	return cs, nil
 }
