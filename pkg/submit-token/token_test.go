@@ -31,6 +31,62 @@ func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {
 	return pub, signer
 }
 
+func TestSubmitHeaderFromHeader(t *testing.T) {
+	for _, table := range []struct {
+		desc  string
+		input string
+		exp   *SubmitHeader
+	}{
+		{"no domain", " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", nil},
+		{
+			"valid, lowercase",
+			"foo.example.com aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			&SubmitHeader{Domain: "foo.example.com", Token: mustSignatureFromHex(t, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")},
+		},
+		{
+			"valid, mixed case",
+			"foo.example.com aaaaaaaaaaaaaaaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			&SubmitHeader{Domain: "foo.example.com", Token: mustSignatureFromHex(t, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")},
+		},
+		{"extra space", "foo.example.com  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", nil},
+		{"bad hex", "foo.example.com aaxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", nil},
+		{"bad hex length", "foo.example.com aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", nil},
+		{"bad signature length", "foo.example.com aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", nil},
+	} {
+		var header SubmitHeader
+		if err := header.FromHeader(table.input); err != nil {
+			if table.exp == nil {
+				// Expected error
+				t.Logf("%s: error (expected): %v\n", table.desc, err)
+			} else {
+				t.Errorf("%s: FromHeader failed: %v\n", table.desc, err)
+			}
+		} else {
+			if table.exp == nil {
+				t.Errorf("%s: unexpected non-failure, got result: %x\n", table.desc, header)
+			} else if got, want := header, *table.exp; got != want {
+				t.Errorf("%s: unexpected result, got: %x, wanted: %x\n", table.desc, got, want)
+			}
+		}
+	}
+}
+
+func TestSubmitHeaderToHeader(t *testing.T) {
+	for _, table := range []struct {
+		input SubmitHeader
+		exp   string
+	}{
+		{
+			SubmitHeader{Domain: "foo.example.org", Token: mustSignatureFromHex(t, "BBbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")},
+			"foo.example.org bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		},
+	} {
+		if got, want := table.input.ToHeader(), table.exp; got != want {
+			t.Errorf("unexpected result from ToHeader, got: %q, want: %q\n", got, want)
+		}
+	}
+}
+
 func TestVerify(t *testing.T) {
 	logKeyHex := "cda2517e17dcba133eb0e71bf77473f94a77d7e61b1de4e1e64adfd0938d6182"
 	logKey, err := crypto.PublicKeyFromHex(logKeyHex)
@@ -87,4 +143,12 @@ func TestVerify(t *testing.T) {
 			logKeyHex, hexKey + "aa", "bad", "4", "5",
 			"6", "7", "8", "9", "10", hexKey},
 		"ignored keys: 1")
+}
+
+func mustSignatureFromHex(t *testing.T, ascii string) crypto.Signature {
+	sig, err := crypto.SignatureFromHex(ascii)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sig
 }
