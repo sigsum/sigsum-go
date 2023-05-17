@@ -46,21 +46,20 @@ func TestVerify(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	token := hex.EncodeToString(signature[:])
-	testOne := func(desc, tokenDomain, signature, registeredDomain string, records []string,
+	testOne := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string,
 		check func(err error) error) {
 		t.Helper()
 		if err := check(verifierWithResponses(&logKey, registeredDomain, records).Verify(
-			context.Background(), tokenDomain, signature)); err != nil {
+			context.Background(), &SubmitHeader{Domain: tokenDomain, Token: *signature})); err != nil {
 			t.Errorf("%s: %v", desc, err)
 		}
 	}
-	testValid := func(desc, tokenDomain, signature, registeredDomain string, records []string) {
+	testValid := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string) {
 		t.Helper()
 		testOne("valid: "+desc, tokenDomain, signature, registeredDomain, records,
 			func(err error) error { return err })
 	}
-	testInvalid := func(desc, tokenDomain, signature, registeredDomain string, records []string, msg string) {
+	testInvalid := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string, msg string) {
 		t.Helper()
 		testOne("invalid: "+desc, tokenDomain, signature, registeredDomain, records,
 			func(err error) error {
@@ -75,16 +74,16 @@ func TestVerify(t *testing.T) {
 			})
 	}
 
-	testValid("single key", "foo.example.org", token, "foo.example.org", []string{hexKey})
-	testInvalid("nxdomain", "foo.example.org", token, "bar.example.org", []string{hexKey}, "NXDOMAIN")
-	testInvalid("no matching key", "foo.example.org", token, "foo.example.org", []string{
+	testValid("single key", "foo.example.org", &signature, "foo.example.org", []string{hexKey})
+	testInvalid("nxdomain", "foo.example.org", &signature, "bar.example.org", []string{hexKey}, "NXDOMAIN")
+	testInvalid("no matching key", "foo.example.org", &signature, "foo.example.org", []string{
 		logKeyHex, hexKey + "aa", "bad"},
 		"bad keys: 2")
 	testValid("multiple keys",
-		"foo.example.org", token, "foo.example.org", []string{
+		"foo.example.org", &signature, "foo.example.org", []string{
 			logKeyHex, hexKey + "aa", "bad", hexKey})
 	testInvalid("too many keys",
-		"foo.example.org", token, "foo.example.org", []string{
+		"foo.example.org", &signature, "foo.example.org", []string{
 			logKeyHex, hexKey + "aa", "bad", "4", "5",
 			"6", "7", "8", "9", "10", hexKey},
 		"ignored keys: 1")

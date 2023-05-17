@@ -107,14 +107,13 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 		return proof.SigsumProof{}, fmt.Errorf("no logs defined in policy")
 	}
 	for _, entity := range logs {
-		var tokenHeader *string
+		var header *token.SubmitHeader
 		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
-			token, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
+			signature, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
 			if err != nil {
 				return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
 			}
-			s := fmt.Sprintf("%s %x", config.Domain, token)
-			tokenHeader = &s
+			header = &token.SubmitHeader{Domain: config.Domain, Token: signature}
 		}
 
 		client := client.New(client.Config{
@@ -126,7 +125,7 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 		pr, err := func() (proof.SigsumProof, error) {
 			ctx, cancel := context.WithTimeout(ctx, config.getTimeout())
 			defer cancel()
-			return submitLeafToLog(ctx, config.Policy, client, &logKeyHash, tokenHeader, config.sleep, req, &leafHash)
+			return submitLeafToLog(ctx, config.Policy, client, &logKeyHash, header, config.sleep, req, &leafHash)
 		}()
 		if err == nil {
 			pr.Leaf = proof.NewShortLeaf(&leaf)
@@ -138,7 +137,7 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 }
 
 func submitLeafToLog(ctx context.Context, policy *policy.Policy,
-	cli client.Log, logKeyHash *crypto.Hash, tokenHeader *string, sleep func(context.Context) error,
+	cli client.Log, logKeyHash *crypto.Hash, header *token.SubmitHeader, sleep func(context.Context) error,
 	req *requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
 	pr := proof.SigsumProof{
 		// Note: Leaves to caller to populate proof.Leaf.
@@ -146,7 +145,7 @@ func submitLeafToLog(ctx context.Context, policy *policy.Policy,
 	}
 
 	for {
-		persisted, err := cli.AddLeaf(ctx, *req, tokenHeader)
+		persisted, err := cli.AddLeaf(ctx, *req, header)
 
 		if err != nil {
 			return proof.SigsumProof{}, err

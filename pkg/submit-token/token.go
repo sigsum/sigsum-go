@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
@@ -16,28 +17,47 @@ const (
 	maxNumberOfKeys = 10
 )
 
-// TODO: Return hex string, for consistency with VerifyToken ?
+// Represents the contents of the HTTP Sigsum-Submit: header-
+type SubmitHeader struct {
+	Domain string
+	Token  crypto.Signature
+}
+
+func (s *SubmitHeader) ToHeader() string {
+	return fmt.Sprintf("%s %x", s.Domain, s.Token)
+}
+
+func (s *SubmitHeader) FromHeader(header string) error {
+	parts := strings.Split(header, " ")
+	if n := len(parts); n != 2 {
+		return fmt.Errorf("expected 2 parts, got %d", n)
+	}
+	if len(parts[0]) == 0 {
+		return fmt.Errorf("malformed header, domain part empty")
+	}
+	var err error
+	s.Token, err = crypto.SignatureFromHex(parts[1])
+	if err == nil {
+		s.Domain = parts[0]
+	}
+	return err
+}
+
 func MakeToken(signer crypto.Signer, logKey *crypto.PublicKey) (crypto.Signature, error) {
 	return signer.Sign(crypto.AttachNamespace(namespace, logKey[:]))
 }
 
 // Verify a token using a given key, with no DNS loookup.
-func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token string) error {
-	signature, err := crypto.SignatureFromHex(token)
-	if err != nil {
-		return fmt.Errorf("failed decoding hex signature: %v", err)
-	}
-	if !crypto.Verify(key, crypto.AttachNamespace(namespace, logKey[:]), &signature) {
+func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token *crypto.Signature) error {
+	if !crypto.Verify(key, crypto.AttachNamespace(namespace, logKey[:]), token) {
 		return fmt.Errorf("invalid token signature")
 	}
 	return nil
 }
 
 // Verifier can verify that a domain name is aware of a public key.
-// Name and signature corresponds to the value of the submit-token:
-// header, so signature is still hex-encoded.
 type Verifier interface {
-	Verify(ctx context.Context, name, signature string) error
+	Verify(ctx context.Context, submitToken *SubmitHeader) error
 }
 
 // DnsResolver implements the Verifier interface by querying DNS.
@@ -55,12 +75,8 @@ func NewDnsVerifier(logKey *crypto.PublicKey) Verifier {
 	}
 }
 
-func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) error {
-	signature, err := crypto.SignatureFromHex(signatureHex)
-	if err != nil {
-		return fmt.Errorf("failed decoding hex signature: %v", err)
-	}
-	rsps, err := dv.lookupTXT(ctx, Label+"."+name)
+func (dv *DnsVerifier) Verify(ctx context.Context, header *SubmitHeader) error {
+	rsps, err := dv.lookupTXT(ctx, Label+"."+header.Domain)
 	if err != nil {
 		return fmt.Errorf("token: dns look-up failed: %v", err)
 	}
@@ -77,7 +93,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, name, signatureHex string) er
 			badKeys++
 			continue
 		}
-		if crypto.Verify(&key, signedData, &signature) {
+		if crypto.Verify(&key, signedData, &header.Token) {
 			return nil
 		}
 	}
