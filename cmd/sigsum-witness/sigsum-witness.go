@@ -232,7 +232,7 @@ func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, proof *types.C
 	}
 
 	if err := proof.Verify(&s.th, &sth.TreeHead); err != nil {
-		return types.Cosignature{}, 444, fmt.Errorf("not consistent")
+		return types.Cosignature{}, 422, fmt.Errorf("not consistent")
 	}
 
 	cs, err := cosign()

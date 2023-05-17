@@ -41,6 +41,7 @@ type Witness interface {
 var (
 	HttpNotFound            = errors.New("404 Not Found")
 	HttpAccepted            = errors.New("202 Accepted")
+	HttpConflict            = errors.New("409 Conflict")
 	HttpUnprocessableEntity = errors.New("422 Unprocessable Entity")
 )
 
@@ -171,6 +172,8 @@ func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error) error 
 		return HttpNotFound
 	case http.StatusAccepted:
 		return HttpAccepted
+	case http.StatusConflict:
+		return HttpConflict
 	case http.StatusUnprocessableEntity:
 		return HttpUnprocessableEntity
 	case http.StatusOK:
