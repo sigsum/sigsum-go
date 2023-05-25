@@ -14,6 +14,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 const (
@@ -84,7 +85,7 @@ func (c *Config) sleep(ctx context.Context) error {
 }
 
 func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, message *crypto.Hash) (proof.SigsumProof, error) {
-	signature, err := signer.Sign(message[:])
+	signature, err := types.SignLeafMessage(signer, message[:])
 	if err != nil {
 		return proof.SigsumProof{}, err
 	}
