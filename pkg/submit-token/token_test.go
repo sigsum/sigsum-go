@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func verifierWithResponses(logKey *crypto.PublicKey, domain string, responses []string) Verifier {
+func verifierWithResponses(logKey *crypto.PublicKey, domain string, responses []string) *DnsVerifier {
 	return &DnsVerifier{
 		lookupTXT: func(_ context.Context, name string) ([]string, error) {
 			if name != "_sigsum_v0."+domain {
