@@ -5,6 +5,7 @@ import (
 
 	"encoding/binary"
 	"math/bits"
+	"math/rand"
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -126,15 +127,30 @@ func TestInclusionValid(t *testing.T) {
 		}
 		rootHashes = append(rootHashes, tree.GetRootHash())
 	}
+
+	r := rand.New(rand.NewSource(17))
+
 	for i := 0; i < len(hashes); i++ {
 		for n := i + 1; n <= len(hashes); n++ {
 			proof, err := tree.ProveInclusion(uint64(i), uint64(n))
 			if err != nil {
 				t.Fatalf("ProveInclusion %d, %d failed: %v", i, n, err)
 			}
-			if err := VerifyInclusion(&hashes[i], uint64(i), uint64(n), &rootHashes[n-1], proof); err != nil {
+			leaf := hashes[i]
+			if err := VerifyInclusion(&leaf, uint64(i), uint64(n), &rootHashes[n-1], proof); err != nil {
 				t.Errorf("inclusion proof not valid, i %d, n %d: %v\n  proof: %x\n",
 					i, n, err, proof)
+			}
+			bitToFlip := r.Intn(crypto.HashSize * 8)
+			hashToFlip := r.Intn(len(proof) + 1)
+			if hashToFlip > 0 {
+				proof[hashToFlip-1][bitToFlip/8] ^= 1 << (bitToFlip % 8)
+			} else {
+				leaf[bitToFlip/8] ^= 1 << (bitToFlip % 8)
+			}
+			if err := VerifyInclusion(&leaf, uint64(i), uint64(n), &rootHashes[n-1], proof); err == nil {
+				t.Errorf("inclusion proof should have failed, i %d, n %d: flipped bit %d of hash %d\n",
+					i, n, bitToFlip, hashToFlip)
 			}
 		}
 	}
@@ -199,18 +215,41 @@ func TestConsistencyValid(t *testing.T) {
 		rootHashes = append(rootHashes, tree.GetRootHash())
 	}
 
+	r := rand.New(rand.NewSource(18))
+
 	for m := 0; m < len(rootHashes); m++ {
 		for n := m; n < len(rootHashes); n++ {
 			proof, err := tree.ProveConsistency(uint64(m), uint64(n))
 			if err != nil {
 				t.Fatalf("ProveConsistency %d, %d failed: %v", m, n, err)
 			}
+			oldRoot := rootHashes[m]
+			newRoot := rootHashes[n]
 			if err := VerifyConsistency(
-				uint64(m), uint64(n),
-				&rootHashes[m], &rootHashes[n], proof); err != nil {
+				uint64(m), uint64(n), &oldRoot, &newRoot, proof); err != nil {
 				t.Errorf("consistency proof not valid, m %d, n %d: %v\n  proof: %x\n",
 					m, n, err, proof)
 			}
+			bitToFlip := r.Intn(crypto.HashSize * 8)
+			hashToFlip := r.Intn(len(proof) + 2)
+			switch hashToFlip {
+			case 0:
+				oldRoot[bitToFlip/8] ^= 1 << (bitToFlip % 8)
+			case 1:
+				if m == 0 {
+					// Any new root is consistent.
+					continue
+				}
+				newRoot[bitToFlip/8] ^= 1 << (bitToFlip % 8)
+			default:
+				proof[hashToFlip-2][bitToFlip/8] ^= 1 << (bitToFlip % 8)
+			}
+			if err := VerifyConsistency(
+				uint64(m), uint64(n), &oldRoot, &newRoot, proof); err == nil {
+				t.Errorf("consistency proof should have failed, m %d, n %d: flipped bit %d of hash %d\n",
+					m, n, bitToFlip, hashToFlip)
+			}
+
 		}
 	}
 }
