@@ -38,8 +38,8 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 		return fmt.Errorf("proof input is malformed: no path")
 	}
 
-	// Step2
-	if pow2(oldSize) {
+	// Step2,
+	if isPowerOfTwo(oldSize) {
 		path = append([]crypto.Hash{*oldRoot}, path...)
 	}
 
@@ -48,9 +48,9 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 	sn := newSize - 1
 
 	// Step 4
-	for lsb(fn) {
-		fn = rshift(fn)
-		sn = rshift(sn)
+	for isOdd(fn) {
+		fn >>= 1
+		sn >>= 1
 	}
 
 	// Step 5
@@ -65,18 +65,18 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 		}
 
 		// Step 6(b)
-		if lsb(fn) || fn == sn {
+		if isOdd(fn) || fn == sn {
 			// Step 6(b), i
 			fr = HashInteriorNode(&c, &fr)
 			// Step 6(b), ii
 			sr = HashInteriorNode(&c, &sr)
 			// Step 6(b), iii
-			if !lsb(fn) {
+			if isEven(fn) {
 				for {
-					fn = rshift(fn)
-					sn = rshift(sn)
+					fn >>= 1
+					sn >>= 1
 
-					if lsb(fn) || fn == 0 {
+					if isOdd(fn) || fn == 0 {
 						break
 					}
 				}
@@ -87,8 +87,8 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 		}
 
 		// Step 6(c)
-		fn = rshift(fn)
-		sn = rshift(sn)
+		fn >>= 1
+		sn >>= 1
 	}
 
 	// Step 7
@@ -127,17 +127,17 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 		}
 
 		// Step 4(b)
-		if lsb(fn) || fn == sn {
+		if isOdd(fn) || fn == sn {
 			// Step 4(b), i
 			r = HashInteriorNode(&p, &r)
 
 			// Step 4(b), ii
-			if !lsb(fn) {
+			if isEven(fn) {
 				for {
-					fn = rshift(fn)
-					sn = rshift(sn)
+					fn >>= 1
+					sn >>= 1
 
-					if lsb(fn) || fn == 0 {
+					if isOdd(fn) || fn == 0 {
 						break
 					}
 				}
@@ -148,8 +148,8 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 		}
 
 		// Step 4(c)
-		fn = rshift(fn)
-		sn = rshift(sn)
+		fn >>= 1
+		sn >>= 1
 	}
 
 	// Step 5
@@ -162,17 +162,15 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	return nil
 }
 
-// lsb outputs true if the least significant bit is set
-func lsb(num uint64) bool {
+func isOdd(num uint64) bool {
 	return (num & 1) != 0
 }
 
-// pow2 outputs true if the number is a power of 2
-func pow2(num uint64) bool {
-	return (num & (num - 1)) == 0
+func isEven(num uint64) bool {
+	return (num & 1) == 0
 }
 
-// rshift returns the right-shifted number
-func rshift(num uint64) uint64 {
-	return num >> 1
+// Checks if num is a power of 2. It is required that num > 0.
+func isPowerOfTwo(num uint64) bool {
+	return (num & (num - 1)) == 0
 }
