@@ -55,11 +55,6 @@ func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token *crypto.
 	return nil
 }
 
-// Verifier can verify that a domain name is aware of a public key.
-type Verifier interface {
-	Verify(ctx context.Context, submitToken *SubmitHeader) error
-}
-
 // DnsResolver implements the Verifier interface by querying DNS.
 type DnsVerifier struct {
 	// Usually, net.Resolver.LookupTXT, but set differently for testing.
@@ -67,7 +62,7 @@ type DnsVerifier struct {
 	logKey    crypto.PublicKey
 }
 
-func NewDnsVerifier(logKey *crypto.PublicKey) Verifier {
+func NewDnsVerifier(logKey *crypto.PublicKey) *DnsVerifier {
 	var resolver net.Resolver
 	return &DnsVerifier{
 		lookupTXT: resolver.LookupTXT,
