@@ -122,6 +122,13 @@ func (r *compactRange) addRight(i uint64, hash *crypto.Hash) {
 		panic("range empty")
 	}
 	h := *hash
+	// TODO: XXX We have to somehow record the height of subtrees.
+	// E.g., if we have a stack of two entries and add an entry
+	// with index 3, we should reduce once to create the interior
+	// node representing the range [2, 4). But we don't know if
+	// the first entry on the stack represents [0,2), in which
+	// case we should reduce once more, or just [1,2) (a leaf
+	// hash).
 	for s := i + 1; isEven(s) && len(r.stack) > r.empty; s >>= 1 {
 		h = HashInteriorNode(&r.stack[len(r.stack)-1], &h)
 		r.stack = r.stack[:len(r.stack)-1]
@@ -219,6 +226,95 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 		return fmt.Errorf("proof input is malformed: reached root too soon")
 	}
 
+	if cRange.rootHash() != *root {
+		return fmt.Errorf("invalid proof: root mismatch")
+	}
+	return nil
+}
+
+// VerifyBatchInclusion verifies a consecutive sequence of leaves are
+// included in a Merkle tree. The algorithm is an extension of the
+// inclusion proof in RFC 9162, §2.1.3.2, using inclusion proofs for
+// the first and last (inclusive) leaves in the sequence.
+
+// In case the leaf sequence extends all the way to the last leaf of
+// the tree, the correspondign inclusion proof is nott needed and can
+// be omitted.
+
+// TODO: Reduce duplication with VerifyInclusion; the latter could be a simple wrapper calling the more general function.
+func VerifyInclusionBatch(leaves []crypto.Hash, index, size uint64, root *crypto.Hash, startPath []crypto.Hash, endPath []crypto.Hash) error {
+	if len(leaves) == 0 {
+		return fmt.Errorf("invalid input, empty leaf sequence")
+	}
+	if index + uint64(len(leaves)) > size {
+		return fmt.Errorf("index out of range")
+	}
+
+	cRange := newCompactRange(&leaves[0])
+	for i := 1; i < len(leaves); i++ {
+		cRange.addRight(index + uint64(i), &leaves[i])
+	}
+
+	fn := index
+	en := index + uint64(len(leaves)) - 1
+	sn := size - 1
+
+//	fmt.Printf("XXX crange: %x\n", *cRange)
+//	fmt.Printf("XXX root: %x\n", *root)
+
+	for en < sn {
+		if len(startPath) == 0 {
+			return fmt.Errorf("proof input is malformed: startPath too short")
+		}
+		if len(endPath) == 0 {
+			return fmt.Errorf("proof input is malformed: endPath too short")
+		}
+		// Note that we may have fn == en; in that case, one
+		// of the cases apply, and the paths should be equal.
+		if isOdd(fn) {
+			// Node on path is left sibling
+			cRange.addLeft(fn - 1, &startPath[0])
+		} else { /* Just ignore? */ }
+
+		if isEven(en) {
+			// Node on path is right sibling
+			cRange.addRight(en + 1, &endPath[0])
+		} else { /* Just ignore? */ }
+
+		startPath = startPath[1:]
+		endPath = endPath[1:]
+		fn >>= 1
+		en >>= 1
+		sn >>= 1
+	}
+
+	// Range is extended to the end. Keep extending to the left.
+	for fn < sn {
+		if len(startPath) == 0 {
+			return fmt.Errorf("proof input is malformed: startPath too short")
+		}
+		if isOdd(fn) {
+			cRange.addLeft(fn-1, &startPath[0])
+		}
+		startPath = startPath[1:]
+		fn >>= 1
+		sn >>= 1
+	}
+
+	// Keep extending to the left, but path no longer has any
+	// right siblings.
+	for fn > 0 {
+		if isOdd(fn) {
+			if len(startPath) == 0 {
+				return fmt.Errorf("proof input is malformed: path too short")
+			}
+			cRange.addLeft(fn-1, &startPath[0])
+			startPath = startPath[1:]
+		}
+		fn >>= 1
+	}
+
+	fmt.Printf("XXX final crange: %x\n", *cRange)
 	if cRange.rootHash() != *root {
 		return fmt.Errorf("invalid proof: root mismatch")
 	}

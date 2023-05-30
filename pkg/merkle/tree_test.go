@@ -153,6 +153,55 @@ func TestInclusionValid(t *testing.T) {
 					i, n, bitToFlip, hashToFlip)
 			}
 		}
+
+	}
+}
+
+func TestInclusionBatchValid(t *testing.T) {
+	hashes := newLeaves(100)
+
+	rootHashes := []crypto.Hash{}
+	tree := NewTree()
+	for _, h := range hashes {
+		if !tree.AddLeafHash(&h) {
+			t.Fatalf("AddLeafHash failed at size %d", tree.Size())
+		}
+		rootHashes = append(rootHashes, tree.GetRootHash())
+	}
+
+	r := rand.New(rand.NewSource(17))
+
+	for i := 0; i < len(hashes); i++ {
+		for n := i + 1; n <= len(hashes); n++ {
+			sProof, err := tree.ProveInclusion(uint64(i), uint64(n))
+			if err != nil {
+				t.Fatalf("ProveInclusion %d, %d failed: %v", i, n, err)
+			}
+			batchSize := 1 + r.Intn(n - i)
+			eProof, err := tree.ProveInclusion(uint64(i + batchSize - 1), uint64(n))
+			if err != nil {
+				t.Fatalf("ProveInclusion %d, %d failed: %v", i + batchSize - 1, n, err)
+			}
+			leaves := make([]crypto.Hash, batchSize)
+			copy(leaves, hashes[i:])
+
+			if err := VerifyInclusionBatch(leaves, uint64(i), uint64(n), &rootHashes[n-1], sProof, eProof); err != nil {
+				t.Errorf("inclusion proof not valid, i %d, n %d, batch %d: %v\n  proofs: %x %x\n",
+					i, n, batchSize, err, sProof, eProof)
+			}
+
+//			bitToFlip := r.Intn(crypto.HashSize * 8)
+//			hashToFlip := r.Intn(len(proof) + len(leaves))
+//			if hashToFlip < len(leaves) {
+//				leaves[hashToFlip][bitToFlip/8] ^= 1 << (bitToFlip % 8)
+//			} else {
+//				proof[hashToFlip-len(leaves)][bitToFlip/8] ^= 1 << (bitToFlip % 8)
+//			}
+//			if err := VerifyInclusionBatch(leaves, uint64(i), uint64(n), &rootHashes[n-1], proof); err == nil {
+//				t.Errorf("inclusion proof should have failed, i %d, n %d: flipped bit %d of hash %d\n",
+//					i, n, bitToFlip, hashToFlip)
+//			}
+		}
 	}
 }
 
