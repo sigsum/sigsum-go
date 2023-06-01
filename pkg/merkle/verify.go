@@ -132,7 +132,7 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	r := *leaf
 	fn := index
 
-	for sn := size - 1; fn < sn ; path, fn, sn = path[1:], fn >> 1, sn >> 1 {
+	for sn := size - 1; fn < sn; path, fn, sn = path[1:], fn>>1, sn>>1 {
 		if len(path) == 0 {
 			return fmt.Errorf("proof input is malformed: path too short")
 		}
@@ -148,7 +148,7 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	// We have the right-most node, so all nodes left on the path
 	// are left siblings, and there are no siblings at even
 	// indices.
-	for ; fn > 0 ; fn >>= 1 {
+	for ; fn > 0; fn >>= 1 {
 		if isOdd(fn) {
 			if len(path) == 0 {
 				return fmt.Errorf("proof input is malformed: path too short")
