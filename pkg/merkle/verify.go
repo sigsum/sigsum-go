@@ -3,7 +3,6 @@ package merkle
 import (
 	"bytes"
 	"fmt"
-	"math/bits"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
@@ -106,8 +105,10 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 	return nil
 }
 
-// VerifyInclusion verifies that something is in a Merkle tree.  The algorithm
-// used is in RFC 9162, §2.1.3.2.  It is the same proof technique as RFC 6962.
+// VerifyInclusion verifies that something is in a Merkle tree. The
+// algorithm used is equivalent to the one in in RFC 9162, §2.1.3.2.
+// Note that with index == 0, size == 1, the empty path is considered
+// a valid inclusion proof, and inclusion means that *leaf == *root.
 func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
 	if index >= size {
 		return fmt.Errorf("proof input is malformed: index out of range")
@@ -115,7 +116,7 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 
 	// Each iteration of the loop eliminates the bottom layer of
 	// the tree. fn is the index in the tree for the hash of
-	// interest, r, and sn is the index of the last node in the
+	// interest, r. sn is the index of the last node in the
 	// tree. All leaf nodes, in particular the final one with
 	// index sn, are considered to be at the bottom layer, but
 	// possibly with the parent located more than one layer above.
@@ -130,51 +131,37 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 
 	r := *leaf
 	fn := index
-	sn := size - 1
 
-	pop := func() (s *crypto.Hash) {
-		if len(path) > 0 {
-			s, path = &path[0], path[1:]
-		}
-		return
-	}
-
-	for fn < sn {
-		s := pop()
-		if s == nil {
+	for sn := size - 1; fn < sn ; path, fn, sn = path[1:], fn >> 1, sn >> 1 {
+		if len(path) == 0 {
 			return fmt.Errorf("proof input is malformed: path too short")
 		}
-
 		if isOdd(fn) {
 			// Node on path is left sibling
-			r = HashInteriorNode(s, &r)
+			r = HashInteriorNode(&path[0], &r)
 		} else {
 			// Node on path is right sibling
-			r = HashInteriorNode(&r, s)
+			r = HashInteriorNode(&r, &path[0])
 		}
-		// Drop bottom layer of the tree, continue proving
-		// inclusion for the internal node constructed above.
-		fn >>= 1
-		sn >>= 1
 	}
 
-	// We have the right-most node, so all nodes left on the path are left siblings.
-	for sn > 0 {
-		s := pop()
-		if s == nil {
-			return fmt.Errorf("proof input is malformed: path too short")
+	// We have the right-most node, so all nodes left on the path
+	// are left siblings, and there are no siblings at even
+	// indices.
+	for ; fn > 0 ; fn >>= 1 {
+		if isOdd(fn) {
+			if len(path) == 0 {
+				return fmt.Errorf("proof input is malformed: path too short")
+			}
+			r = HashInteriorNode(&path[0], &r)
+			path = path[1:]
 		}
-
-		r = HashInteriorNode(s, &r)
-
-		// Skip tree levels where there are no siblings.
-		sn >>= bits.TrailingZeros64(sn) + 1
 	}
 
 	if len(path) > 0 {
 		return fmt.Errorf("proof input is malformed: reached root too soon")
 	}
-	if !bytes.Equal(r[:], root[:]) {
+	if r != *root {
 		return fmt.Errorf("invalid proof: root mismatch")
 	}
 	return nil
