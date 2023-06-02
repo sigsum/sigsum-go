@@ -209,13 +209,12 @@ func makeRightRange(k int, leaves []crypto.Hash) []crypto.Hash {
 // the tree, the corresponding inclusion proof is not needed and can
 // be omitted.
 
-// TODO: Reduce duplication with VerifyInclusion; the latter could be a simple wrapper calling the more general function.
-func VerifyInclusionBatch(leaves []crypto.Hash, start, size uint64, root *crypto.Hash, startPath []crypto.Hash, endPath []crypto.Hash) error {
+func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Hash, startPath []crypto.Hash, endPath []crypto.Hash) error {
 	if len(leaves) == 0 {
 		return fmt.Errorf("range must be non-empty")
 	}
 	// TODO: When in working shape, simplify to set to ...-1.
-	end := start + uint64(len(leaves))
+	end := fn + uint64(len(leaves))
 	if end > size {
 		return fmt.Errorf("end of range exceeds tree size")
 	}
@@ -224,19 +223,19 @@ func VerifyInclusionBatch(leaves []crypto.Hash, start, size uint64, root *crypto
 		if !pathEqual(startPath, endPath) {
 			return fmt.Errorf("proof invalid, inconsistent paths")
 		}
-		return VerifyInclusion(&leaves[0], start, size, root, startPath)
+		return VerifyInclusion(&leaves[0], fn, size, root, startPath)
 	}
 
-	// Construct compact range for intermediate nodes, [start+1, end-1).
-	// Find the bit index of the most significant bit where start and end differ.
-	k := bits.Len64(start^(end-1)) - 1
+	// Construct compact range for intermediate nodes, [fn+1, end-1).
+	// Find the bit index of the most significant bit where fn and end differ.
+	k := bits.Len64(fn^(end-1)) - 1
 	split := (end - 1) & -(uint64(1) << k)
 
-	// fmt.Printf("XXX start = %d, split = %d, end = %d, k = %d\n", start, split, end, k)
+	// fmt.Printf("XXX fn = %d, split = %d, end = %d, k = %d\n", fn, split, end, k)
 	// Now split is divisible by 2^k, and we have
-	// split - 2^k <= start + 1 < split <= end - 1 < split + 2^k
-	leftRange := makeLeftRange(k, leaves[1:split-start])
-	rightRange := makeRightRange(k, leaves[split-start:len(leaves)-1])
+	// split - 2^k <= fn + 1 < split <= end - 1 < split + 2^k
+	leftRange := makeLeftRange(k, leaves[1:split-fn])
+	rightRange := makeRightRange(k, leaves[split-fn:len(leaves)-1])
 
 	// The right siblings for the first k levels should match the
 	// inclusion path.
@@ -244,7 +243,6 @@ func VerifyInclusionBatch(leaves []crypto.Hash, start, size uint64, root *crypto
 		return fmt.Errorf("proof input is malformed: start path too short")
 	}
 	fr := leaves[0]
-	fn := start
 	for i := 0; i < k; startPath, fn, i = startPath[1:], fn>>1, i+1 {
 		if isOdd(fn) {
 			// Node on path is left sibling
