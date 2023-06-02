@@ -3,6 +3,7 @@ package merkle
 import (
 	"bytes"
 	"fmt"
+	"math/bits"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
@@ -114,6 +115,13 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 		return fmt.Errorf("proof input is malformed: index out of range")
 	}
 
+	// k is the number of lowend bits that differ between fn and
+	// sn, i.e., number of rounds through the first loop.
+	k := bits.Len64(index ^ (size - 1))
+	if got, want := len(path), k+bits.OnesCount64(index>>k); got != want {
+		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
+	}
+
 	// Each iteration of the loop eliminates the bottom layer of
 	// the tree. fn is the index in the tree for the hash of
 	// interest, r. sn is the index of the last node in the
@@ -133,9 +141,6 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	fn := index
 
 	for sn := size - 1; fn < sn; path, fn, sn = path[1:], fn>>1, sn>>1 {
-		if len(path) == 0 {
-			return fmt.Errorf("proof input is malformed: path too short")
-		}
 		if isOdd(fn) {
 			// Node on path is left sibling
 			r = HashInteriorNode(&path[0], &r)
@@ -150,16 +155,13 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	// indices.
 	for ; fn > 0; fn >>= 1 {
 		if isOdd(fn) {
-			if len(path) == 0 {
-				return fmt.Errorf("proof input is malformed: path too short")
-			}
 			r = HashInteriorNode(&path[0], &r)
 			path = path[1:]
 		}
 	}
 
 	if len(path) > 0 {
-		return fmt.Errorf("proof input is malformed: reached root too soon")
+		panic("internal error: left over path elements")
 	}
 	if r != *root {
 		return fmt.Errorf("invalid proof: root mismatch")
