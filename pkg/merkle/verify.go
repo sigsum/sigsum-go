@@ -94,6 +94,13 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 	return nil
 }
 
+func inclusionPathLength(index, size uint64) int {
+	// k is the number of lowend bits that differ between fn and
+	// sn, i.e., number of iterations until fn == sn.
+	k := bits.Len64(index ^ (size - 1))
+	return k + bits.OnesCount64(index>>k)
+}
+
 // VerifyInclusion verifies that something is in a Merkle tree. The
 // algorithm used is equivalent to the one in in RFC 9162, §2.1.3.2.
 // Note that with index == 0, size == 1, the empty path is considered
@@ -101,6 +108,9 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
 	if index >= size {
 		return fmt.Errorf("proof input is malformed: index out of range")
+	}
+	if got, want := len(path), inclusionPathLength(index, size); got != want {
+		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
 	}
 
 	if got, want := len(path), pathLength(index, size); got != want {
@@ -183,56 +193,6 @@ func makeRightRange(leaves []crypto.Hash) []crypto.Hash {
 	return cr
 }
 
-// An inclusion path to be matched with a compact range
-type pathWithRange struct {
-	path []crypto.Hash
-	cr   []crypto.Hash
-}
-
-// Pop next path element.
-func (p *pathWithRange) popPath() (*crypto.Hash, error) {
-	if len(p.path) == 0 {
-		return nil, fmt.Errorf("invalid, path too short")
-	}
-	h := &p.path[0]
-	p.path = p.path[1:]
-	return h, nil
-}
-
-// Pop next path element, and require that it equals the given hash.
-func (p *pathWithRange) popPathCheck(e *crypto.Hash) error {
-	h, err := p.popPath()
-	if err != nil {
-		return err
-	}
-	if *h != *e {
-		return fmt.Errorf("unexpected path value")
-	}
-	return nil
-}
-
-// Pop next path element and next entry from the compact range, and
-// require that they match.
-func (p *pathWithRange) popAndCheck() (*crypto.Hash, error) {
-	if len(p.cr) == 0 {
-		return nil, fmt.Errorf("internal error, compact range exhausted")
-	}
-	h := &p.cr[len(p.cr)-1]
-	p.cr = p.cr[:len(p.cr)-1]
-	if err := p.popPathCheck(h); err != nil {
-		return nil, err
-	}
-	return h, nil
-}
-
-// Like checkPath, but also require that the compact ranhe is empty.
-func (p *pathWithRange) popFinalCheck(h *crypto.Hash) error {
-	if len(p.cr) > 0 {
-		return fmt.Errorf("internal error: range leftover")
-	}
-	return p.popPathCheck(h)
-}
-
 // VerifyBatchInclusion verifies a consecutive sequence of leaves are
 // included in a Merkle tree. The algorithm is an extension of the
 // inclusion proof in RFC 9162, §2.1.3.2, using inclusion proofs for
@@ -257,7 +217,12 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 		}
 		return VerifyInclusion(&leaves[0], fn, size, root, startPath)
 	}
-
+	if len(startPath) != inclusionPathLength(fn, size) {
+		return fmt.Errorf("proof invalid, wrong inclusion path length for first node")
+	}
+	if len(endPath) != inclusionPathLength(en, size) {
+		return fmt.Errorf("proof invalid, wrong inclusion path length for last node")
+	}
 	// Find the bit index of the most significant bit where fn and en differ.
 	k := bits.Len64(fn^en) - 1
 	// Split the range at a multiple of 2^k, so that
@@ -266,24 +231,22 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 
 	// Construct the compact range of the intermediate leaves,
 	// i.e., excluding the leaves at fn and en, split as above.
-	left := pathWithRange{path: startPath, cr: makeLeftRange(leaves[1 : split-fn])}
-	right := pathWithRange{path: endPath, cr: makeRightRange(leaves[split-fn : len(leaves)-1])}
+	leftRange := makeLeftRange(leaves[1 : split-fn])
+	rightRange := makeRightRange(leaves[split-fn : len(leaves)-1])
 
 	fr := leaves[0]
 	for i := 0; i < k; startPath, fn, i = startPath[1:], fn>>1, i+1 {
 		if isOdd(fn) {
 			// Node on path is left sibling
-			s, err := left.popPath()
-			if err != nil {
-				return err
-			}
-			fr = HashInteriorNode(s, &fr)
+			fr = HashInteriorNode(&startPath[0], &fr)
 		} else {
 			// Node on path is right sibling, and must
 			// match left compact range.
-			s, err := left.popAndCheck()
-			if err != nil {
-				return err
+			s := &leftRange[len(leftRange)-1]
+			leftRange = leftRange[:len(leftRange)-1]
+
+			if *s != startPath[0] {
+				return fmt.Errorf("unexpected path, inconsistent with leaf range")
 			}
 			fr = HashInteriorNode(&fr, s)
 		}
@@ -297,36 +260,36 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 	for i := 0; i < k; en, sn, i = en>>1, sn>>1, i+1 {
 		if isOdd(en) {
 			// Node on path is left sibling, and must match right compact range.
-			s, err := right.popAndCheck()
-			if err != nil {
-				return err
+			s := &rightRange[len(rightRange)-1]
+			rightRange = rightRange[:len(rightRange)-1]
+
+			if *s != endPath[0] {
+				return fmt.Errorf("unexpected path, inconsistent with leaf range")
 			}
 			er = HashInteriorNode(s, &er)
+			endPath = endPath[1:]
 		} else if en < sn {
 			// Node on path is right sibling.
-			s, err := right.popPath()
-			if err != nil {
-				return err
-			}
-			er = HashInteriorNode(&er, s)
+			er = HashInteriorNode(&er, &endPath[0])
+			endPath = endPath[1:]
 		}
 	}
 	// Now we're just about to merge to a single node
 	if isOdd(fn) || isEven(en) || fn+1 != en {
-		return fmt.Errorf("internal error expected adjacent fn, en, got %d, %d", fn, en)
+		panic(fmt.Sprintf("internal error expected adjacent fn, en, got %d, %d", fn, en))
 	}
-	if err := left.popFinalCheck(&er); err != nil {
-		return err
+	if len(leftRange) > 0 || len(rightRange) > 0 {
+		panic("internal error, left over compact range elements")
 	}
-	if err := right.popFinalCheck(&fr); err != nil {
-		return err
+	if startPath[0] != er || endPath[0] != fr {
+		return fmt.Errorf("start and end trees not consistent")
 	}
-	if !pathEqual(left.path, right.path) {
+	if !pathEqual(startPath[1:], endPath[1:]) {
 		return fmt.Errorf("proof invalid, inconsistent paths")
 	}
 
 	fr = HashInteriorNode(&fr, &er)
-	return VerifyInclusion(&fr, fn>>1, (sn>>1)+1, root, left.path)
+	return VerifyInclusion(&fr, fn>>1, (sn>>1)+1, root, startPath[1:])
 }
 
 func isOdd(num uint64) bool {
