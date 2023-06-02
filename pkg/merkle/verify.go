@@ -98,9 +98,9 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 // algorithm used is equivalent to the one in in RFC 9162, §2.1.3.2.
 // Note that with index == 0, size == 1, the empty path is considered
 // a valid inclusion proof, and inclusion means that *leaf == *root.
-func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
+func inclusionToRoot(leaf *crypto.Hash, index, size uint64, path []crypto.Hash) (crypto.Hash, error) {
 	if index >= size {
-		return fmt.Errorf("proof input is malformed: index out of range")
+		return crypto.Hash{}, fmt.Errorf("proof input is malformed: index out of range")
 	}
 
 	if got, want := len(path), pathLength(index, size); got != want {
@@ -139,17 +139,204 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	if len(path) > 0 {
 		panic("internal error: left over path elements")
 	}
+	return r, nil
+}
 
-	if r != *root {
+func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
+	hash, err := inclusionToRoot(leaf, index, size, path)
+	if err != nil {
+		return err
+	}
+	if hash != *root {
 		return fmt.Errorf("invalid proof: root mismatch")
 	}
 	return nil
+}
+
+// TODO: Can this be done with makeRightRange + some reversal (and a
+// wrapper for HashInteriorNode that swaps the arguments) ?
+// Returns the compact range of a leaf interval ending at 2^k.
+func makeLeftRange(k int, leaves []crypto.Hash) []crypto.Hash {
+	if len(leaves) > (1 << k) {
+		panic("internal error")
+	}
+	if len(leaves) == 0 {
+		return nil
+	}
+	r := make([]crypto.Hash, k)
+	pos := k - 1
+	r[pos] = leaves[len(leaves)-1]
+	for i := 2; i <= len(leaves); i++ {
+		h := leaves[len(leaves)-i]
+		for j := (1 << k) - i; pos < k && isEven(j); j, pos = j>>1, pos+1 {
+			h = HashInteriorNode(&h, &r[pos])
+		}
+		pos--
+		r[pos] = h
+	}
+	return r[pos:]
+}
+
+// Returns the compact range of a leaf interval starting at 2^k.
+func makeRightRange(k int, leaves []crypto.Hash) []crypto.Hash {
+	if len(leaves) > (1 << k) {
+		panic("internal error")
+	}
+	if len(leaves) == 0 {
+		return nil
+	}
+
+	r := make([]crypto.Hash, 0, k)
+	r = append(r, leaves[0])
+
+	for i := 1; i < len(leaves); i++ {
+		h := leaves[i]
+		for j := i + 1; len(r) > 0 && isEven(j); j >>= 1 {
+			h = HashInteriorNode(&r[len(r)-1], &h)
+			r = r[:len(r)-1]
+		}
+		r = append(r, h)
+	}
+	return r
+}
+
+// VerifyBatchInclusion verifies a consecutive sequence of leaves are
+// included in a Merkle tree. The algorithm is an extension of the
+// inclusion proof in RFC 9162, §2.1.3.2, using inclusion proofs for
+// the first and last (inclusive) leaves in the sequence.
+
+// In case the leaf sequence extends all the way to the last leaf of
+// the tree, the corresponding inclusion proof is not needed and can
+// be omitted.
+
+// TODO: Reduce duplication with VerifyInclusion; the latter could be a simple wrapper calling the more general function.
+func VerifyInclusionBatch(leaves []crypto.Hash, start, size uint64, root *crypto.Hash, startPath []crypto.Hash, endPath []crypto.Hash) error {
+	if len(leaves) == 0 {
+		return fmt.Errorf("range must be non-empty")
+	}
+	// TODO: When in working shape, simplify to set to ...-1.
+	end := start + uint64(len(leaves))
+	if end > size {
+		return fmt.Errorf("end of range exceeds tree size")
+	}
+
+	if len(leaves) == 1 {
+		if !pathEqual(startPath, endPath) {
+			return fmt.Errorf("proof invalid, inconsistent paths")
+		}
+		return VerifyInclusion(&leaves[0], start, size, root, startPath)
+	}
+
+	// Construct compact range for intermediate nodes, [start+1, end-1).
+	// Find the bit index of the most significant bit where start and end differ.
+	k := bits.Len64(start^(end-1)) - 1
+	split := (end - 1) & -(uint64(1) << k)
+
+	// fmt.Printf("XXX start = %d, split = %d, end = %d, k = %d\n", start, split, end, k)
+	// Now split is divisible by 2^k, and we have
+	// split - 2^k <= start + 1 < split <= end - 1 < split + 2^k
+	leftRange := makeLeftRange(k, leaves[1:split-start])
+	rightRange := makeRightRange(k, leaves[split-start:len(leaves)-1])
+
+	// The right siblings for the first k levels should match the
+	// inclusion path.
+	if len(startPath) < k+1 {
+		return fmt.Errorf("proof input is malformed: start path too short")
+	}
+	fr := leaves[0]
+	fn := start
+	for i := 0; i < k; startPath, fn, i = startPath[1:], fn>>1, i+1 {
+		if isOdd(fn) {
+			// Node on path is left sibling
+			fr = HashInteriorNode(&startPath[0], &fr)
+		} else {
+			if len(leftRange) == 0 {
+				return fmt.Errorf("internal error: exhausted left range")
+			}
+			// Node on path is right sibling, and must
+			// match left compact range.
+			fr = HashInteriorNode(&fr, &leftRange[0])
+
+			if leftRange[0] != startPath[0] {
+				return fmt.Errorf("proof inconsistent with leaf range")
+			}
+			leftRange = leftRange[1:]
+		}
+
+	}
+	if len(leftRange) > 0 {
+		return fmt.Errorf("internal error: left range leftovers")
+	}
+
+	en := end - 1
+	sn := size - 1
+	er := leaves[len(leaves)-1]
+
+	for i := 0; i < k; en, sn, i = en>>1, sn>>1, i+1 {
+		if isOdd(en) {
+			// Node on path is left sibling, and must match right compact range.
+			if len(rightRange) == 0 {
+				return fmt.Errorf("internal error: exhausted right range")
+			}
+			if len(endPath) == 0 {
+				return fmt.Errorf("proof input is malformed: end path too short")
+			}
+			er = HashInteriorNode(&rightRange[len(rightRange)-1], &er)
+			if rightRange[len(rightRange)-1] != endPath[0] {
+				return fmt.Errorf("proof inconsistent with leaf range")
+			}
+			rightRange = rightRange[:len(rightRange)-1]
+			endPath = endPath[1:]
+		} else if en < sn {
+			if len(endPath) == 0 {
+				return fmt.Errorf("proof input is malformed: end path too short")
+			}
+			// Node on path is right sibling.
+			er = HashInteriorNode(&er, &endPath[0])
+			endPath = endPath[1:]
+		}
+	}
+	if len(rightRange) > 0 {
+		return fmt.Errorf("internal error: right range leftovers")
+	}
+
+	// Now we're just about to merge to a single node
+	if isOdd(fn) || isEven(en) || fn+1 != en {
+		return fmt.Errorf("internal error expected adjacent fn, en, got %d, %d", fn, en)
+	}
+	if len(endPath) == 0 {
+		return fmt.Errorf("proof input is malformed: end path too short")
+	}
+	if startPath[0] != er || endPath[0] != fr {
+		return fmt.Errorf("proof invalid")
+	}
+	if !pathEqual(startPath[1:], endPath[1:]) {
+		return fmt.Errorf("proof invalid, inconsistent paths")
+	}
+
+	fr = HashInteriorNode(&fr, &er)
+	fn >>= 1
+	sn >>= 1
+
+	return VerifyInclusion(&fr, fn, sn+1, root, startPath[1:])
 }
 
 func isOdd(num uint64) bool {
 	return (num & 1) != 0
 }
 
-func isEven(num uint64) bool {
+func isEven[T uint64 | int](num T) bool {
 	return (num & 1) == 0
+}
+
+func pathEqual(a, b []crypto.Hash) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, h := range a {
+		if h != b[i] {
+			return false
+		}
+	}
+	return true
 }
