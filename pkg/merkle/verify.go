@@ -98,9 +98,9 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 // algorithm used is equivalent to the one in in RFC 9162, §2.1.3.2.
 // Note that with index == 0, size == 1, the empty path is considered
 // a valid inclusion proof, and inclusion means that *leaf == *root.
-func inclusionToRoot(leaf *crypto.Hash, index, size uint64, path []crypto.Hash) (crypto.Hash, error) {
+func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
 	if index >= size {
-		return crypto.Hash{}, fmt.Errorf("proof input is malformed: index out of range")
+		return fmt.Errorf("proof input is malformed: index out of range")
 	}
 
 	if got, want := len(path), pathLength(index, size); got != want {
@@ -139,15 +139,7 @@ func inclusionToRoot(leaf *crypto.Hash, index, size uint64, path []crypto.Hash) 
 	if len(path) > 0 {
 		panic("internal error: left over path elements")
 	}
-	return r, nil
-}
-
-func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
-	hash, err := inclusionToRoot(leaf, index, size, path)
-	if err != nil {
-		return err
-	}
-	if hash != *root {
+	if r != *root {
 		return fmt.Errorf("invalid proof: root mismatch")
 	}
 	return nil
@@ -341,7 +333,7 @@ func isOdd(num uint64) bool {
 	return (num & 1) != 0
 }
 
-func isEven[T uint64 | int](num T) bool {
+func isEven(num uint64) bool {
 	return (num & 1) == 0
 }
 
