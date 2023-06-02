@@ -3,6 +3,7 @@ package merkle
 import (
 	"bytes"
 	"fmt"
+
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -104,59 +105,63 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 	return nil
 }
 
-// VerifyInclusion verifies that something is in a Merkle tree.  The algorithm
-// used is in RFC 9162, §2.1.3.2.  It is the same proof technique as RFC 6962.
+// VerifyInclusion verifies that something is in a Merkle tree. The
+// algorithm used is equivalent to the one in in RFC 9162, §2.1.3.2.
+// Note that with index == 0, size == 1, the empty path is considered
+// a valid inclusion proof, and inclusion means that *leaf == *root.
 func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
-	// Step 1
 	if index >= size {
 		return fmt.Errorf("proof input is malformed: index out of range")
 	}
 
-	// Step 2
-	fn := index
-	sn := size - 1
+	// Each iteration of the loop eliminates the bottom layer of
+	// the tree. fn is the index in the tree for the hash of
+	// interest, r. sn is the index of the last node in the
+	// tree. All leaf nodes, in particular the final one with
+	// index sn, are considered to be at the bottom layer, but
+	// possibly with the parent located more than one layer above.
+	// E.g., the tree with 3 leaves:
+	//
+	//     o      Root node
+	//    / \
+	//   o   \
+	//  / \   \
+	// o   o   o  The three leaf nodes
+	// 0   1   2
 
-	// Step 3
 	r := *leaf
+	fn := index
 
-	// Step 4
-	for _, p := range path {
-		// Step 4(a)
-		if sn == 0 {
-			return fmt.Errorf("proof input is malformed: reached root too soon")
+	for sn := size - 1; fn < sn; path, fn, sn = path[1:], fn>>1, sn>>1 {
+		if len(path) == 0 {
+			return fmt.Errorf("proof input is malformed: path too short")
 		}
-
-		// Step 4(b)
-		if isOdd(fn) || fn == sn {
-			// Step 4(b), i
-			r = HashInteriorNode(&p, &r)
-
-			// Step 4(b), ii
-			if isEven(fn) {
-				for {
-					fn >>= 1
-					sn >>= 1
-
-					if isOdd(fn) || fn == 0 {
-						break
-					}
-				}
-			}
+		if isOdd(fn) {
+			// Node on path is left sibling
+			r = HashInteriorNode(&path[0], &r)
 		} else {
-			// Step 4(b), i
-			r = HashInteriorNode(&r, &p)
+			// Node on path is right sibling
+			r = HashInteriorNode(&r, &path[0])
 		}
-
-		// Step 4(c)
-		fn >>= 1
-		sn >>= 1
 	}
 
-	// Step 5
-	if sn != 0 {
-		return fmt.Errorf("proof input is malformed: never reached the root")
+	// We have the right-most node, so all nodes left on the path
+	// are left siblings, and there are no siblings at even
+	// indices.
+	for ; fn > 0; fn >>= 1 {
+		if isOdd(fn) {
+			if len(path) == 0 {
+				return fmt.Errorf("proof input is malformed: path too short")
+			}
+			r = HashInteriorNode(&path[0], &r)
+			path = path[1:]
+		}
 	}
-	if !bytes.Equal(r[:], root[:]) {
+
+	if len(path) > 0 {
+		return fmt.Errorf("proof input is malformed: reached root too soon")
+	}
+	if r != *root {
 		return fmt.Errorf("invalid proof: root mismatch")
 	}
 	return nil
