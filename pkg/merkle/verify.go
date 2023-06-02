@@ -213,9 +213,8 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 	if len(leaves) == 0 {
 		return fmt.Errorf("range must be non-empty")
 	}
-	// TODO: When in working shape, simplify to set to ...-1.
-	end := fn + uint64(len(leaves))
-	if end > size {
+	en := fn + uint64(len(leaves)) - 1
+	if en >= size {
 		return fmt.Errorf("end of range exceeds tree size")
 	}
 
@@ -226,19 +225,19 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 		return VerifyInclusion(&leaves[0], fn, size, root, startPath)
 	}
 
-	// Construct compact range for intermediate nodes, [fn+1, end-1).
-	// Find the bit index of the most significant bit where fn and end differ.
-	k := bits.Len64(fn^(end-1)) - 1
-	split := (end - 1) & -(uint64(1) << k)
+	// Find the bit index of the most significant bit where fn and en differ.
+	k := bits.Len64(fn^en) - 1
+	// Split the range at a multiple of 2^k, so that
+	// split - 2^k <= fn < split <= en < split + 2^k
+	split := en & -(uint64(1) << k)
 
-	// fmt.Printf("XXX fn = %d, split = %d, end = %d, k = %d\n", fn, split, end, k)
-	// Now split is divisible by 2^k, and we have
-	// split - 2^k <= fn + 1 < split <= end - 1 < split + 2^k
+	// Construct the compact range of the intermediate leaves,
+	// i.e., excluding the leaves at fn and en, split as above.
 	leftRange := makeLeftRange(k, leaves[1:split-fn])
 	rightRange := makeRightRange(k, leaves[split-fn:len(leaves)-1])
 
-	// The right siblings for the first k levels should match the
-	// inclusion path.
+	// Process left path; the right siblings for the first k
+	// levels should match the compact range.
 	if len(startPath) < k+1 {
 		return fmt.Errorf("proof input is malformed: start path too short")
 	}
@@ -266,7 +265,10 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 		return fmt.Errorf("internal error: left range leftovers")
 	}
 
-	en := end - 1
+	// Process right path; left siblings for the first k levels
+	// should match the compact range. Due to the possibility of
+	// hitting en == sn, we can't require upfront then
+	// len(endPath) >= k+1.
 	sn := size - 1
 	er := leaves[len(leaves)-1]
 
