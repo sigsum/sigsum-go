@@ -151,40 +151,18 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	return nil
 }
 
-func extendRange(cr []crypto.Hash, i uint64, h crypto.Hash,
-	makeNode func(left, right *crypto.Hash) crypto.Hash) []crypto.Hash {
-	for s := i + 1; len(cr) > 0 && isEven(s); s >>= 1 {
-		h = makeNode(&cr[len(cr)-1], &h)
-		cr = cr[:len(cr)-1]
-	}
-	return append(cr, h)
-}
-
 // Returns the compact range of a leaf interval ending at 2^k, in
 // reverse order, rightmost tree first.
-func makeLeftRange(leaves []crypto.Hash) []crypto.Hash {
+func makeLeftRange(leaves []crypto.Hash) compactRange {
 	if len(leaves) == 0 {
 		return nil
 	}
-	cr := []crypto.Hash{leaves[len(leaves)-1]}
-	for i := 1; i < len(leaves); i++ {
-		cr = extendRange(cr, uint64(i), leaves[len(leaves)-1-i],
+	cr := compactRange{}
+	for i := 0; i < len(leaves); i++ {
+		cr = cr.extend(uint64(i), leaves[len(leaves)-1-i],
 			func(left, right *crypto.Hash) crypto.Hash {
 				return HashInteriorNode(right, left)
 			})
-	}
-	return cr
-}
-
-// Returns the compact range of a leaf interval starting at 2^k.
-func makeRightRange(leaves []crypto.Hash) []crypto.Hash {
-	if len(leaves) == 0 {
-		return nil
-	}
-
-	cr := []crypto.Hash{leaves[0]}
-	for i := 1; i < len(leaves); i++ {
-		cr = extendRange(cr, uint64(i), leaves[i], HashInteriorNode)
 	}
 	return cr
 }
@@ -262,7 +240,7 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 
 	// Construct the right part of the compact range of the
 	// intermediate leaves.
-	rightRange := makeRightRange(leaves[split-fn : len(leaves)-1])
+	rightRange := newCompactRange(leaves[split-fn : len(leaves)-1])
 
 	// Process right path; left siblings for the first k levels
 	// should match the compact range.
@@ -326,11 +304,7 @@ func VerifyInclusionTail(leaves []crypto.Hash, fn uint64, root *crypto.Hash, pat
 		return err
 	}
 
-	// Construct the compact range of the tail leaves,
-	// (excluding the leave at fn), split as above.
-	rightRange := makeRightRange(leaves[split-fn:])
-
-	er := hashStack(rightRange)
+	er := rootOf(leaves[split-fn:])
 	if er != path[k] {
 		return fmt.Errorf("unexpected path, inconsistent with leaf range")
 	}
