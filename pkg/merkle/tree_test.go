@@ -208,6 +208,50 @@ func TestInclusionBatchValid(t *testing.T) {
 	}
 }
 
+func TestInclusionTailValid(t *testing.T) {
+	hashes := newLeaves(100)
+
+	rootHashes := []crypto.Hash{}
+	tree := NewTree()
+	for _, h := range hashes {
+		if !tree.AddLeafHash(&h) {
+			t.Fatalf("AddLeafHash failed at size %d", tree.Size())
+		}
+		rootHashes = append(rootHashes, tree.GetRootHash())
+	}
+
+	r := rand.New(rand.NewSource(17))
+
+	for i := 0; i < len(hashes); i++ {
+		for n := i + 1; n <= len(hashes); n++ {
+			proof, err := tree.ProveInclusion(uint64(i), uint64(n))
+			if err != nil {
+				t.Fatalf("ProveInclusion %d, %d failed: %v", i, n, err)
+			}
+			leaves := make([]crypto.Hash, n-i)
+			copy(leaves, hashes[i:])
+
+			if err := VerifyInclusionTail(leaves, uint64(i), &rootHashes[n-1], proof); err != nil {
+				t.Errorf("inclusion proof not valid, i %d, n %d: %v\n  proof: %x\n",
+					i, n, err, proof)
+			}
+
+			bitToFlip := r.Intn(crypto.HashSize * 8)
+			hashToFlip := r.Intn(len(proof) + len(leaves))
+			if hashToFlip < len(leaves) {
+				leaves[hashToFlip][bitToFlip/8] ^= 1 << (bitToFlip % 8)
+			} else {
+				proof[hashToFlip-len(leaves)][bitToFlip/8] ^= 1 << (bitToFlip % 8)
+			}
+
+			if err := VerifyInclusionTail(leaves, uint64(i), &rootHashes[n-1], proof); err == nil {
+				t.Errorf("inclusion proof should have failed, i %d, n %d: flipped bit %d of hash %d\n",
+					i, n, bitToFlip, hashToFlip)
+			}
+		}
+	}
+}
+
 func TestConsistency(t *testing.T) {
 	hashes := newLeaves(7)
 	h01 := HashInteriorNode(&hashes[0], &hashes[1])

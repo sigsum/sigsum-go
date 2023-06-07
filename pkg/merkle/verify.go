@@ -109,10 +109,6 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	if index >= size {
 		return fmt.Errorf("proof input is malformed: index out of range")
 	}
-	if got, want := len(path), inclusionPathLength(index, size); got != want {
-		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
-	}
-
 	if got, want := len(path), pathLength(index, size); got != want {
 		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
 	}
@@ -290,6 +286,60 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 
 	fr = HashInteriorNode(&fr, &er)
 	return VerifyInclusion(&fr, fn>>1, (sn>>1)+1, root, startPath[1:])
+}
+
+// Verifies inclusion of all the leaves, to a root hash
+// corresponding to size index + len(leaves).
+func VerifyInclusionTail(leaves []crypto.Hash, fn uint64, root *crypto.Hash, path []crypto.Hash) error {
+	if len(leaves) == 0 {
+		return fmt.Errorf("range must be non-empty")
+	}
+	if len(leaves) == 1 {
+		return VerifyInclusion(&leaves[0], fn, fn+1, root, path)
+	}
+	sn := fn + uint64(len(leaves)) - 1
+	if got, want := len(path), inclusionPathLength(fn, sn+1); got != want {
+		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
+	}
+
+	// Find the bit index of the most significant bit where fn and sn differ.
+	k := bits.Len64(fn^sn) - 1
+	// Split the range at a multiple of 2^k, so that
+	// split - 2^k <= fn < split <= sn < split + 2^k
+	split := sn & -(uint64(1) << k)
+
+	// Construct the compact range of the tail leaves,
+	// (excluding the leave at fn), split as above.
+	leftRange := makeLeftRange(leaves[1 : split-fn])
+	rightRange := makeRightRange(leaves[split-fn:])
+
+	fr := leaves[0]
+	for i := 0; i < k; path, fn, i = path[1:], fn>>1, i+1 {
+		if isOdd(fn) {
+			// Node on path is left sibling
+			fr = HashInteriorNode(&path[0], &fr)
+		} else {
+			// Node on path is right sibling, and must
+			// match compact range.
+			s := &leftRange[len(leftRange)-1]
+			leftRange = leftRange[:len(leftRange)-1]
+
+			if *s != path[0] {
+				return fmt.Errorf("unexpected path, inconsistent with leaf range")
+			}
+			fr = HashInteriorNode(&fr, s)
+		}
+	}
+
+	if len(leftRange) > 0 {
+		panic("internal error, left over compact range elements")
+	}
+	er := hashStack(rightRange)
+	if er != path[0] {
+		return fmt.Errorf("unexpected path, inconsistent with leaf range")
+	}
+	fr = HashInteriorNode(&fr, &er)
+	return VerifyInclusion(&fr, fn>>1, (sn>>(k+1))+1, root, path[1:])
 }
 
 func isOdd(num uint64) bool {
