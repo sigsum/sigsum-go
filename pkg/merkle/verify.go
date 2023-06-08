@@ -94,13 +94,6 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 	return nil
 }
 
-func inclusionPathLength(index, size uint64) int {
-	// k is the number of lowend bits that differ between fn and
-	// sn, i.e., number of iterations until fn == sn.
-	k := bits.Len64(index ^ (size - 1))
-	return k + bits.OnesCount64(index>>k)
-}
-
 // VerifyInclusion verifies that something is in a Merkle tree. The
 // algorithm used is equivalent to the one in in RFC 9162, §2.1.3.2.
 // Note that with index == 0, size == 1, the empty path is considered
@@ -109,6 +102,7 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	if index >= size {
 		return fmt.Errorf("proof input is malformed: index out of range")
 	}
+
 	if got, want := len(path), pathLength(index, size); got != want {
 		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
 	}
@@ -145,6 +139,7 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	if len(path) > 0 {
 		panic("internal error: left over path elements")
 	}
+
 	if r != *root {
 		return fmt.Errorf("invalid proof: root mismatch")
 	}
@@ -221,10 +216,10 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 		}
 		return VerifyInclusion(&leaves[0], fn, size, root, startPath)
 	}
-	if len(startPath) != inclusionPathLength(fn, size) {
+	if len(startPath) != pathLength(fn, size) {
 		return fmt.Errorf("proof invalid, wrong inclusion path length for first node")
 	}
-	if len(endPath) != inclusionPathLength(en, size) {
+	if len(endPath) != pathLength(en, size) {
 		return fmt.Errorf("proof invalid, wrong inclusion path length for last node")
 	}
 	// Find the bit index of the most significant bit where fn and en differ.
@@ -289,7 +284,7 @@ func VerifyInclusionTail(leaves []crypto.Hash, fn uint64, root *crypto.Hash, pat
 		return VerifyInclusion(&leaves[0], fn, fn+1, root, path)
 	}
 	sn := fn + uint64(len(leaves)) - 1
-	if got, want := len(path), inclusionPathLength(fn, sn+1); got != want {
+	if got, want := len(path), pathLength(fn, sn+1); got != want {
 		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
 	}
 
