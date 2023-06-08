@@ -8,10 +8,17 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
+func pathLength(index, size uint64) int {
+	// k is the number of lowend bits that differ between fn and
+	// sn, i.e., number of iterations until fn == sn.
+	k := bits.Len64(index ^ (size - 1))
+	return k + bits.OnesCount64(index>>k)
+}
+
 // VerifyConsistency verifies that a Merkle tree is consistent.  The algorithm
 // used is in RFC 9162, §2.1.4.2.  It is the same proof technique as RFC 6962.
 func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, path []crypto.Hash) error {
-	// Step 0 (not in RFC 6962): support the easy cases of an empty proof
+	// First handle the easy cases where an empty proof is valid.
 	if oldSize == newSize {
 		// Consistent if and only if roots are equal.
 		// Require empty path.
@@ -35,68 +42,49 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 		return nil
 	}
 
-	// Step 1
-	if len(path) == 0 {
-		return fmt.Errorf("proof input is malformed: no path")
+	// The last leaf of the old tree is at index fn. Eliminate
+	// bottom layers of the tree, until fn points at a subtree
+	// that is a left child; that subtree is included as-is also
+	// in the new tree, and that is the starting point for the
+	// traversal.
+	trimBits := bits.TrailingZeros64(oldSize) // Ones of oldSize - 1
+	fn := (oldSize - 1) >> trimBits
+	sn := (newSize - 1) >> trimBits
+
+	wantLength := pathLength(fn, sn+1)
+	if fn > 0 {
+		wantLength++
+	}
+	if len(path) != wantLength {
+		return fmt.Errorf("proof input is malformed: path length %d, should be %d", len(path), wantLength)
 	}
 
-	// Step2,
-	if isPowerOfTwo(oldSize) {
-		path = append([]crypto.Hash{*oldRoot}, path...)
+	// If fn == 0, we start at the oldRoot, otherwise, the
+	// starting point is the first element of the supplied path.
+	var fr crypto.Hash
+	if fn == 0 {
+		fr = *oldRoot
+	} else {
+		fr, path = path[0], path[1:]
 	}
+	sr := fr
 
-	// Step 3
-	fn := oldSize - 1
-	sn := newSize - 1
-
-	// Step 4
-	for isOdd(fn) {
-		fn >>= 1
-		sn >>= 1
-	}
-
-	// Step 5
-	fr := path[0]
-	sr := path[0]
-
-	// Step 6
-	for _, c := range path[1:] {
-		// Step 6(a)
-		if sn == 0 {
-			return fmt.Errorf("proof input is malformed: reached root too soon")
+	for ; sn > 0; fn, sn = fn>>1, sn>>1 {
+		if isOdd(fn) {
+			// Node on path is left sibling
+			fr = HashInteriorNode(&path[0], &fr)
+			sr = HashInteriorNode(&path[0], &sr)
+			path = path[1:]
+		} else if fn < sn {
+			// Node on path is right sibling for the larger tree.
+			sr = HashInteriorNode(&sr, &path[0])
+			path = path[1:]
 		}
-
-		// Step 6(b)
-		if isOdd(fn) || fn == sn {
-			// Step 6(b), i
-			fr = HashInteriorNode(&c, &fr)
-			// Step 6(b), ii
-			sr = HashInteriorNode(&c, &sr)
-			// Step 6(b), iii
-			if isEven(fn) {
-				for {
-					fn >>= 1
-					sn >>= 1
-
-					if isOdd(fn) || fn == 0 {
-						break
-					}
-				}
-			}
-		} else {
-			// Step 6(b), i
-			sr = HashInteriorNode(&sr, &c)
-		}
-
-		// Step 6(c)
-		fn >>= 1
-		sn >>= 1
+	}
+	if len(path) > 0 {
+		panic("internal error: left over path elements")
 	}
 
-	// Step 7
-	if sn != 0 {
-		return fmt.Errorf("proof input is malformed: never reached the root")
-	}
 	if !bytes.Equal(fr[:], oldRoot[:]) {
 		return fmt.Errorf("invalid proof: old root mismatch")
 	}
@@ -115,10 +103,7 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 		return fmt.Errorf("proof input is malformed: index out of range")
 	}
 
-	// k is the number of lowend bits that differ between fn and
-	// sn, i.e., number of rounds through the first loop.
-	k := bits.Len64(index ^ (size - 1))
-	if got, want := len(path), k+bits.OnesCount64(index>>k); got != want {
+	if got, want := len(path), pathLength(index, size); got != want {
 		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
 	}
 
@@ -140,29 +125,21 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	r := *leaf
 	fn := index
 
-	for sn := size - 1; fn < sn; path, fn, sn = path[1:], fn>>1, sn>>1 {
+	for sn := size - 1; sn > 0; fn, sn = fn>>1, sn>>1 {
 		if isOdd(fn) {
 			// Node on path is left sibling
 			r = HashInteriorNode(&path[0], &r)
-		} else {
+			path = path[1:]
+		} else if fn < sn {
 			// Node on path is right sibling
 			r = HashInteriorNode(&r, &path[0])
-		}
-	}
-
-	// We have the right-most node, so all nodes left on the path
-	// are left siblings, and there are no siblings at even
-	// indices.
-	for ; fn > 0; fn >>= 1 {
-		if isOdd(fn) {
-			r = HashInteriorNode(&path[0], &r)
 			path = path[1:]
 		}
 	}
-
 	if len(path) > 0 {
 		panic("internal error: left over path elements")
 	}
+
 	if r != *root {
 		return fmt.Errorf("invalid proof: root mismatch")
 	}
@@ -175,9 +152,4 @@ func isOdd(num uint64) bool {
 
 func isEven(num uint64) bool {
 	return (num & 1) == 0
-}
-
-// Checks if num is a power of 2. It is required that num > 0.
-func isPowerOfTwo(num uint64) bool {
-	return (num & (num - 1)) == 0
 }
