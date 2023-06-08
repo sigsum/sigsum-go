@@ -52,8 +52,8 @@ func TestInternal(t *testing.T) {
 			t.Fatalf("invalid state: %d leafs, %d index entries",
 				len(tree.leafs), len(tree.leafIndex))
 		}
-		if popc := bits.OnesCount(uint(len(tree.leafs))); popc != len(tree.stack) {
-			t.Fatalf("internal error: popc %d, len 0x%x", popc, len(tree.stack))
+		if popc := bits.OnesCount(uint(len(tree.leafs))); popc != len(tree.cRange) {
+			t.Fatalf("internal error: popc %d, len 0x%x", popc, len(tree.cRange))
 		}
 	}
 }
