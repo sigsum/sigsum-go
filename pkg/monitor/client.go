@@ -5,6 +5,7 @@ import (
 
 	"sigsum.org/sigsum-go/pkg/client"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -53,6 +54,18 @@ func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.T
 	return cth.SignedTreeHead, nil
 }
 
+func (c *monitoringLogClient) getInclusionProofAtIndex(ctx context.Context,
+	index uint64, req requests.InclusionProof) (types.InclusionProof, error) {
+	proof, err := c.client.GetInclusionProof(ctx, req)
+	if err != nil {
+		return types.InclusionProof{}, newAlert(AlertLogError, "get-inclusion-proof failed: %v", err)
+	}
+	if proof.LeafIndex != index {
+		return types.InclusionProof{}, newAlert(AlertLogError, "unexpected get-inclusion-proof index, got %d, want %d", proof.LeafIndex, index)
+	}
+	return proof, nil
+}
+
 // Retrieves at most count leaves, starting at index, and check that
 // they are included in the latest retrieved tree head.
 func (c *monitoringLogClient) getLeaves(ctx context.Context, treeHead *types.TreeHead, req requests.Leaves) ([]types.Leaf, error) {
@@ -60,25 +73,41 @@ func (c *monitoringLogClient) getLeaves(ctx context.Context, treeHead *types.Tre
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Do batch inclusion verification.
+
+	leafHashes := make([]crypto.Hash, len(leaves))
 	for i, leaf := range leaves {
-		leafHash := leaf.ToHash()
-		if treeHead.Size == 1 {
-			if leafHash != treeHead.RootHash {
-				return nil, newAlert(AlertLogError, "tree size = 1, but leaf hash != root hash")
-			}
-		} else {
-			proof, err := c.client.GetInclusionProof(ctx,
-				requests.InclusionProof{Size: treeHead.Size, LeafHash: leafHash})
-			if err != nil {
-				return nil, newAlert(AlertLogError, "get-inclusion-proof failed: %v", err)
-			}
-			if got, want := proof.LeafIndex, req.StartIndex+uint64(i); got != want {
-				return nil, newAlert(AlertLogError, "unexpected get-inclusion-proof index, got %d, want %d", got, want)
-			}
-			if err := proof.Verify(&leafHash, treeHead); err != nil {
-				return nil, newAlert(AlertLogError, "inclusion proof for leaf %d not valid", proof.LeafIndex)
-			}
+		leafHashes[i] = leaf.ToHash()
+	}
+
+	end := req.StartIndex + uint64(len(leaves))
+
+	var proof types.InclusionProof
+	if treeHead.Size > 1 {
+		var err error
+		proof, err = c.getInclusionProofAtIndex(ctx, req.StartIndex,
+			requests.InclusionProof{Size: treeHead.Size, LeafHash: leafHashes[0]})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(leaves) == 1 {
+		if err := proof.Verify(&leafHashes[0], treeHead); err != nil {
+			return nil, newAlert(AlertLogError, "inclusion proof for leaf %d not valid", proof.LeafIndex)
+		}
+	} else if end == treeHead.Size {
+		if err := merkle.VerifyInclusionTail(leafHashes, req.StartIndex, &treeHead.RootHash, proof.Path); err != nil {
+			return nil, newAlert(AlertLogError, "inclusion proof not valid for tail range %d:%d: %v",
+				req.StartIndex, end, err)
+		}
+	} else {
+		endProof, err := c.getInclusionProofAtIndex(ctx, end-1,
+			requests.InclusionProof{Size: treeHead.Size, LeafHash: leafHashes[len(leafHashes)-1]})
+		if err != nil {
+			return nil, err
+		}
+		if err := merkle.VerifyInclusionBatch(leafHashes, req.StartIndex, treeHead.Size, &treeHead.RootHash, proof.Path, endProof.Path); err != nil {
+			return nil, newAlert(AlertLogError, "inclusion proof not valid for range %d:%d: %v", req.StartIndex, end, err)
 		}
 	}
 	return leaves, nil
