@@ -1,8 +1,9 @@
-// package ascii implements an ASCII key-value parser and writer
+// Package ascii implements an ASCII key-value parser and writer.
 package ascii
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"strconv"
@@ -11,20 +12,9 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
-// Basic value types
 func IntFromDecimal(s string) (uint64, error) {
 	// Use ParseUint, to not accept leading +/-.
 	return strconv.ParseUint(s, 10, 63)
-}
-
-func split(s string, n int) ([]string, error) {
-	values := strings.Split(s, " ")
-
-	if len(values) != n {
-		return nil, fmt.Errorf("bad number of values, got %d, expected %d",
-			len(values), n)
-	}
-	return values, nil
 }
 
 type Parser struct {
@@ -32,8 +22,22 @@ type Parser struct {
 }
 
 func NewParser(input io.Reader) Parser {
-	// By default, scans by lines
-	return Parser{bufio.NewScanner(input)}
+	p := Parser{bufio.NewScanner(input)}
+	// This is like bufio.ScanLines but it doesn't strip CRs
+	// and fails on final unterminated lines.
+	p.scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if i := bytes.IndexByte(data, '\n'); i >= 0 {
+			return i + 1, data[0:i], nil
+		}
+		if atEOF {
+			if len(data) > 0 {
+				return 0, nil, io.ErrUnexpectedEOF
+			}
+			return 0, nil, io.EOF
+		}
+		return 0, nil, nil
+	})
+	return p
 }
 
 func (p *Parser) GetEOF() error {
@@ -41,19 +45,23 @@ func (p *Parser) GetEOF() error {
 		return fmt.Errorf("garbage at end of message: %q",
 			p.scanner.Text())
 	}
-	return nil
+	return p.scanner.Err()
 }
 
+// next scans the next line, expecting it to contain a key/value pair separated
+// by =, where the key is name. It returns the value.
 func (p *Parser) next(name string) (string, error) {
 	if !p.scanner.Scan() {
+		if err := p.scanner.Err(); err != nil {
+			return "", err
+		}
 		return "", io.EOF
 	}
 	line := p.scanner.Text()
-	equals := strings.Index(line, "=")
-	if equals < 0 {
+	key, value, ok := strings.Cut(line, "=")
+	if !ok {
 		return "", fmt.Errorf("invalid input line: %q", line)
 	}
-	key, value := line[:equals], line[equals+1:]
 	if key != name {
 		return "", fmt.Errorf("invalid input line, expected %v, got key: %q", name, key)
 	}
@@ -98,5 +106,11 @@ func (p *Parser) GetValues(name string, count int) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return split(v, count)
+	values := strings.Split(v, " ")
+
+	if len(values) != count {
+		return nil, fmt.Errorf("bad number of values, got %d, expected %d",
+			len(values), count)
+	}
+	return values, nil
 }

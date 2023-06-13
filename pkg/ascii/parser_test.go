@@ -5,6 +5,7 @@ import (
 
 	"bytes"
 	"fmt"
+
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -76,5 +77,64 @@ func TestParser(t *testing.T) {
 	}
 	if err := p.GetEOF(); err != nil {
 		t.Errorf("GetEOF failure: %v", err)
+	}
+}
+
+func TestParserCRLF(t *testing.T) {
+	input := "foo=bar\r\nfoo=bar\r\n"
+	p := NewParser(bytes.NewBufferString(input))
+	v, err := p.GetValues("foo", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(v) != 1 {
+		t.Errorf("unexpected number of values (wanted 1): %#v", v)
+	}
+	if v[0] != "bar\r" {
+		t.Errorf("unexpected values (wanted bar and a CR): %q", v[0])
+	}
+}
+
+func TestParserMissingNewline(t *testing.T) {
+	input := "foo=bar\nx=y"
+	p := NewParser(bytes.NewBufferString(input))
+	if _, err := p.GetValues("foo", 1); err != nil {
+		t.Errorf("GetValues failure: %v", err)
+	}
+	if _, err := p.GetValues("x", 1); err == nil {
+		t.Errorf("expected GetValues failure")
+	}
+}
+
+func TestParserEOF(t *testing.T) {
+	input := "foo=bar\n"
+	p := NewParser(bytes.NewBufferString(input))
+	if _, err := p.GetValues("foo", 1); err != nil {
+		t.Errorf("GetValues failure: %v", err)
+	}
+	if _, err := p.GetValues("foo", 1); err == nil {
+		t.Errorf("expected GetValues error")
+	}
+}
+
+func TestParserGetEOF(t *testing.T) {
+	input := "foo=bar\nx=y\n"
+	p := NewParser(bytes.NewBufferString(input))
+	if _, err := p.GetValues("foo", 1); err != nil {
+		t.Errorf("GetValues failure: %v", err)
+	}
+	if err := p.GetEOF(); err == nil {
+		t.Errorf("expected GetEOF failure")
+	}
+}
+
+func TestParserEOFGarbage(t *testing.T) {
+	input := "foo=bar\ngarbage"
+	p := NewParser(bytes.NewBufferString(input))
+	if _, err := p.GetValues("foo", 1); err != nil {
+		t.Errorf("GetValues failure: %v", err)
+	}
+	if err := p.GetEOF(); err == nil {
+		t.Errorf("expected GetEOF failure")
 	}
 }
