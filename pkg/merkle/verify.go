@@ -149,9 +149,6 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 // Returns the compact range of a leaf interval ending at 2^k, in
 // reverse order, rightmost tree first.
 func makeLeftRange(leaves []crypto.Hash) compactRange {
-	if len(leaves) == 0 {
-		return nil
-	}
 	cr := compactRange{}
 	for i := 0; i < len(leaves); i++ {
 		cr = cr.extend(uint64(i), leaves[len(leaves)-1-i],
@@ -309,10 +306,6 @@ func VerifyInclusionTail(leaves []crypto.Hash, fn uint64, root *crypto.Hash, pat
 
 func isOdd(num uint64) bool {
 	return (num & 1) != 0
-}
-
-func isEven(num uint64) bool {
-	return (num & 1) == 0
 }
 
 func pathEqual(a, b []crypto.Hash) bool {
