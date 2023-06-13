@@ -193,11 +193,6 @@ func verifyInclusionLeft(leaves []crypto.Hash, path []crypto.Hash) (crypto.Hash,
 // included in a Merkle tree. The algorithm is an extension of the
 // inclusion proof in RFC 9162, §2.1.3.2, using inclusion proofs for
 // the first and last (inclusive) leaves in the sequence.
-
-// TODO: In case the leaf sequence extends all the way to the last
-// leaf of the tree, the corresponding inclusion proof is redundant,
-// so we should be able to do without it.
-
 func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Hash, startPath []crypto.Hash, endPath []crypto.Hash) error {
 	if len(leaves) == 0 {
 		return fmt.Errorf("range must be non-empty")
