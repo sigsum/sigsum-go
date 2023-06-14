@@ -178,42 +178,56 @@ func TestLeafFromASCII(t *testing.T) {
 func TestLeavesFromASCII(t *testing.T) {
 	for _, table := range []struct {
 		desc       string
-		serialized io.Reader
+		serialized string
+		lenDiff    int
 		wantErr    bool
 		want       []Leaf
 	}{
 		{
 			desc:       "invalid: not a list of tree leaves (too few key-value pairs)",
-			serialized: bytes.NewBufferString("checksum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"),
+			serialized: "checksum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too many key-value pairs)",
-			serialized: bytes.NewBufferString(validLeafASCII(t) + "key=value\n"),
+			serialized: validLeafASCII(t) + "key=value\n",
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too few checksums))",
-			serialized: bytes.NewBufferString(invalidLeavesASCII(t, "checksum")),
+			serialized: invalidLeavesASCII(t, "checksum"),
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too few signatures))",
-			serialized: bytes.NewBufferString(invalidLeavesASCII(t, "signature")),
+			serialized: invalidLeavesASCII(t, "signature"),
 			wantErr:    true,
 		},
 		{
 			desc:       "invalid: not a list of tree leaves (too few key hashes))",
-			serialized: bytes.NewBufferString(invalidLeavesASCII(t, "key_hash")),
+			serialized: invalidLeavesASCII(t, "key_hash"),
 			wantErr:    true,
 		},
 		{
 			desc:       "valid leaves",
-			serialized: bytes.NewBufferString(validLeavesASCII(t)),
+			serialized: validLeavesASCII(t),
 			want:       validLeaves(t),
 		},
+		{
+			desc:       "valid fewer leaves",
+			serialized: validLeavesASCII(t),
+			want:       validLeaves(t),
+			lenDiff:    1,
+		},
+		{
+			desc:       "invalid, too many leaves",
+			serialized: validLeavesASCII(t),
+			want:       validLeaves(t),
+			lenDiff:    -1,
+			wantErr:    true,
+		},
 	} {
-		leaves, err := LeavesFromASCII(table.serialized)
+		leaves, err := LeavesFromASCII(bytes.NewBufferString(table.serialized), uint64(len(table.want)+table.lenDiff))
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}

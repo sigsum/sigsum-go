@@ -83,9 +83,13 @@ func (cli *Client) GetConsistencyProof(ctx context.Context, req requests.Consist
 }
 
 func (cli *Client) GetLeaves(ctx context.Context, req requests.Leaves) (leaves []types.Leaf, err error) {
+	if req.StartIndex >= req.EndIndex {
+		return nil, fmt.Errorf("invalid request, StartIndex (%d) >= EndIndex (%d)",
+			req.StartIndex, req.EndIndex)
+	}
 	err = cli.get(ctx, req.ToURL(types.EndpointGetLeaves.Path(cli.config.URL)),
 		func(r io.Reader) (err error) {
-			leaves, err = types.LeavesFromASCII(r)
+			leaves, err = types.LeavesFromASCII(r, req.StartIndex-req.EndIndex)
 			return err
 		})
 	return
