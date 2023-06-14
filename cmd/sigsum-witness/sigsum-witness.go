@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	getopt "github.com/pborman/getopt/v2"
@@ -52,7 +55,29 @@ func main() {
 
 	http.HandleFunc("/"+types.EndpointGetTreeSize.Path(settings.prefix), witness.GetTreeSize)
 	http.HandleFunc("/"+types.EndpointAddTreeHead.Path(settings.prefix), witness.AddTreeHead)
-	log.Fatal(http.ListenAndServe(settings.hostAndPort, nil))
+	server := http.Server{
+		Addr: settings.hostAndPort,
+	}
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := server.ListenAndServe()
+		if err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	<-sigs
+
+	shutdownCtx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+
+	server.Shutdown(shutdownCtx)
 }
 
 func (s *Settings) parse(args []string) {
