@@ -5,51 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"sigsum.org/sigsum-go/pkg/client"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-type AlertType int
-
 const (
-	AlertOther AlertType = iota
-	// Indicates log is misbehaving, or not responding.
-	AlertLogError
-	AlertInvalidLogSignature
-	AlertInconsistentTreeHead
+	batchSize = 512
 )
-
-func (t AlertType) String() string {
-	switch t {
-	case AlertOther:
-		return "Other"
-
-	case AlertLogError:
-		return "Log not responding as expected"
-	case AlertInvalidLogSignature:
-		return "Invalid log signature"
-	case AlertInconsistentTreeHead:
-		return "Log tree head not consistent"
-	default:
-		return fmt.Sprintf("Unknown alert type %d", t)
-	}
-}
-
-type Alert struct {
-	Type AlertType
-	Err  error
-}
-
-func (a *Alert) Error() string {
-	return fmt.Sprintf("monitoring alert: %s: %s", a.Type, a.Err)
-}
-
-func newAlert(t AlertType, msg string, args ...interface{}) *Alert {
-	return &Alert{Type: t, Err: fmt.Errorf(msg, args...)}
-}
 
 // TODO: Figure out the proper interface to the monitor. Are callbacks
 // the right way, or should we instead have one or more channels to
@@ -71,13 +35,12 @@ type Callbacks interface {
 // expected to have one instance and one goroutine per log it
 // monitors.
 type Monitor struct {
-	logKey crypto.PublicKey // Identifies the log monitored.
 	// Keys of interest. If nil, all keys are of interest (but no
 	// signatures are verified).
 	submitKeys map[crypto.Hash]crypto.PublicKey
 
-	client client.Log
-	// Latest processed valid tree head.
+	client *monitoringLogClient
+
 	// TODO: This mutated field implies that this struct isn't
 	// concurrency safe. Which is no big problem, since it is used
 	// only by the goroutine spawned by the Run method. But
@@ -85,92 +48,63 @@ type Monitor struct {
 	// tree head as an input argument, and return value, for the
 	// Update method.
 	treeHead types.TreeHead
+	// Index of next leaf to process.
+	leafPos uint64
 }
 
-// Queries the log for a new tree head. Get any new leaves, verify
-// inclusion of all leaves, and extract the ones that match a known
-// submitter key.
-func (m *Monitor) Update(ctx context.Context) ([]types.Leaf, *types.SignedTreeHead, error) {
-	cth, err := m.client.GetTreeHead(ctx)
-	if err != nil {
-		return nil, nil, newAlert(AlertLogError, "get-tree-head failed: %v", err)
+func (m *Monitor) filterLeaves(leaves []types.Leaf) ([]types.Leaf, error) {
+	if m.submitKeys == nil {
+		return leaves, nil
 	}
-	// For now, only check log's signature. TODO: Also check cosignatures.
-	if !cth.Verify(&m.logKey) {
-		return nil, nil, newAlert(AlertInvalidLogSignature, "log signature invalid")
-	}
-	if cth.Size < m.treeHead.Size {
-		return nil, nil, newAlert(AlertInconsistentTreeHead, "monitored log has shrunk, size %d, previous size %d", cth.Size, m.treeHead.Size)
-	}
-	if cth.Size == m.treeHead.Size {
-		return nil, nil, nil
-	}
-	if m.treeHead.Size > 0 {
-		proof, err := m.client.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: m.treeHead.Size, NewSize: cth.Size})
-		if err != nil {
-			return nil, nil, newAlert(AlertLogError, "get-consistency-proof failed: %v", err)
-		}
-
-		if err := proof.Verify(&m.treeHead, &cth.TreeHead); err != nil {
-			return nil, nil, newAlert(AlertInconsistentTreeHead, "consistency proof not valid: %v", err)
-		}
-	}
-	var matchedLeaves []types.Leaf = nil
-	// TODO: Get leaves in batches, and verify them all based on a single inclusion proof.
-	for i := m.treeHead.Size; i < cth.Size; i++ {
-		leaves, err := m.client.GetLeaves(ctx, requests.Leaves{StartIndex: i, EndIndex: i + 1})
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(leaves) != 1 {
-			return nil, nil, newAlert(AlertLogError, "invalid get-leaves response, got %d leaves, expected 1", len(leaves))
-		}
-		leaf := leaves[0]
-		leafHash := leaf.ToHash()
-		if cth.Size == 1 {
-			if leafHash != cth.RootHash {
-				return nil, nil, newAlert(AlertLogError, "tree size = 1, but leaf hash != root hash")
+	matchedLeaves := []types.Leaf{}
+	for _, leaf := range leaves {
+		if key, ok := m.submitKeys[leaf.KeyHash]; ok {
+			if !leaf.Verify(&key) {
+				// Indicates log is misbehaving.
+				// TODO: Report error, but continue processing other leaves?
+				return nil, newAlert(AlertLogError, "invalid leaf signature, keyhash %x", leaf.KeyHash)
 			}
-		} else {
-			proof, err := m.client.GetInclusionProof(ctx,
-				requests.InclusionProof{Size: cth.Size, LeafHash: leafHash})
-			if err != nil {
-				return nil, nil, newAlert(AlertLogError, "get-inclusion-proof failed: %v", err)
-			}
-			if err := proof.Verify(&leafHash, &cth.TreeHead); err != nil {
-				return nil, nil, newAlert(AlertLogError, "inclusion proof not valid")
-			}
-		}
-		if m.submitKeys != nil {
-			if key, ok := m.submitKeys[leaf.KeyHash]; ok {
-				if !leaf.Verify(&key) {
-					// Indicates log is misbehaving.
-					return nil, nil, newAlert(AlertLogError, "invalid leaf signature, keyhash %x", leaf.KeyHash)
-				}
-				matchedLeaves = append(matchedLeaves, leaf)
-			}
-		} else {
 			matchedLeaves = append(matchedLeaves, leaf)
 		}
 	}
-	m.treeHead = cth.TreeHead
-	return matchedLeaves, &cth.SignedTreeHead, nil
+	return matchedLeaves, nil
 }
 
 func (m *Monitor) Run(ctx context.Context, interval time.Duration, callbacks Callbacks) {
-	keyHash := crypto.HashBytes(m.logKey[:])
+	keyHash := crypto.HashBytes(m.client.logKey[:])
 	for ctx.Err() == nil {
 		updateCtx, _ := context.WithTimeout(ctx, interval)
-		leaves, sth, e := m.Update(ctx)
-		if e != nil {
-			callbacks.Alert(keyHash, e)
-		} else {
-			if sth != nil {
-				callbacks.NewTreeHead(keyHash, *sth)
+		if m.treeHead.Size == m.leafPos {
+			cth, err := m.client.getTreeHead(ctx, &m.treeHead)
+			if err != nil {
+				callbacks.Alert(keyHash, err)
+			} else if cth.Size > m.treeHead.Size {
+				callbacks.NewTreeHead(keyHash, cth)
+				m.treeHead = cth.TreeHead
+			}
+		}
+		for m.leafPos < m.treeHead.Size {
+			end := m.treeHead.Size
+			if end-m.leafPos > batchSize {
+				end = m.leafPos + batchSize
+			}
+			leaves, err := m.client.getLeaves(ctx, &m.treeHead,
+				requests.Leaves{StartIndex: m.leafPos, EndIndex: end})
+			if err != nil {
+				callbacks.Alert(keyHash, err)
+			}
+			nextPos := m.leafPos + uint64(len(leaves))
+			leaves, err = m.filterLeaves(leaves)
+			if err != nil {
+				callbacks.Alert(keyHash, err)
 			}
 			if leaves != nil {
+				// TODO: Also pass nextPos, for
+				// application to be able to persist
+				// it.
 				callbacks.NewLeaves(keyHash, leaves)
 			}
+			m.leafPos = nextPos
 		}
 		// Waits until end of interval
 		<-updateCtx.Done()
@@ -188,17 +122,19 @@ func StartMonitoring(
 	for _, l := range p.GetLogsWithUrl() {
 		keyHash := crypto.HashBytes(l.PublicKey[:])
 		monitor := Monitor{
-			logKey:     l.PublicKey,
 			submitKeys: submitKeys,
-			client:     client.New(client.Config{URL: l.URL, UserAgent: "sigsum-monitor"}),
+			client:     newMonitoringLogClient(&l.PublicKey, l.URL),
 		}
 		if sth, ok := state[keyHash]; ok {
 			if !sth.Verify(&l.PublicKey) {
 				return fmt.Errorf("invalid signature in old state for log %q", keyHash)
 			}
 			monitor.treeHead = sth.TreeHead
+			// TODO: include in the state mapping.
+			monitor.leafPos = monitor.treeHead.Size
 		} else {
 			monitor.treeHead = types.NewEmptyTreeHead()
+			monitor.leafPos = 0
 		}
 		monitors = append(monitors, monitor)
 	}
