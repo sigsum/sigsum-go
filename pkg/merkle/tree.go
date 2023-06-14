@@ -215,3 +215,7 @@ func split(n uint64) uint64 {
 	}
 	return uint64(1) << (bits.Len64(n-1) - 1)
 }
+
+func isEven(num uint64) bool {
+	return (num & 1) == 0
+}

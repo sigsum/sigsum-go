@@ -146,10 +146,171 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	return nil
 }
 
+// Returns the compact range of a leaf interval ending at 2^k, in
+// reverse order, rightmost tree first.
+func makeLeftRange(leaves []crypto.Hash) compactRange {
+	cr := compactRange{}
+	for i := 0; i < len(leaves); i++ {
+		cr = cr.extend(uint64(i), leaves[len(leaves)-1-i],
+			func(left, right *crypto.Hash) crypto.Hash {
+				return HashInteriorNode(right, left)
+			})
+	}
+	return cr
+}
+
+// Verify inclusion of a range of leaves ending at a multiple of 2^k,
+// where the path has k entries.
+func verifyInclusionLeft(leaves []crypto.Hash, path []crypto.Hash) (crypto.Hash, error) {
+	if len(leaves) > (1 << len(path)) {
+		panic(fmt.Sprintf("internal error: %d leaves, %d path elements", len(leaves), len(path)))
+	}
+	cRange := makeLeftRange(leaves[1:])
+	r := leaves[0]
+	fn := (uint64(1) << len(path)) - uint64(len(leaves))
+	for _, s := range path {
+		if isOdd(fn) {
+			// Node on path is left sibling
+			r = HashInteriorNode(&s, &r)
+		} else {
+			// Node on path is right sibling, and must
+			// match left compact range.
+			if s != cRange[len(cRange)-1] {
+				return crypto.Hash{}, fmt.Errorf("unexpected path, inconsistent with leaf range")
+			}
+			cRange = cRange[:len(cRange)-1]
+			r = HashInteriorNode(&r, &s)
+		}
+		fn >>= 1
+	}
+	if len(cRange) > 0 {
+		panic("internal error, left over compact range elements")
+	}
+	return r, nil
+}
+
+// VerifyBatchInclusion verifies a consecutive sequence of leaves are
+// included in a Merkle tree. The algorithm is an extension of the
+// inclusion proof in RFC 9162, §2.1.3.2, using inclusion proofs for
+// the first and last (inclusive) leaves in the sequence.
+func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Hash, startPath []crypto.Hash, endPath []crypto.Hash) error {
+	if len(leaves) == 0 {
+		return fmt.Errorf("range must be non-empty")
+	}
+	en := fn + uint64(len(leaves)) - 1
+	if en >= size {
+		return fmt.Errorf("end of range exceeds tree size")
+	}
+
+	if len(leaves) == 1 {
+		if !pathEqual(startPath, endPath) {
+			return fmt.Errorf("proof invalid, inconsistent paths")
+		}
+		return VerifyInclusion(&leaves[0], fn, size, root, startPath)
+	}
+	if len(startPath) != pathLength(fn, size) {
+		return fmt.Errorf("proof invalid, wrong inclusion path length for first node")
+	}
+	if len(endPath) != pathLength(en, size) {
+		return fmt.Errorf("proof invalid, wrong inclusion path length for last node")
+	}
+	// Find the bit index of the most significant bit where fn and en differ.
+	k := bits.Len64(fn^en) - 1
+	// Split the range at a multiple of 2^k, so that
+	// split - 2^k <= fn < split <= en < split + 2^k
+	split := en & -(uint64(1) << k)
+
+	fr, err := verifyInclusionLeft(leaves[:split-fn], startPath[:k])
+	if err != nil {
+		return err
+	}
+
+	// Construct the right part of the compact range of the
+	// intermediate leaves.
+	rightRange := newCompactRange(leaves[split-fn : len(leaves)-1])
+
+	// Process right path; left siblings for the first k levels
+	// should match the compact range.
+	sn := size - 1
+	er := leaves[len(leaves)-1]
+
+	for i := 0; i < k; en, sn, i = en>>1, sn>>1, i+1 {
+		if isOdd(en) {
+			// Node on path is left sibling, and must match right compact range.
+			s := &rightRange[len(rightRange)-1]
+			rightRange = rightRange[:len(rightRange)-1]
+
+			if *s != endPath[0] {
+				return fmt.Errorf("unexpected path, inconsistent with leaf range")
+			}
+			er = HashInteriorNode(s, &er)
+			endPath = endPath[1:]
+		} else if en < sn {
+			// Node on path is right sibling.
+			er = HashInteriorNode(&er, &endPath[0])
+			endPath = endPath[1:]
+		}
+	}
+	if len(rightRange) > 0 {
+		panic("internal error, left over compact range elements")
+	}
+	// Now we're just about to merge to a single node
+	if startPath[k] != er || endPath[0] != fr {
+		return fmt.Errorf("start and end trees not consistent")
+	}
+	if !pathEqual(startPath[k+1:], endPath[1:]) {
+		return fmt.Errorf("proof invalid, inconsistent paths")
+	}
+
+	fr = HashInteriorNode(&fr, &er)
+	return VerifyInclusion(&fr, fn>>(k+1), (sn>>1)+1, root, startPath[k+1:])
+}
+
+// Verifies inclusion of all the leaves, to a root hash
+// corresponding to size index + len(leaves).
+func VerifyInclusionTail(leaves []crypto.Hash, fn uint64, root *crypto.Hash, path []crypto.Hash) error {
+	if len(leaves) == 0 {
+		return fmt.Errorf("range must be non-empty")
+	}
+	if len(leaves) == 1 {
+		return VerifyInclusion(&leaves[0], fn, fn+1, root, path)
+	}
+	sn := fn + uint64(len(leaves)) - 1
+	if got, want := len(path), pathLength(fn, sn+1); got != want {
+		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
+	}
+
+	// Find the bit index of the most significant bit where fn and sn differ.
+	k := bits.Len64(fn^sn) - 1
+	// Split the range at a multiple of 2^k, so that
+	// split - 2^k <= fn < split <= sn < split + 2^k
+	split := sn & -(uint64(1) << k)
+
+	fr, err := verifyInclusionLeft(leaves[:split-fn], path[:k])
+	if err != nil {
+		return err
+	}
+
+	er := rootOf(leaves[split-fn:])
+	if er != path[k] {
+		return fmt.Errorf("unexpected path, inconsistent with leaf range")
+	}
+	fr = HashInteriorNode(&fr, &er)
+	return VerifyInclusion(&fr, fn>>(k+1), (sn>>(k+1))+1, root, path[k+1:])
+}
+
 func isOdd(num uint64) bool {
 	return (num & 1) != 0
 }
 
-func isEven(num uint64) bool {
-	return (num & 1) == 0
+func pathEqual(a, b []crypto.Hash) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, h := range a {
+		if h != b[i] {
+			return false
+		}
+	}
+	return true
 }
