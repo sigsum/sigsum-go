@@ -83,12 +83,14 @@ func (m *Monitor) Run(ctx context.Context, interval time.Duration, callbacks Cal
 				m.treeHead = cth.TreeHead
 			}
 		}
-		for m.leafPos < m.treeHead.Size {
+		for state := (*getLeavesState)(nil); m.leafPos < m.treeHead.Size; {
 			end := m.treeHead.Size
 			if end-m.leafPos > batchSize {
 				end = m.leafPos + batchSize
 			}
-			leaves, err := m.client.getLeaves(ctx, &m.treeHead,
+			var leaves []types.Leaf
+			var err error
+			leaves, state, err = m.client.getLeaves(ctx, state, &m.treeHead,
 				requests.Leaves{StartIndex: m.leafPos, EndIndex: end})
 			if err != nil {
 				callbacks.Alert(keyHash, err)
