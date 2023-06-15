@@ -105,7 +105,7 @@ func (l *Leaf) Parse(p *ascii.Parser) error {
 	return nil
 }
 
-func LeavesFromASCII(r io.Reader) ([]Leaf, error) {
+func LeavesFromASCII(r io.Reader, maxCount uint64) ([]Leaf, error) {
 	var leaves []Leaf
 	p := ascii.NewParser(r)
 	for {
@@ -119,6 +119,9 @@ func LeavesFromASCII(r io.Reader) ([]Leaf, error) {
 		}
 		if err != nil {
 			return nil, err
+		}
+		if uint64(len(leaves)) >= maxCount {
+			return nil, fmt.Errorf("too many leaves, expected at most %d", maxCount)
 		}
 		leaves = append(leaves, leaf)
 	}
