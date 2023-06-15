@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 
+	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
@@ -37,13 +38,6 @@ type Witness interface {
 	GetTreeSize(context.Context, requests.GetTreeSize) (uint64, error)
 	AddTreeHead(context.Context, requests.AddTreeHead) (types.Cosignature, error)
 }
-
-var (
-	HttpNotFound            = errors.New("404 Not Found")
-	HttpAccepted            = errors.New("202 Accepted")
-	HttpConflict            = errors.New("409 Conflict")
-	HttpUnprocessableEntity = errors.New("422 Unprocessable Entity")
-)
 
 type Config struct {
 	UserAgent string
@@ -104,7 +98,7 @@ func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf, header *token
 		tokenHeader = &s
 	}
 	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.URL), tokenHeader, &buf, nil); err != nil {
-		if errors.Is(err, HttpAccepted) {
+		if errors.Is(err, api.ErrAccepted) {
 			return false, nil
 		}
 		return false, err
@@ -176,18 +170,8 @@ func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error) error 
 		return fmt.Errorf("status code %d, no server response: %w",
 			rsp.StatusCode, err)
 	}
-	switch rsp.StatusCode {
-	case http.StatusNotFound:
-		return HttpNotFound
-	case http.StatusAccepted:
-		return HttpAccepted
-	case http.StatusConflict:
-		return HttpConflict
-	case http.StatusUnprocessableEntity:
-		return HttpUnprocessableEntity
-	case http.StatusOK:
-		return nil
-	default:
-		return fmt.Errorf("status code %d, server: %q", rsp.StatusCode, b)
+	if rsp.StatusCode != http.StatusOK {
+		return api.NewError(rsp.StatusCode, fmt.Errorf("server: %q", b))
 	}
+	return nil
 }
