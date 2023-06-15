@@ -4,9 +4,11 @@ package submit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/client"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/log"
@@ -192,7 +194,7 @@ func submitLeafToLog(ctx context.Context, policy *policy.Policy,
 					Size:     pr.TreeHead.Size,
 					LeafHash: *leafHash,
 				})
-			if err == client.HttpNotFound {
+			if errors.Is(err, api.ErrNotFound) {
 				log.Info("no inclusion proof yet, will retry")
 				if err := sleep(ctx); err != nil {
 					return proof.SigsumProof{}, err
