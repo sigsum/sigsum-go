@@ -55,7 +55,7 @@ func main() {
 	}
 
 	httpServer := http.Server{
-		Addr: settings.hostAndPort,
+		Addr:    settings.hostAndPort,
 		Handler: server.NewWitness(&server.Config{Prefix: settings.prefix}, &witness),
 	}
 
@@ -136,7 +136,6 @@ func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (type
 	if !req.TreeHead.Verify(&s.logPub) {
 		return types.Cosignature{}, api.ErrForbidden
 	}
-
 	return s.state.Update(&req.TreeHead, req.OldSize, &req.Proof,
 		func() (types.Cosignature, error) {
 			return req.TreeHead.Cosign(s.signer, &logKeyHash, uint64(time.Now().Unix()))
