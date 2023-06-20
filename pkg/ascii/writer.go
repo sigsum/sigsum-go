@@ -18,6 +18,9 @@ func writeItem(w io.Writer, item interface{}) error {
 		}
 		_, err := fmt.Fprintf(w, "%d", item)
 		return err
+	case string:
+		_, err := fmt.Fprintf(w, "%s", item)
+		return err
 	default:
 		return fmt.Errorf("unsupported type: %t", item)
 	}
