@@ -181,25 +181,56 @@ e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
 
 # The `sigsum-submit` tool
 
-The `sigsum-submit` tool is used to create and/or submit an add-leaf
-request to a Sigsum log (as defined in the [Sigsum
+The `sigsum-submit` tool is used to create and/or submit add-leaf
+requests to a Sigsum log (as defined in the [Sigsum
 spec](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md).
 
-To create and immediately submit a request, pass both of the `-k`
-(signing key) and `-p` (policy) options, described below.
+To create and immediately submit one or more requests, pass both of
+the `-k` (signing key) and `-p` (policy) options, described below.
 
 To separate these two parts of the process (e.g., if the machine with
-access to the private signing does not have Internet connectivity),
+access to the private signing key does not have Internet connectivity),
 first run `sigsum-submit -k` to create and sign the request. Collect
 the output, which in this case is the body of a Sigsum add-leaf
 request, and pass that as input input to `sigsum -p` later on, to
 submit it to a log.
 
-## Options controlling output
+## Inputs
 
-By default the output of `sigsum-submit`, if any, is written to
-standard output. The `-o` option can be used to redirect output to a
-file. The tool can log various diagnostic messages, and the level of
+Each input to `sigsum-submit` is either a message, a message hash, or
+a leaf request, depending on other options. Input files are provided
+on the command line; if no arguments are provided, a single input is
+read from standard input.
+
+## Outputs
+
+If the input is read from standard input, by default, the output of
+`sigsum-submit`, if any, is written to standard output. The `-o`
+option can be used to redirect output to the specified file (any
+existing file is overwritten).
+
+For file inputs, there's one output file for each input file. The name
+of the output file is constructed as follows:
+
+1. If there's exactly one input file, and the -o option is used,
+   output is written to that file. Any existing file is overwritten.
+
+2. For a request output, the suffix ".req" is added to the input
+   file name.
+
+3. For a proof output, if the input is a request, any ".req"
+   suffix on the input file name is stripped. Then the suffix
+   ".proof" is added.
+
+4. If the --output-dir option is provided, any directory part of
+   the input file name is stripped, and the output is written as a
+   file in the specified output directory.
+
+When output is written to a named file (i.e., not to standard output),
+the output is first written to a temporary file, which is atomically
+renamed to the specified name only on success.
+
+The tool can log various diagnostic messages, and the level of
 verbosity is controlled with the `--diagnostics` option, which takes
 an argument that can be one of "fatal", "error", "warning", "info", or
 "debug", the default being "info".
@@ -207,30 +238,31 @@ an argument that can be one of "fatal", "error", "warning", "info", or
 ## Creating a request
 
 To create, and sign, a new an add-leaf request, use the `-k` option to
-pass a signing key. The message to log is read from standard input. By
-default, the message submitted to the log is the SHA256 hash of the
-input. To use the input as is, without hashing, pass the `--raw-hash`
-option. In this case, the data on standard input must either be
+pass a signing key. The message(s) to sign are listed as file
+arguments on the command line, or, by default, read from standard
+input. By default, the message submitted to the log is the SHA256 hash
+of the input. To use the input as is, without hashing, pass the
+`--raw-hash` option. In this case, the input data must either be
 exactly 32 octets, or a hex string representing 32 octets (64 digits,
 possibly with some leading and trailing whitespace).
 
-If the request is not to be submitted right away, as described below,
-the request is written to standard output, or to the file specified
-with the `-o` option.
+If the request(s) are not to be submitted right away, as described below,
+they are written to the respective output file(s), as described above.
+Any existing output files are overwritten.
 
 ## Submitting a request
 
-To submit the leaf request specify a Sigsum policy file using the `-p`
-option.
+To submit one or more the leaf requests, specify a Sigsum policy file
+using the `-p` option.
 
-If the `-k` option and a signing key was provided, the leaf to be
-submitted is the newly created one. If no `-k` option was provided,
+If the `-k` option and a signing key was provided, the leaf(s) to be
+submitted is the newly created ones. If no `-k` option was provided,
 the input should instead be a the body of an add-leaf request, which
 is parsed and verified. Separating signing and submission is useful if
-the machine access to the signing key is not directly connected to the
-Internet.
+the machine with access to the signing key is not directly connected
+to the Internet.
 
-The policy file must specify public key and URL for at least one log.
+The policy file must specify a public key and URL for at least one log.
 If the policy file specifies a quorum different from "none" and
 corresponding witness public keys, `sigsum-submit` will not be
 satisfied until it has retrieved enough valid cosignatures to satisfy
@@ -245,7 +277,16 @@ If the log(s) used are configured to apply domain-based rate limiting
 for signing a submit token, and the `--token-domain` option specifies
 the domain (without the special "_sigsum_v0" label) where the
 corresponding public key is registered. An appropriate "sigsum-token:"
-header is created and attached to the add-leaf request.
+header is created and attached to each add-leaf request.
+
+When the inputs are provided on the command line (i.e., not read from
+stdandard input), `sigsum-submit` first checks if the corresponding
+output ".proof" file already exists. If it does exist, the proof is read
+and verified; if the proof is valid, the corresponding input is
+skipped, if it is not valid, `sigsum-submit` exits with an error. This
+way, if a `sigsum-submit` call to submit a batch of requests fails
+half-way for any reason, exactly the same command can be rerun and it
+will process only the requests for which proofs are still missing.
 
 When submitting a request, `sigsum-submit` repeats the request until
 it is acknowledged by the log. It keeps polling the log until it has
@@ -256,14 +297,15 @@ requirements, and an inclusion proof for the submitted leaf.
 If submission to the first log fails, or polling for the required proof
 material times out, `sigsum-submit` tries the next log.
 
-On submission success, the Sigsum proof is written to standard output,
-or to the file specified with the `-o` option.
+On submission success, the Sigsum proof is written to respective
+output file, as described above.
 
 ## Verifying a leaf request
 
 If neither a signing key (`-k`) or policy file (`-p`) is provided,
-`sigsum-submit` reads a leaf request from standard input, and verifies
-the syntax and signature, but there is no output.
+`sigsum-submit` reads the leaf request(s) on the command line, or read
+from standard input. Syntax and signatures are verified, but there is
+no output, just the exit code to signal sucess or failure.
 
 ## Examples
 
@@ -290,9 +332,9 @@ node_hash=ede77b77a3bba27ea0af640d37e58281aef4459d71afdf5cf442cee8f9bebf5d
 ```
 
 We can also do the submission in two steps. First create a requests,
-saving it to "example.leaf".
+saving it to "example.req".
 ```
-$ echo "Hello again" | sigsum-submit -k example.key | tee example.leaf
+$ echo "Hello again" | sigsum-submit -k example.key | tee example.req
 message=07305a3200629a7b8a04f77008fa1b1f719fec3b60d4fdf2683ba60cf2956381
 signature=aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
 public_key=e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
@@ -300,7 +342,7 @@ public_key=e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
 
 Then submit it to the log.
 ```
-$ sigsum-submit -p example.policy < example.leaf
+$ sigsum-submit -p example.policy < example.req
 version=0
 log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
 leaf=a2ee 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
@@ -316,7 +358,7 @@ node_hash=ede77b77a3bba27ea0af640d37e58281aef4459d71afdf5cf442cee8f9bebf5d
 
 We can also verify the signature on the leaf request created above.
 ```
-$ sigsum-submit < example.leaf
+$ sigsum-submit < example.req
 ```
 
 # The `sigsum-verify` tool
