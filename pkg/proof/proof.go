@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	SigsumProofVersion = 0
+	SigsumProofVersion = 1
 	ShortChecksumSize  = 2
 )
 
