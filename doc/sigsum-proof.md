@@ -38,20 +38,20 @@ Building on the [ascii
 format](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md)
 used on the wire when interacting with a sigsum log, we defined the
 following ascii format for a sigsum proof. It includes a version
-number, currently 0, the keyhash identifying the log that was used,
+number, currently 1, the keyhash identifying the log that was used,
 the recorded sigsum leaf (but with truncated checksum), a cosigned
 tree head and an inclusion proof, with an empty line (i.e., double
 newline character) separating distinct parts.
 
 ```
-version=0
+version=1
 log=KEYHASH
 leaf=SHORT-CHECKSUM KEYHASH SIGNATURE
 
 tree_size=NUMBER
 root_hash=HASH
 signature=SIGNATURE
-cosignature=KEYHASH TIMESTAMP SIGNATURE
+cosignature=VERSION KEYHASH TIMESTAMP SIGNATURE
 cosignature=...
 
 leaf_index=NUMBER
