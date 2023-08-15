@@ -3,6 +3,7 @@ package token
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -11,7 +12,8 @@ import (
 )
 
 const (
-	Label           = "_sigsum_v0"
+	Label           = "_sigsum_v1"
+	oldLabel        = "_sigsum_v0"
 	HeaderName      = "Sigsum-Token"
 	namespace       = "sigsum.org/v1/submit-token"
 	maxNumberOfKeys = 10
@@ -55,6 +57,21 @@ func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token *crypto.
 	return nil
 }
 
+// Looks up the appropriate TXT records for a domain.
+func LookupDomain(ctx context.Context,
+	lookupTXT func(context.Context, string) ([]string, error),
+	domain string) ([]string, error) {
+	rsps, err := lookupTXT(ctx, Label+"."+domain)
+	var dnsError *net.DNSError
+	if errors.As(err, &dnsError) && dnsError.IsNotFound {
+		r2, e2 := lookupTXT(ctx, oldLabel+"."+domain)
+		if e2 == nil {
+			return r2, nil
+		}
+	}
+	return rsps, err
+}
+
 // DnsResolver implements the Verifier interface by querying DNS.
 type DnsVerifier struct {
 	// Usually, net.Resolver.LookupTXT, but set differently for testing.
@@ -71,7 +88,7 @@ func NewDnsVerifier(logKey *crypto.PublicKey) *DnsVerifier {
 }
 
 func (dv *DnsVerifier) Verify(ctx context.Context, header *SubmitHeader) error {
-	rsps, err := dv.lookupTXT(ctx, Label+"."+header.Domain)
+	rsps, err := LookupDomain(ctx, dv.lookupTXT, header.Domain)
 	if err != nil {
 		return fmt.Errorf("token: dns look-up failed: %v", err)
 	}

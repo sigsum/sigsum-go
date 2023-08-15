@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"log"
+	"net"
 	"testing"
 
 	"fmt"
@@ -11,15 +12,22 @@ import (
 	"strings"
 )
 
-func verifierWithResponses(logKey *crypto.PublicKey, domain string, responses []string) *DnsVerifier {
-	return &DnsVerifier{
-		lookupTXT: func(_ context.Context, name string) ([]string, error) {
-			if name != "_sigsum_v0."+domain {
-				return []string{}, fmt.Errorf("NXDOMAIN: %q", name)
+func lookupTXTWithResponses(name string, responses []string) func(context.Context, string) ([]string, error) {
+	return func(_ context.Context, queryName string) ([]string, error) {
+		if queryName != name {
+			return nil, &net.DNSError{
+				Err:        "NXDOMAIN",
+				Name:       queryName,
+				IsNotFound: true,
 			}
-			return responses, nil
-		},
-		logKey: *logKey,
+		}
+		return responses, nil
+	}
+}
+func verifierWithResponses(logKey *crypto.PublicKey, queryName string, responses []string) *DnsVerifier {
+	return &DnsVerifier{
+		lookupTXT: lookupTXTWithResponses(queryName, responses),
+		logKey:    *logKey,
 	}
 }
 
@@ -112,12 +120,17 @@ func TestVerify(t *testing.T) {
 	}
 	testValid := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string) {
 		t.Helper()
-		testOne("valid: "+desc, tokenDomain, signature, registeredDomain, records,
+		testOne("valid: "+desc, tokenDomain, signature, "_sigsum_v1."+registeredDomain, records,
+			func(err error) error { return err })
+	}
+	testValidFallback := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string) {
+		t.Helper()
+		testOne("valid: "+desc+" (fallback)", tokenDomain, signature, "_sigsum_v0."+registeredDomain, records,
 			func(err error) error { return err })
 	}
 	testInvalid := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string, msg string) {
 		t.Helper()
-		testOne("invalid: "+desc, tokenDomain, signature, registeredDomain, records,
+		testOne("invalid: "+desc, tokenDomain, signature, "_sigsum_v1."+registeredDomain, records,
 			func(err error) error {
 				if err == nil {
 					return fmt.Errorf("unexpected success from invalid token")
@@ -136,6 +149,9 @@ func TestVerify(t *testing.T) {
 		logKeyHex, hexKey + "aa", "bad"},
 		"bad keys: 2")
 	testValid("multiple keys",
+		"foo.example.org", &signature, "foo.example.org", []string{
+			logKeyHex, hexKey + "aa", "bad", hexKey})
+	testValidFallback("multiple keys",
 		"foo.example.org", &signature, "foo.example.org", []string{
 			logKeyHex, hexKey + "aa", "bad", hexKey})
 	testInvalid("too many keys",

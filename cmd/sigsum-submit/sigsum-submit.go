@@ -389,7 +389,7 @@ func withOutputFile(outputFile string, writer func(f io.Writer) error) error {
 // Warn if corresponding public key isn't registered for the domain.
 func checkTokenDomain(ctx context.Context, domain string, pubkey crypto.PublicKey) error {
 	resolver := net.Resolver{}
-	rsps, err := resolver.LookupTXT(ctx, token.Label+"."+domain)
+	rsps, err := token.LookupDomain(ctx, resolver.LookupTXT, domain)
 	if err != nil {
 		return err
 	}
