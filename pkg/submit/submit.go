@@ -110,6 +110,7 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 		return proof.SigsumProof{}, fmt.Errorf("no logs defined in policy")
 	}
 	for _, entity := range logs {
+		log.Info("Attempting submit to log: %s", entity.URL)
 		var header *token.SubmitHeader
 		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
 			signature, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
@@ -156,6 +157,7 @@ func submitLeafToLog(ctx context.Context, policy *policy.Policy,
 		if persisted {
 			break
 		}
+		log.Debug("Leaf submitted, waiting for it to be persisted.")
 		if err := sleep(ctx); err != nil {
 			return proof.SigsumProof{}, err
 		}
@@ -174,28 +176,21 @@ func submitLeafToLog(ctx context.Context, policy *policy.Policy,
 		// See if we can have an inclusion proof for this tree size.
 		if pr.TreeHead.Size == 0 {
 			// Certainly not included yet.
+			log.Debug("Signed tree is still empty, waiting.")
 			if err := sleep(ctx); err != nil {
 				return proof.SigsumProof{}, err
 			}
 			continue
 		}
-		// Special case for the very first leaf.
-		if pr.TreeHead.Size == 1 {
-			if pr.TreeHead.RootHash != *leafHash {
-				// Certainly not included yet.
-				if err := sleep(ctx); err != nil {
-					return proof.SigsumProof{}, err
-				}
-				continue
-			}
-		} else {
+		// For TreeHead.Size == 1, inclusion proof is trivial.
+		if pr.TreeHead.Size > 1 {
 			pr.Inclusion, err = cli.GetInclusionProof(ctx,
 				requests.InclusionProof{
 					Size:     pr.TreeHead.Size,
 					LeafHash: *leafHash,
 				})
 			if errors.Is(err, api.ErrNotFound) {
-				log.Info("no inclusion proof yet, will retry")
+				log.Debug("No inclusion proof yet, waiting.")
 				if err := sleep(ctx); err != nil {
 					return proof.SigsumProof{}, err
 				}
