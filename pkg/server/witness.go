@@ -17,9 +17,7 @@ func NewWitness(config *Config, witness client.Witness) http.Handler {
 	server.register(types.EndpointGetTreeSize, http.MethodGet,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.GetTreeSize
-			// TODO: Take prefix into account, see
-			// https://git.glasklar.is/sigsum/core/log-go/-/issues/50
-			if err := req.FromURL(r.URL.Path); err != nil {
+			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
 				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
 				return
 			}

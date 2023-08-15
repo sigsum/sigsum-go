@@ -63,12 +63,16 @@ func (req *GetTreeSize) ToURL(url string) string {
 	return fmt.Sprintf("%s%x", url, req.KeyHash)
 }
 
+func (req *GetTreeSize) FromURLArgs(args string) error {
+	var err error
+	req.KeyHash, err = crypto.HashFromHex(args)
+	return err
+}
+
 func (req *GetTreeSize) FromURL(url string) error {
 	split := strings.Split(url, "/")
 	if len(split) < 1 {
 		return fmt.Errorf("not enough input")
 	}
-	var err error
-	req.KeyHash, err = crypto.HashFromHex(split[len(split)-1])
-	return err
+	return req.FromURLArgs(split[len(split)-1])
 }
