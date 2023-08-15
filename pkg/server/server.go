@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"sigsum.org/sigsum-go/pkg/api"
@@ -30,6 +31,8 @@ type handlerWithMethod struct {
 	method  string
 	handler http.Handler
 }
+
+type sigsumUrlArguments struct{}
 
 func (h *handlerWithMethod) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Error handling is based on RFC 7231, see Sections 6.5.5
@@ -85,7 +88,19 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), s.config.getTimeout())
 	defer cancel()
+	if strings.HasSuffix(pattern, "/") {
+		ctx = context.WithValue(ctx, sigsumUrlArguments{},
+			strings.TrimPrefix(r.URL.Path, pattern))
+	}
 	handler.ServeHTTP(&response, r.WithContext(ctx))
+}
+
+// Returns an empty string for missing arguments.
+func GetSigsumURLArguments(r *http.Request) string {
+	if args, ok := r.Context().Value(sigsumUrlArguments{}).(string); ok {
+		return args
+	}
+	return ""
 }
 
 func (s *server) register(endpoint types.Endpoint, method string, handler http.Handler) {
