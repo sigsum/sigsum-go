@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -141,7 +142,8 @@ func MonitorLog(ctx context.Context, client *monitoringLogClient,
 func StartMonitoring(
 	ctx context.Context, p *policy.Policy,
 	config *Config,
-	state map[crypto.Hash]MonitorState) {
+	state map[crypto.Hash]MonitorState) <-chan struct{} {
+	var wg sync.WaitGroup
 	for _, l := range p.GetLogsWithUrl() {
 		keyHash := crypto.HashBytes(l.PublicKey[:])
 		initialState, ok := state[keyHash]
@@ -152,6 +154,16 @@ func StartMonitoring(
 			}
 		}
 
-		go MonitorLog(ctx, newMonitoringLogClient(&l.PublicKey, l.URL), initialState, config)
+		wg.Add(1)
+		go func() {
+			MonitorLog(ctx, newMonitoringLogClient(&l.PublicKey, l.URL), initialState, config)
+			wg.Done()
+		}()
 	}
+	ch := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+	return ch
 }

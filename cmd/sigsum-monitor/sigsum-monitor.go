@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	getopt "github.com/pborman/getopt/v2"
@@ -68,11 +70,11 @@ func main() {
 	// keys, and discard state if keys are added, since whenever
 	// new keys are added, the log must be rescanned from the
 	// start.
-	monitor.StartMonitoring(context.Background(),
-		policy, &config, nil)
-	for {
-		time.Sleep(10 * time.Second)
-	}
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	done := monitor.StartMonitoring(ctx, policy, &config, nil)
+	<-done
 }
 
 func (s *Settings) parse(args []string) {
