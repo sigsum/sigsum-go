@@ -2,7 +2,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -12,7 +11,8 @@ import (
 )
 
 const (
-	batchSize = 512
+	DefaultBatchSize     = 512
+	DefaultQueryInterval = 10 * time.Minute
 )
 
 // TODO: Figure out the proper interface to the monitor. Are callbacks
@@ -26,87 +26,111 @@ type Callbacks interface {
 	// Called when there are new leaves with submit key of
 	// interest. Includes only leaves with a known submit key, and
 	// where signature and inclusion proof are valid.
-	// TODO: Also pass along index for each leaf?
-	NewLeaves(logKeyHash crypto.Hash, leaves []types.Leaf)
+	//
+	// The numberOfProcessedLeaves reports the monitoring
+	// progress; it is the number of leaves that have been
+	// retrieved from the log and that have been checked for
+	// proper inclusion; it may lag behind the tree size of the
+	// latest seen tree. indices and leaves represents the subset
+	// of new leaves that are of interest.
+	NewLeaves(logKeyHash crypto.Hash, numberOfProcessedLeaves uint64, indices []uint64, leaves []types.Leaf)
 	Alert(logKeyHash crypto.Hash, e error)
 }
 
-// State for monitoring a single sigsum log. A monitor program is
-// expected to have one instance and one goroutine per log it
-// monitors.
-type Monitor struct {
+type MonitorState struct {
+	TreeHead types.TreeHead
+	// Index of next leaf to process.
+	NextLeafIndex uint64
+}
+
+type Config struct {
+	QueryInterval time.Duration
+	// Maximum number of leaves to request at a time
+	BatchSize uint64
 	// Keys of interest. If nil, all keys are of interest (but no
 	// signatures are verified).
-	submitKeys map[crypto.Hash]crypto.PublicKey
-
-	client *monitoringLogClient
-
-	// TODO: This mutated field implies that this struct isn't
-	// concurrency safe. Which is no big problem, since it is used
-	// only by the goroutine spawned by the Run method. But
-	// consider removing the field here, and handle the the latest
-	// tree head as an input argument, and return value, for the
-	// Update method.
-	treeHead types.TreeHead
-	// Index of next leaf to process.
-	leafPos uint64
+	SubmitKeys map[crypto.Hash]crypto.PublicKey
+	Callbacks  Callbacks
 }
 
-func (m *Monitor) filterLeaves(leaves []types.Leaf) ([]types.Leaf, error) {
-	if m.submitKeys == nil {
-		return leaves, nil
+func (c *Config) applyDefaults() Config {
+	r := *c
+	if r.QueryInterval <= 0 {
+		r.QueryInterval = DefaultQueryInterval
 	}
+	if r.BatchSize == 0 {
+		r.BatchSize = DefaultBatchSize
+	}
+	return r
+}
+
+func (c *Config) filterLeaves(
+	leaves []types.Leaf, startIndex uint64, alertCallback func(*Alert)) ([]uint64, []types.Leaf) {
+	if c.SubmitKeys == nil {
+		indices := make([]uint64, len(leaves))
+		for i := range indices {
+			indices[i] = startIndex + uint64(i)
+		}
+		return indices, leaves
+	}
+	indices := []uint64{}
 	matchedLeaves := []types.Leaf{}
-	for _, leaf := range leaves {
-		if key, ok := m.submitKeys[leaf.KeyHash]; ok {
+	for i, leaf := range leaves {
+		index := startIndex + uint64(i)
+		if key, ok := c.SubmitKeys[leaf.KeyHash]; ok {
 			if !leaf.Verify(&key) {
 				// Indicates log is misbehaving.
-				// TODO: Report error, but continue processing other leaves?
-				return nil, newAlert(AlertLogError, "invalid leaf signature, keyhash %x", leaf.KeyHash)
+				// Generate alert and continue
+				// processing remaining leaves. This
+				// is an issue where inconsistent
+				// verification conditions could
+				// matter, see
+				// https://hdevalence.ca/blog/2020-10-04-its-25519am
+				alertCallback(newAlert(AlertLogError, "invalid signature on leaf %d, keyhash %x", index, leaf.KeyHash))
+			} else {
+				matchedLeaves = append(matchedLeaves, leaf)
+				indices = append(indices, index)
 			}
-			matchedLeaves = append(matchedLeaves, leaf)
 		}
 	}
-	return matchedLeaves, nil
+	return indices, matchedLeaves
 }
 
-func (m *Monitor) Run(ctx context.Context, interval time.Duration, callbacks Callbacks) {
-	keyHash := crypto.HashBytes(m.client.logKey[:])
+// Monitor a single sigsum log. A monitor program is expected to call
+// this function in one goroutine per log it monitors.
+func MonitorLog(ctx context.Context, client *monitoringLogClient,
+	state MonitorState, c *Config) {
+	config := c.applyDefaults()
+	keyHash := crypto.HashBytes(client.logKey[:])
 	for ctx.Err() == nil {
-		updateCtx, _ := context.WithTimeout(ctx, interval)
-		if m.treeHead.Size == m.leafPos {
-			cth, err := m.client.getTreeHead(ctx, &m.treeHead)
+		updateCtx, _ := context.WithTimeout(ctx, config.QueryInterval)
+		if state.TreeHead.Size == state.NextLeafIndex {
+			cth, err := client.getTreeHead(ctx, &state.TreeHead)
 			if err != nil {
-				callbacks.Alert(keyHash, err)
-			} else if cth.Size > m.treeHead.Size {
-				callbacks.NewTreeHead(keyHash, cth)
-				m.treeHead = cth.TreeHead
+				config.Callbacks.Alert(keyHash, err)
+			} else if cth.Size > state.TreeHead.Size {
+				config.Callbacks.NewTreeHead(keyHash, cth)
+				state.TreeHead = cth.TreeHead
 			}
 		}
-		for state := (*getLeavesState)(nil); m.leafPos < m.treeHead.Size; {
-			end := m.treeHead.Size
-			if end-m.leafPos > batchSize {
-				end = m.leafPos + batchSize
+		for glState := (*getLeavesState)(nil); state.NextLeafIndex < state.TreeHead.Size; {
+			end := state.TreeHead.Size
+			if end-state.NextLeafIndex > config.BatchSize {
+				end = state.NextLeafIndex + config.BatchSize
 			}
 			var leaves []types.Leaf
 			var err error
-			leaves, state, err = m.client.getLeaves(ctx, state, &m.treeHead,
-				requests.Leaves{StartIndex: m.leafPos, EndIndex: end})
+			leaves, glState, err = client.getLeaves(ctx, glState, &state.TreeHead,
+				requests.Leaves{StartIndex: state.NextLeafIndex, EndIndex: end})
 			if err != nil {
-				callbacks.Alert(keyHash, err)
+				config.Callbacks.Alert(keyHash, err)
+				break
 			}
-			nextPos := m.leafPos + uint64(len(leaves))
-			leaves, err = m.filterLeaves(leaves)
-			if err != nil {
-				callbacks.Alert(keyHash, err)
-			}
-			if leaves != nil {
-				// TODO: Also pass nextPos, for
-				// application to be able to persist
-				// it.
-				callbacks.NewLeaves(keyHash, leaves)
-			}
-			m.leafPos = nextPos
+			indices, leaves := config.filterLeaves(leaves, state.NextLeafIndex, func(alert *Alert) {
+				config.Callbacks.Alert(keyHash, err)
+			})
+			state.NextLeafIndex += uint64(len(leaves))
+			config.Callbacks.NewLeaves(keyHash, state.NextLeafIndex, indices, leaves)
 		}
 		// Waits until end of interval
 		<-updateCtx.Done()
@@ -116,32 +140,18 @@ func (m *Monitor) Run(ctx context.Context, interval time.Duration, callbacks Cal
 // Runs monitor in the background, until ctx is cancelled.
 func StartMonitoring(
 	ctx context.Context, p *policy.Policy,
-	interval time.Duration,
-	submitKeys map[crypto.Hash]crypto.PublicKey,
-	state map[crypto.Hash]types.SignedTreeHead,
-	callbacks Callbacks) error {
-	monitors := []Monitor{}
+	config *Config,
+	state map[crypto.Hash]MonitorState) {
 	for _, l := range p.GetLogsWithUrl() {
 		keyHash := crypto.HashBytes(l.PublicKey[:])
-		monitor := Monitor{
-			submitKeys: submitKeys,
-			client:     newMonitoringLogClient(&l.PublicKey, l.URL),
-		}
-		if sth, ok := state[keyHash]; ok {
-			if !sth.Verify(&l.PublicKey) {
-				return fmt.Errorf("invalid signature in old state for log %q", keyHash)
+		initialState, ok := state[keyHash]
+		if !ok {
+			initialState = MonitorState{
+				TreeHead:      types.NewEmptyTreeHead(),
+				NextLeafIndex: 0,
 			}
-			monitor.treeHead = sth.TreeHead
-			// TODO: include in the state mapping.
-			monitor.leafPos = monitor.treeHead.Size
-		} else {
-			monitor.treeHead = types.NewEmptyTreeHead()
-			monitor.leafPos = 0
 		}
-		monitors = append(monitors, monitor)
+
+		go MonitorLog(ctx, newMonitoringLogClient(&l.PublicKey, l.URL), initialState, config)
 	}
-	for _, m := range monitors {
-		go m.Run(ctx, interval, callbacks)
-	}
-	return nil
 }

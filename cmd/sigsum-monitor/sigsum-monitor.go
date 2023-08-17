@@ -29,10 +29,10 @@ func (_ callbacks) NewTreeHead(logKeyHash crypto.Hash, signedTreeHead types.Sign
 	fmt.Printf("New %x tree, size %d\n", logKeyHash, signedTreeHead.Size)
 }
 
-func (_ callbacks) NewLeaves(logKeyHash crypto.Hash, leaves []types.Leaf) {
-	fmt.Printf("New %x leaves, size %d\n", logKeyHash, len(leaves))
-	for _, l := range leaves {
-		fmt.Printf("  keyhash %x checksum %x\n", l.KeyHash, l.Checksum)
+func (_ callbacks) NewLeaves(logKeyHash crypto.Hash, numberOfProcessedLeaves uint64, indices []uint64, leaves []types.Leaf) {
+	fmt.Printf("New %x leaves, count %d, total processed %d\n", logKeyHash, len(leaves), numberOfProcessedLeaves)
+	for i, l := range leaves {
+		fmt.Printf("  index %d keyhash %x checksum %x\n", indices[i], l.KeyHash, l.Checksum)
 	}
 }
 
@@ -50,15 +50,18 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to create policy: %v", err)
 	}
-	var submitKeys map[crypto.Hash]crypto.PublicKey
+	config := monitor.Config{
+		QueryInterval: settings.interval,
+		Callbacks:     callbacks{},
+	}
 	if len(settings.keys) > 0 {
-		submitKeys = make(map[crypto.Hash]crypto.PublicKey)
+		config.SubmitKeys = make(map[crypto.Hash]crypto.PublicKey)
 		for _, f := range settings.keys {
 			pub, err := key.ReadPublicKeyFile(f)
 			if err != nil {
 				log.Fatal("Failed reading key: %v", err)
 			}
-			submitKeys[crypto.HashBytes(pub[:])] = pub
+			config.SubmitKeys[crypto.HashBytes(pub[:])] = pub
 		}
 	}
 	// TODO: Read state from disk. Also store the list of submit
@@ -66,8 +69,7 @@ func main() {
 	// new keys are added, the log must be rescanned from the
 	// start.
 	monitor.StartMonitoring(context.Background(),
-		policy, settings.interval, submitKeys,
-		nil, callbacks{})
+		policy, &config, nil)
 	for {
 		time.Sleep(10 * time.Second)
 	}
