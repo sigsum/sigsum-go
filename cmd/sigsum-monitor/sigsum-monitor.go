@@ -29,10 +29,10 @@ func (_ callbacks) NewTreeHead(logKeyHash crypto.Hash, signedTreeHead types.Sign
 	fmt.Printf("New %x tree, size %d\n", logKeyHash, signedTreeHead.Size)
 }
 
-func (_ callbacks) NewLeaves(logKeyHash crypto.Hash, leaves []types.Leaf) {
-	fmt.Printf("New %x leaves, size %d\n", logKeyHash, len(leaves))
-	for _, l := range leaves {
-		fmt.Printf("  keyhash %x checksum %x\n", l.KeyHash, l.Checksum)
+func (_ callbacks) NewLeaves(logKeyHash crypto.Hash, numberOfProcessedLeaves uint64, indices []uint64, leaves []types.Leaf) {
+	fmt.Printf("New %x leaves, count %d, total processed %d\n", logKeyHash, len(leaves), numberOfProcessedLeaves)
+	for i, l := range leaves {
+		fmt.Printf("  index %d keyhash %x checksum %x\n", indices[i], l.KeyHash, l.Checksum)
 	}
 }
 

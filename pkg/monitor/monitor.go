@@ -26,8 +26,14 @@ type Callbacks interface {
 	// Called when there are new leaves with submit key of
 	// interest. Includes only leaves with a known submit key, and
 	// where signature and inclusion proof are valid.
-	// TODO: Also pass along index for each leaf?
-	NewLeaves(logKeyHash crypto.Hash, leaves []types.Leaf)
+	//
+	// The numberOfProcessedLeaves reports the monitoring
+	// progress; it is the number of leaves that have been
+	// retrieved from the log and that have been checked for
+	// proper inclusion; it may lag behind the tree size of the
+	// latest seen tree. indices and leaves represents the subset
+	// of new leaves that are of interest.
+	NewLeaves(logKeyHash crypto.Hash, numberOfProcessedLeaves uint64, indices []uint64, leaves []types.Leaf)
 	Alert(logKeyHash crypto.Hash, e error)
 }
 
@@ -52,22 +58,35 @@ type Monitor struct {
 	leafPos uint64
 }
 
-func (m *Monitor) filterLeaves(leaves []types.Leaf) ([]types.Leaf, error) {
+func (m *Monitor) filterLeaves(leaves []types.Leaf, startIndex uint64, alertCallback func(*Alert)) ([]uint64, []types.Leaf) {
 	if m.submitKeys == nil {
-		return leaves, nil
+		indices := make([]uint64, len(leaves))
+		for i := range indices {
+			indices[i] = startIndex + uint64(i)
+		}
+		return indices, leaves
 	}
+	indices := []uint64{}
 	matchedLeaves := []types.Leaf{}
-	for _, leaf := range leaves {
+	for i, leaf := range leaves {
+		index := startIndex + uint64(i)
 		if key, ok := m.submitKeys[leaf.KeyHash]; ok {
 			if !leaf.Verify(&key) {
 				// Indicates log is misbehaving.
-				// TODO: Report error, but continue processing other leaves?
-				return nil, newAlert(AlertLogError, "invalid leaf signature, keyhash %x", leaf.KeyHash)
+				// Generate alert and continue
+				// processing remaining leaves. This
+				// is an issue where inconsistent
+				// verification conditions could
+				// matter, see
+				// https://hdevalence.ca/blog/2020-10-04-its-25519am
+				alertCallback(newAlert(AlertLogError, "invalid signature on leaf %d, keyhash %x", index, leaf.KeyHash))
+			} else {
+				matchedLeaves = append(matchedLeaves, leaf)
+				indices = append(indices, index)
 			}
-			matchedLeaves = append(matchedLeaves, leaf)
 		}
 	}
-	return matchedLeaves, nil
+	return indices, matchedLeaves
 }
 
 func (m *Monitor) Run(ctx context.Context, interval time.Duration, callbacks Callbacks) {
@@ -94,19 +113,13 @@ func (m *Monitor) Run(ctx context.Context, interval time.Duration, callbacks Cal
 				requests.Leaves{StartIndex: m.leafPos, EndIndex: end})
 			if err != nil {
 				callbacks.Alert(keyHash, err)
+				break
 			}
-			nextPos := m.leafPos + uint64(len(leaves))
-			leaves, err = m.filterLeaves(leaves)
-			if err != nil {
+			indices, leaves := m.filterLeaves(leaves, m.leafPos, func(alert *Alert) {
 				callbacks.Alert(keyHash, err)
-			}
-			if leaves != nil {
-				// TODO: Also pass nextPos, for
-				// application to be able to persist
-				// it.
-				callbacks.NewLeaves(keyHash, leaves)
-			}
-			m.leafPos = nextPos
+			})
+			m.leafPos += uint64(len(leaves))
+			callbacks.NewLeaves(keyHash, m.leafPos, indices, leaves)
 		}
 		// Waits until end of interval
 		<-updateCtx.Done()
