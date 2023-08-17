@@ -37,7 +37,7 @@ curl -s -w '%{http_code}\n' http://localhost:7777/get-tree-size/x > test.rsp
 
 curl -s -w '%{http_code}\n' http://localhost:7777/get-tree-size/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa > test.rsp
 
-[ "404" = "$(tail -1 test.rsp)" ] || (
-    echo 1>&2 'Unexpected status code, expected 404 (Not found)'
+[ "403" = "$(tail -1 test.rsp)" ] || (
+    echo 1>&2 'Unexpected status code, expected 403 (Forbidden)'
     exit 1
 )
