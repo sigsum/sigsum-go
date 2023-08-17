@@ -131,6 +131,7 @@ func (s *witness) GetTreeSize(w http.ResponseWriter, r *http.Request) {
 	suffix := fmt.Sprintf("/%x", crypto.HashBytes(s.logPub[:]))
 	if !strings.HasSuffix(r.URL.Path, suffix) {
 		http.Error(w, "Log not known", http.StatusForbidden)
+		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if _, err := fmt.Fprintf(w, "size=%d\n", s.state.GetSize()); err != nil {
