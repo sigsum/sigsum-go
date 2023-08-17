@@ -26,7 +26,7 @@ func NewWitness(config *Config, witness client.Witness) http.Handler {
 				_, err = fmt.Fprintf(w, "size=%d", size)
 			}
 			if err != nil {
-				reportErrorCode(w, r.URL, http.StatusInternalServerError, err)
+				reportError(w, r.URL, err)
 			}
 		}))
 	server.register(types.EndpointAddTreeHead, http.MethodPost,
