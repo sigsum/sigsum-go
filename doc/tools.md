@@ -275,7 +275,7 @@ If the log(s) used are configured to apply domain-based rate limiting
 (as publicly accessible logs are expected to do), the
 `--token-key-file` option must be used to specify the private key used
 for signing a submit token, and the `--token-domain` option specifies
-the domain (without the special "_sigsum_v0" label) where the
+the domain (without the special "_sigsum_v1" label) where the
 corresponding public key is registered. An appropriate "sigsum-token:"
 header is created and attached to each add-leaf request.
 
