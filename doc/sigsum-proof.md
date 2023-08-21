@@ -85,8 +85,14 @@ To verify the proof, the following steps are required:
 1. Compute `checksum = H(message)`, and check that it matches the
    truncated checksum on the leaf line. (This check serves to detect
    accidental mismatch between message and proof).
+
+2. Check that the leaf keyhash equals the hash of the submitter's
+   public key, and that the log keyhash equals the hash of a
+   recognized log's public key. (Requiring bitwise equality defends
+   against attacks involving multiple equivalent representations of
+   public keys).
    
-2. Check that the leaf signature (with `checksum` computed as above)
+3. Check that the leaf signature (with `checksum` computed as above)
    is valid.
    
 4. Check that the log's tree head signature is valid.
