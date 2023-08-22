@@ -7,9 +7,12 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/mocks"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -101,20 +104,9 @@ func TestGetTreeHead(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		// Ensures that batch is of zero size, so that first
 		// GetTreeHead returns an empty tree.
-		c := r.Intn(i + 1)
-		newSize := log.tree.Size() + uint64(c)
-		for j := 0; j < c; j++ {
-			var msg crypto.Hash
-			binary.BigEndian.PutUint64(msg[:], uint64(i))
-			binary.BigEndian.PutUint64(msg[8:], uint64(j))
-			_, err := log.AddLeaf(context.Background(), makeLeafRequest(t, leafSigner, &msg), nil)
-			if err != nil {
-				t.Fatalf("AddLeaf failed: %v", err)
-			}
-		}
-		if got, want := log.tree.Size(), newSize; got != want {
-			t.Fatalf("Unexpected merkle tree size: got %d, want %d", got, want)
-		}
+		c := uint64(r.Intn(i + 1))
+		newSize := log.tree.Size() + c
+		addLeaves(t, &log, leafSigner, uint64(i), c)
 
 		sth, err := monitorClient.getTreeHead(context.Background(), &prevTree)
 		if err != nil {
@@ -124,5 +116,83 @@ func TestGetTreeHead(t *testing.T) {
 			t.Fatalf("Unexpected log size: got %d, want %d", got, want)
 		}
 		prevTree = sth.TreeHead
+	}
+}
+
+// Test for invalid answers from log.
+func TestGetTreeHeadErrors(t *testing.T) {
+	logSigner := crypto.NewEd25519Signer(&crypto.PrivateKey{2})
+	leafSigner := crypto.NewEd25519Signer(&crypto.PrivateKey{3})
+	log := testLog{signer: logSigner, tree: merkle.NewTree()}
+
+	addLeaves(t, &log, leafSigner, 0, 20)
+	oldTh, err := log.GetTreeHead(context.Background())
+	if err != nil {
+		t.Fatalf("GetTreeHead failed: %v", err)
+	}
+	addLeaves(t, &log, leafSigner, 1, 20)
+	oneTest := func(description string, mungeTreeHead func(*types.CosignedTreeHead), mungeConsistency func(*types.ConsistencyProof)) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockLog := mocks.NewMockLogClient(ctrl)
+
+		mockLog.EXPECT().GetTreeHead(gomock.Any()).DoAndReturn(
+			func(ctx context.Context) (types.CosignedTreeHead, error) {
+				cth, err := log.GetTreeHead(ctx)
+				if err == nil && mungeTreeHead != nil {
+					mungeTreeHead(&cth)
+				}
+				return cth, err
+			})
+		mockLog.EXPECT().GetConsistencyProof(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+			func(ctx context.Context, req requests.ConsistencyProof) (types.ConsistencyProof, error) {
+				proof, err := log.GetConsistencyProof(ctx, req)
+				if err == nil && mungeConsistency != nil {
+					mungeConsistency(&proof)
+				}
+				return proof, err
+			})
+
+		monitorClient := monitoringLogClient{
+			logKey: logSigner.Public(),
+			client: mockLog,
+		}
+
+		_, err := monitorClient.getTreeHead(context.Background(), &oldTh.TreeHead)
+		if err == nil {
+			if description != "" {
+				t.Errorf("%s: Unexpectedly succeeded", description)
+			}
+			return
+		}
+		if description == "" {
+			t.Fatalf("Unexpected getTreeHead failure: %v", err)
+		}
+		t.Logf("%s: (expected) failure: %v", description, err)
+	}
+	oneTest("", nil, nil) // No failure; checks test wireup.
+	oneTest("bad signature", func(cth *types.CosignedTreeHead) {
+		cth.Signature[2] ^= 1
+	}, nil)
+	oneTest("bad signature (hash)", func(cth *types.CosignedTreeHead) {
+		cth.RootHash[5] ^= 1
+	}, nil)
+	oldTh.Size++
+	oneTest("bad consistency", nil, nil)
+}
+
+func addLeaves(t *testing.T, log *testLog, signer crypto.Signer, id, count uint64) {
+	oldSize := log.tree.Size()
+	for j := uint64(0); j < count; j++ {
+		var msg crypto.Hash
+		binary.BigEndian.PutUint64(msg[:], id)
+		binary.BigEndian.PutUint64(msg[8:], j)
+		_, err := log.AddLeaf(context.Background(), makeLeafRequest(t, signer, &msg), nil)
+		if err != nil {
+			t.Fatalf("AddLeaf failed: %v", err)
+		}
+	}
+	if got, want := log.tree.Size(), oldSize+count; got != want {
+		t.Fatalf("Unexpected merkle tree size: got %d, want %d", got, want)
 	}
 }
