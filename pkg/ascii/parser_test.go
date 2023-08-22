@@ -138,3 +138,41 @@ func TestParserEOFGarbage(t *testing.T) {
 		t.Errorf("expected GetEOF failure")
 	}
 }
+
+func TestSplitParts(t *testing.T) {
+	for _, table := range []struct {
+		in    string
+		count int
+		want  []string
+	}{
+		{"", 1, []string{""}},
+		{"ab", 1, []string{"ab"}},
+		{"ab\n", 2, []string{"ab\n"}},
+		{"ab\nc", 3, []string{"ab\nc"}},
+		{"ab\nc\n", 4, []string{"ab\nc\n"}},
+
+		{"ab\n\n", 2, []string{"ab\n", ""}},
+		{"ab\n\nc", 3, []string{"ab\n", "c"}},
+		{"ab\n\nc\n", 3, []string{"ab\n", "c\n"}},
+		{"ab\n\n\nc", 4, []string{"ab\n", "\nc"}},
+
+		{"ab\n\nc\n", 1, []string{"ab\n\nc\n"}},
+
+		// Abbreviated sigsum proof.
+		{
+			"version=1\nlog=abc\n\nsize=3\nroot_hash=def\n\nleaf_index=2\n",
+			4,
+			[]string{
+				"version=1\nlog=abc\n",
+				"size=3\nroot_hash=def\n",
+				"leaf_index=2\n",
+			},
+		},
+	} {
+		parts := SplitParts([]byte(table.in), table.count)
+		if got, want := len(parts), len(table.want); got != want {
+			t.Errorf("unexpected number of parts for %q, got %d, want %d",
+				table.in, got, want)
+		}
+	}
+}

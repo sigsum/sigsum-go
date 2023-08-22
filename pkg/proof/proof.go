@@ -93,16 +93,9 @@ func (sp *SigsumProof) FromASCII(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	proofParts := bytes.Split(data, []byte{'\n', '\n'})
+	proofParts := ascii.SplitParts(data, 3)
 	if len(proofParts) < 2 {
 		return fmt.Errorf("invalid proof, too few parts")
-	}
-	// Reapply final newline to split parts.
-	for i := range proofParts[:len(proofParts)-1] {
-		// Alternatively, could re-extend the slice to avoid an allocation.
-		//
-		// 	proofParts[i] = proofParts[i][:len(proofParts[i])+1]
-		proofParts[i] = append(proofParts[i], '\n')
 	}
 
 	p := ascii.NewParser(bytes.NewBuffer(proofParts[0]))

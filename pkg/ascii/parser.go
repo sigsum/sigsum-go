@@ -114,3 +114,27 @@ func (p *Parser) GetValues(name string, count int) ([]string, error) {
 	}
 	return values, nil
 }
+
+// Splits into at most n parts, separated by double new line
+// (paragraph separator), keeping a single newline at end of parts.
+func SplitParts(data []byte, n int) [][]byte {
+	if n <= 0 {
+		panic("invalid argument: SplitParts count must be > 0")
+	}
+
+	parts := make([][]byte, n)
+	i := 0
+	for ; i < n-1; i++ {
+		end := bytes.Index(data, []byte{'\n', '\n'})
+		if end < 0 {
+			break
+		}
+		// Include the first newline character in this part.
+		// Like bytes.Split, also trim capacity so range can't
+		// be extended.
+		parts[i] = data[: end+1 : end+1]
+		data = data[end+2:]
+	}
+	parts[i] = data
+	return parts[:i+1]
+}
