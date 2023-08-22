@@ -123,7 +123,7 @@ type witness struct {
 
 func (s *witness) GetTreeSize(_ context.Context, req requests.GetTreeSize) (uint64, error) {
 	if req.KeyHash != crypto.HashBytes(s.logPub[:]) {
-		return 0, api.ErrForbidden
+		return 0, api.ErrNotFound
 	}
 	return s.state.GetSize(), nil
 }
