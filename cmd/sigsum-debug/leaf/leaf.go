@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	getopt "github.com/pborman/getopt/v2"
+	"github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/hash"
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf/sign"
