@@ -28,3 +28,16 @@ curl -s http://localhost:7777/get-tree-size/$(./bin/sigsum-key hash -k test.log.
     exit 1
 )
 
+curl -s -w '%{http_code}\n' http://localhost:7777/get-tree-size/x > test.rsp
+
+[ "400" = "$(tail -1 test.rsp)" ] || (
+    echo 1>&2 'Unexpected status code, expected 400 (Bad request)'
+    exit 1
+)
+
+curl -s -w '%{http_code}\n' http://localhost:7777/get-tree-size/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa > test.rsp
+
+[ "404" = "$(tail -1 test.rsp)" ] || (
+    echo 1>&2 'Unexpected status code, expected 404 (Forbidden)'
+    exit 1
+)

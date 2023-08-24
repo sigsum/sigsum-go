@@ -127,10 +127,18 @@ func (s *witness) GetTreeSize(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Only GET supported", http.StatusBadRequest)
 		return
 	}
-	// TODO: Ignores extra url components. Requires lowercase.
-	suffix := fmt.Sprintf("/%x", crypto.HashBytes(s.logPub[:]))
-	if !strings.HasSuffix(r.URL.Path, suffix) {
-		http.Error(w, "Log not known", http.StatusForbidden)
+	slash := strings.LastIndex(r.URL.Path, "/")
+	if slash < 0 {
+		http.Error(w, "Invalid url", http.StatusBadRequest)
+		return
+	}
+	keyHash, err := crypto.HashFromHex(r.URL.Path[slash+1:])
+	if err != nil {
+		http.Error(w, "Invalid keyhash url argument", http.StatusBadRequest)
+		return
+	}
+	if keyHash != crypto.HashBytes(s.logPub[:]) {
+		http.Error(w, "Unknown log keyhash", http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -152,11 +160,11 @@ func (s *witness) AddTreeHead(w http.ResponseWriter, r *http.Request) {
 	}
 	logKeyHash := crypto.HashBytes(s.logPub[:])
 	if req.KeyHash != logKeyHash {
-		http.Error(w, "unknown log", http.StatusForbidden)
+		http.Error(w, "Unknown log keyhash", http.StatusNotFound)
 		return
 	}
 	if !req.TreeHead.Verify(&s.logPub) {
-		http.Error(w, "invalid log signature", http.StatusForbidden)
+		http.Error(w, "Invalid log signature", http.StatusForbidden)
 		return
 	}
 
