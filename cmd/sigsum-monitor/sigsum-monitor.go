@@ -24,6 +24,7 @@ type Settings struct {
 	keys        []string
 	diagnostics string
 	interval    time.Duration
+	directory   string
 }
 
 type callbacks struct{}
@@ -67,14 +68,28 @@ func main() {
 			config.SubmitKeys[crypto.HashBytes(pub[:])] = pub
 		}
 	}
-	// TODO: Read state from disk. Also store the list of submit
-	// keys, and discard state if keys are added, since whenever
-	// new keys are added, the log must be rescanned from the
-	// start.
+	var initialState map[crypto.Hash]monitor.MonitorState
+
+	if len(settings.directory) > 0 {
+		var logKeys []crypto.PublicKey
+		for _, e := range policy.GetLogsWithUrl() {
+			logKeys = append(logKeys, e.PublicKey)
+		}
+		persisted, err := monitor.NewPersistedState(settings.directory, logKeys)
+		if err != nil {
+			log.Fatal("failed to read state directory %q: %v",
+				settings.directory, err)
+		}
+		initialState = persisted.GetInitialState()
+		config.Callbacks = persisted.WrapCallbacks(config.Callbacks)
+	}
+	// TODO: Also store the list of submit keys, and discard state
+	// if keys are added, since whenever new keys are added, the
+	// log must be rescanned from the start.
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	done := monitor.StartMonitoring(ctx, policy, &config, nil)
+	done := monitor.StartMonitoring(ctx, policy, &config, initialState)
 	<-done
 }
 
@@ -90,6 +105,7 @@ func (s *Settings) parse(args []string) {
 	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file").Mandatory()
 	set.FlagLong(&s.interval, "interval", 0, "Monitoring interval")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
+	set.FlagLong(&s.directory, "state-directory", 0, "Directory for storing monitor state")
 	set.FlagLong(&help, "help", 0, "Display help")
 	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
 	err := set.Getopt(args, nil)

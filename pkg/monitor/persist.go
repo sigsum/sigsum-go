@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/log"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -16,50 +18,72 @@ import (
 // per log, with hex keyhash as filename. Each file contains a signed
 // tree head, a newline, and a line nect_leaf_index=NUMBER.
 
-func parseMonitorState(r io.Reader) (types.SignedTreeHead, uint64, error) {
+// Similar to MonitorState, but also inludes the treehead signature.
+type storedMonitorState struct {
+	sth types.SignedTreeHead
+	// Index of next leaf to process.
+	nextLeafIndex uint64
+}
+
+func (s *storedMonitorState) FromASCII(r io.Reader) error {
 	data, err := io.ReadAll(r)
 	if err != nil {
-		return types.SignedTreeHead{}, 0, fmt.Errorf("reading monitor state failed: %v", err)
+		return fmt.Errorf("reading monitor state failed: %w", err)
 	}
 	parts := bytes.Split(data, []byte{'\n', '\n'})
 	if len(parts) != 2 {
-		return types.SignedTreeHead{}, 0, fmt.Errorf("invalid monitor state")
+		return fmt.Errorf("invalid monitor state")
 	}
 	// Extend slice to get back a single newline.
-	parts[0] = parts[0][:len(parts[0])+1]
+	parts[0] = append(parts[0], '\n')
 
-	var sth types.SignedTreeHead
-	if err := sth.FromASCII(bytes.NewBuffer(parts[0])); err != nil {
-		return types.SignedTreeHead{}, 0, err
+	if err := s.sth.FromASCII(bytes.NewBuffer(parts[0])); err != nil {
+		return err
 	}
 	parser := ascii.NewParser(bytes.NewBuffer(parts[1]))
-	nextLeafIndex, err := parser.GetInt("next_leaf_index")
+	s.nextLeafIndex, err = parser.GetInt("next_leaf_index")
 	if err != nil {
-		return types.SignedTreeHead{}, 0, err
+		return err
 	}
-	return sth, nextLeafIndex, parser.GetEOF()
+	return parser.GetEOF()
+}
+
+func (s *storedMonitorState) ToASCII(w io.Writer) error {
+	if err := s.sth.ToASCII(w); err != nil {
+		return err
+	}
+	// Empty line as separator.
+	if _, err := fmt.Fprint(w, "\n"); err != nil {
+		return err
+	}
+	return ascii.WriteInt(w, "next_leaf_index", s.nextLeafIndex)
 }
 
 type PersistedState struct {
 	directory string
+	// Protects access to the map. We allow concurrent updates for
+	// distinct logs, but for each particular log, callbacks must
+	// be sequential.
+	mu sync.Mutex
+	m  map[crypto.Hash]storedMonitorState
 }
 
-func (s PersistedState) ReadState(logKeys []crypto.PublicKey) (map[crypto.Hash]MonitorState, error) {
+func NewPersistedState(directory string, logKeys []crypto.PublicKey) (*PersistedState, error) {
 	// Require that directory exists.
-	stat, err := os.Stat(s.directory)
+	stat, err := os.Stat(directory)
 	if err != nil {
 		return nil, fmt.Errorf("monitor state directory doesn't exist: %v", err)
 	}
 	if !stat.IsDir() {
-		return nil, fmt.Errorf("monitor state directory %q refers to a non-directory", s.directory)
+		return nil, fmt.Errorf("monitor state directory %q refers to a non-directory", directory)
 	}
 
-	m := make(map[crypto.Hash]MonitorState)
+	m := make(map[crypto.Hash]storedMonitorState)
 	for _, key := range logKeys {
 		keyHash := crypto.HashBytes(key[:])
-		fname := fmt.Sprintf("%s/%x", s.directory, keyHash)
+		fileName := fmt.Sprintf("%s/%x", directory, keyHash)
 		err := func() error {
-			f, err := os.Open(fname)
+			f, err := os.Open(fileName)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
 					// Do nothing.
@@ -68,19 +92,128 @@ func (s PersistedState) ReadState(logKeys []crypto.PublicKey) (map[crypto.Hash]M
 				return err
 			}
 			defer f.Close()
-			sth, nextLeafIndex, err := parseMonitorState(f)
-			if err != nil {
+			var state storedMonitorState
+			if err := state.FromASCII(f); err != nil {
 				return err
 			}
-			if !sth.Verify(&key) {
+			if !state.sth.Verify(&key) {
 				return fmt.Errorf("invalid tree head signature in monitor state")
 			}
-			m[keyHash] = MonitorState{TreeHead: sth.TreeHead, NextLeafIndex: nextLeafIndex}
+			m[keyHash] = state
 			return nil
 		}()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read file %q: %w", fileName, err)
 		}
 	}
-	return m, nil
+	return &PersistedState{directory: directory, m: m}, nil
+}
+
+func (s *PersistedState) GetInitialState() map[crypto.Hash]MonitorState {
+	m := make(map[crypto.Hash]MonitorState)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for h, s := range s.m {
+		m[h] = MonitorState{TreeHead: s.sth.TreeHead, NextLeafIndex: s.nextLeafIndex}
+	}
+	return m
+}
+
+func (s *PersistedState) WrapCallbacks(callbacks Callbacks) Callbacks {
+	return &persistingCallbacks{state: s, callbacks: callbacks}
+}
+
+func (s *PersistedState) updateTreeHead(keyHash *crypto.Hash, sth *types.SignedTreeHead) *storedMonitorState {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if state, ok := s.m[*keyHash]; ok {
+		if sth.Size <= state.sth.Size {
+			if sth.Size < state.sth.Size {
+				log.Error("monitor: Invalid tree head update, ignoring: key hash: %x, new size (%d), < old size (%d)",
+					*keyHash, sth.Size, state.sth.Size)
+			}
+			return nil
+		}
+		state.sth = *sth
+		s.m[*keyHash] = state
+		return &state
+	}
+	state := storedMonitorState{sth: *sth, nextLeafIndex: 0}
+	s.m[*keyHash] = state
+	return &state
+}
+
+func (s *PersistedState) updateNextLeafIndex(keyHash *crypto.Hash, nextLeafIndex uint64) *storedMonitorState {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if state, ok := s.m[*keyHash]; ok {
+		if nextLeafIndex > state.sth.Size {
+			log.Error("monitor: Invalid leaf index update, ignoring: key hash: %x, new index (%d) > tree size (%d)",
+				*keyHash, nextLeafIndex, state.sth.Size)
+			return nil
+		}
+		if nextLeafIndex <= state.nextLeafIndex {
+			if nextLeafIndex < state.nextLeafIndex {
+				log.Error("monitor: Invalid leaf index update, ignoring: key hash: %x, new index (%d) < old index (%d)",
+					*keyHash, nextLeafIndex, state.nextLeafIndex)
+			}
+			return nil
+		}
+		state.nextLeafIndex = nextLeafIndex
+		s.m[*keyHash] = state
+		return &state
+	}
+	log.Error("monitor: Invalid leaf index update, treehead unknown: key hash: %x, new index (%d)",
+		*keyHash, nextLeafIndex)
+	return nil
+}
+
+func (s *PersistedState) writeState(keyHash *crypto.Hash, state *storedMonitorState) error {
+	// TODO: Use renameio? See https://git.glasklar.is/sigsum/core/sigsum-go/-/issues/58
+	fileName := fmt.Sprintf("%s/%x", s.directory, *keyHash)
+	tmpName := fileName + ".new"
+	f, err := os.OpenFile(tmpName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		return err
+	}
+	// In case Close is called explictly below, the deferred call
+	// will fail, and error ignored.
+	defer f.Close()
+	defer os.Remove(tmpName) // Ignore error
+
+	if err := state.ToASCII(f); err != nil {
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	// Atomically replace old file with new.
+	return os.Rename(tmpName, fileName)
+}
+
+type persistingCallbacks struct {
+	state     *PersistedState
+	callbacks Callbacks
+}
+
+func (c *persistingCallbacks) NewTreeHead(logKeyHash crypto.Hash, sth types.SignedTreeHead) {
+	c.callbacks.NewTreeHead(logKeyHash, sth)
+	if newState := c.state.updateTreeHead(&logKeyHash, &sth); newState != nil {
+		c.state.writeState(&logKeyHash, newState)
+	}
+}
+func (c *persistingCallbacks) NewLeaves(logKeyHash crypto.Hash, nextLeafIndex uint64, indices []uint64, leaves []types.Leaf) {
+	c.callbacks.NewLeaves(logKeyHash, nextLeafIndex, indices, leaves)
+	if newState := c.state.updateNextLeafIndex(&logKeyHash, nextLeafIndex); newState != nil {
+		c.state.writeState(&logKeyHash, newState)
+	}
+}
+func (c *persistingCallbacks) Alert(logKeyHash crypto.Hash, e error) {
+	c.callbacks.Alert(logKeyHash, e)
 }
