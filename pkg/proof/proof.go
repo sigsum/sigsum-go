@@ -86,26 +86,9 @@ func decodeShortChecksum(s string) (out ShortChecksum, err error) {
 	return
 }
 
-func (sp *SigsumProof) FromASCII(r io.Reader) error {
-	// Could do something more fancy with a reader or scanner to
-	// split on empty line, without reading all the data up front.
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return err
-	}
-	proofParts := bytes.Split(data, []byte{'\n', '\n'})
-	if len(proofParts) < 2 {
-		return fmt.Errorf("invalid proof, too few parts")
-	}
-	// Reapply final newline to split parts.
-	for i := range proofParts[:len(proofParts)-1] {
-		// Alternatively, could re-extend the slice to avoid an allocation.
-		//
-		// 	proofParts[i] = proofParts[i][:len(proofParts[i])+1]
-		proofParts[i] = append(proofParts[i], '\n')
-	}
-
-	p := ascii.NewParser(bytes.NewBuffer(proofParts[0]))
+func (sp *SigsumProof) FromASCII(f io.Reader) error {
+	r := ascii.NewParagraphReader(f)
+	p := ascii.NewParser(r)
 	version, err := p.GetInt("version")
 	if err != nil {
 		return fmt.Errorf("invalid version line: %v", err)
@@ -125,23 +108,32 @@ func (sp *SigsumProof) FromASCII(r io.Reader) error {
 		return err
 	}
 
-	if err := sp.TreeHead.FromASCII(bytes.NewBuffer(proofParts[1])); err != nil {
+	if err := r.NextParagraph(); err != nil {
+		return fmt.Errorf("missing tree head part: %v", err)
+	}
+	if err := sp.TreeHead.FromASCII(r); err != nil {
 		return err
 	}
 	if sp.TreeHead.Size == 0 {
 		return fmt.Errorf("invalid tree: empty")
 	}
 	if sp.TreeHead.Size == 1 {
-		if len(proofParts) != 2 {
-			return fmt.Errorf("too many parts")
-		}
 		sp.Inclusion = types.InclusionProof{}
-		return nil
+	} else {
+		if err := r.NextParagraph(); err != nil {
+			return fmt.Errorf("missing inclusion proof part: %v", err)
+		}
+		if err := sp.Inclusion.FromASCII(r); err != nil {
+			return err
+		}
 	}
-	if len(proofParts) != 3 {
-		return fmt.Errorf("too few parts")
+	if err := r.NextParagraph(); err != io.EOF {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("too many parts")
 	}
-	return sp.Inclusion.FromASCII(bytes.NewBuffer(proofParts[2]))
+	return nil
 }
 
 func (sp *SigsumProof) ToASCII(w io.Writer) error {
