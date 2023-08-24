@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	getopt "github.com/pborman/getopt/v2"
+	"github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/head/sign"
 )

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	getopt "github.com/pborman/getopt/v2"
+	"github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
