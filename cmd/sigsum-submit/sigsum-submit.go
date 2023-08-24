@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/renameio/v2"
 	"github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -367,23 +368,18 @@ func readLeafRequestFile(name string) (requests.Leaf, error) {
 
 // Create temporary file, and atomically replace.
 func withOutputFile(outputFile string, writer func(f io.Writer) error) error {
-	tmpFile := outputFile + ".tmp"
-	f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	f, err := renameio.NewPendingFile(outputFile,
+		renameio.WithPermissions(0o644))
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmpFile) // Ignore error
-	defer f.Close()          // Ignore error, fails if Close was called explicitly.
+	defer f.Cleanup()
 
 	if err := writer(f); err != nil {
-		return fmt.Errorf("writing to temporary output file %q failed: %v", tmpFile, err)
-	}
-	// Explicit Close, to check for errors.
-	if err := f.Close(); err != nil {
-		return fmt.Errorf("closing temporary output file %q failed: %v", tmpFile, err)
+		return fmt.Errorf("writing to (temporary) output file for %q failed: %v", outputFile, err)
 	}
 	// Atomic move, replacing any existing file.
-	return os.Rename(tmpFile, outputFile)
+	return f.CloseAtomicallyReplace()
 }
 
 // Warn if corresponding public key isn't registered for the domain.

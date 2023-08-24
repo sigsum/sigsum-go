@@ -6,6 +6,7 @@ go 1.19
 
 require (
 	github.com/golang/mock v1.6.0
+	github.com/google/renameio/v2 v2.0.0
 	github.com/pborman/getopt/v2 v2.1.0
 	golang.org/x/net v0.5.0
 	golang.org/x/text v0.6.0
