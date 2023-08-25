@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dchest/safefile"
 	"github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -237,21 +238,17 @@ func (s *state) Store(cth *types.CosignedTreeHead) error {
 		// TODO: Panic?
 		return fmt.Errorf("cosigning an old tree, internal error")
 	}
-	tmpName := s.fileName + ".new"
-	f, err := os.OpenFile(tmpName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	f, err := safefile.Create(s.fileName, 0644)
 	if err != nil {
 		return err
 	}
-	// In case Close is called explictly below, the deferred call
-	// will fail, and error ignored.
 	defer f.Close()
-	defer os.Remove(tmpName) // Ignore error
 
 	if err := cth.ToASCII(f); err != nil {
 		return err
 	}
 	// Atomically replace old file with new.
-	return os.Rename(tmpName, s.fileName)
+	return f.Commit()
 }
 
 // On success, returns stored cosignature. On failure, returns HTTP status code and error.
