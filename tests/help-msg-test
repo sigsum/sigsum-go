@@ -34,4 +34,3 @@ test_one ./bin/sigsum-verify --help
 test_one ./bin/sigsum-witness --help
 test_one ./bin/sigsum-debug --help
 test_one ./bin/sigsum-debug leaf --help
-test_one ./bin/sigsum-debug head --help
