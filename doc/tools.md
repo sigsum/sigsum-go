@@ -256,8 +256,8 @@ To submit one or more the leaf requests, specify a Sigsum policy file
 using the `-p` option.
 
 If the `-k` option and a signing key was provided, the leaf(s) to be
-submitted is the newly created ones. If no `-k` option was provided,
-the input should instead be a the body of an add-leaf request, which
+submitted are the newly created ones. If no `-k` option was provided,
+each input should instead be a the body of an add-leaf request, which
 is parsed and verified. Separating signing and submission is useful if
 the machine with access to the signing key is not directly connected
 to the Internet.
@@ -280,7 +280,7 @@ corresponding public key is registered. An appropriate "sigsum-token:"
 header is created and attached to each add-leaf request.
 
 When the inputs are provided on the command line (i.e., not read from
-stdandard input), `sigsum-submit` first checks if the corresponding
+standard input), `sigsum-submit` first checks if the corresponding
 output ".proof" file already exists. If it does exist, the proof is read
 and verified; if the proof is valid, the corresponding input is
 skipped, if it is not valid, `sigsum-submit` exits with an error. This
@@ -303,9 +303,10 @@ output file, as described above.
 ## Verifying a leaf request
 
 If neither a signing key (`-k`) or policy file (`-p`) is provided,
-`sigsum-submit` reads the leaf request(s) on the command line, or read
-from standard input. Syntax and signatures are verified, but there is
-no output, just the exit code to signal sucess or failure.
+`sigsum-submit` reads the leaf request(s) on the command line (or from
+standard input if there are no arguments). Syntax and signature of
+each leaf request is verified, but there is no output, just the exit
+code to signal success or failure.
 
 ## Examples
 
@@ -385,6 +386,9 @@ The proof is considered valid if
    requirement, and
 4. the inclusion proof ties the leaf to the signed tree head.
 
+See [Sigsum proof](./sigsum-proof.md) for more information on the
+meaning of a sigsum proof, and the validation criteria,
+
 ## Example
 
 Verify the proof from the first `sigsum-submit` example above,
@@ -401,12 +405,29 @@ that are used for domain based rate limiting (as defined in the
 spec](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md),
 see also [rate limit
 configuration](https://git.glasklar.is/sigsum/core/log-go/-/blob/main/doc/rate-limit.md)).
-There are three sub commands, `create`, `record` and `verify`.
+There are three sub commands, `record`, `create` and `verify`. The
+`record` sub command is useful when setting up the DNS record that is
+required for submitting to a log server with rate limits.
+
+The other two sub commands are more obscure, and are intended for
+scripts that need to handle submit tokens manually, e.g., to submit an
+add-leaf request without using the `sigsum-submit` tool.
+
+Using submit tokens requires a signing key, and it is recommended to
+create a separate key used exclusively for this purpose.
+
+## Creating a DNS record for a key
+
+To use submit tokens, the corresponding public key must be registered
+in DNS. The `sigsum-token record` sub command formats an appropriate
+TXT record, in zone file format.
+
+There's one mandatory argument, `-k`, specifying the public key to
+use. The TXT record is written to standard output, or to the file
+specified with the `-o` option.
 
 ## Creating a submit token
 
-To create a submit token, one first needs a key pair (it is
-recommended to create a key used exclusively for this purpose).
 A token is a fix string, to be included in the "sigsum-token:" header
 in `add-leaf` requests sent to a log. One can use the same rate limit
 key with multiple logs, but tokens will be distinct, since they're
@@ -426,16 +447,6 @@ Note that when using `sigsum-submit`, you don't need `sigsum-token` to
 create any tokens; `sigsum-submit` creates appropriate tokens for each
 log if you pass the `--token-key-file` and `--token-domain` options.
 
-## Creating a DNS record for a key
-
-To use submit tokens, the corresponding public key must be registered
-in DNS. The `sigsum-token record` sub command formats an appropriate
-TXT record, in zone file format.
-
-There's one mandatory argument, `-k`, specifying the public key to
-use. The TXT record is written to standard output, or to the file
-specified with the `-o` option.
-
 ## Verifying a submit token
 
 The `sigsum-token verify` sub command reads the token to validate from
@@ -451,7 +462,7 @@ validation errors, with result only reflected in the exit code.
 Format a public key as a TXT record.
 ```
 $ sigsum-token record -k example.key.pub
-_sigsum_v0 IN TXT "e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92"
+_sigsum_v1 IN TXT "e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92"
 ```
 
 Create a token, formatted as a HTTP header.
