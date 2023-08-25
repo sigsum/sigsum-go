@@ -14,7 +14,6 @@ import (
 	"log"
 	"os"
 
-	"sigsum.org/sigsum-go/cmd/sigsum-debug/head"
 	"sigsum.org/sigsum-go/cmd/sigsum-debug/leaf"
 )
 
@@ -26,7 +25,6 @@ Usage:
 
   sigsum-debug help  Usage message
   sigsum-debug leaf  Hash, sign, and verify tree leaves
-  sigsum-debug head  Sign and verify tree heads
 
 `
 
@@ -45,8 +43,6 @@ func main() {
 		os.Exit(0)
 	case "leaf":
 		err = leaf.Main(os.Args)
-	case "head":
-		err = head.Main(os.Args)
 	default:
 		err = fmt.Errorf(": invalid command %q, try \"help\"", os.Args[1])
 	}
