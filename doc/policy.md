@@ -22,7 +22,7 @@ cosigned according to the defined quorum rule.
 
 Both logs and witnesses are identified primarily by their respective
 public key. Each log or witness may also have an associated URL; this
-is required for operations interacting with the log or witnesses, but
+is required for operations interacting with the log or witness, but
 no URLs are needed if the policy is used only for offline
 verification.
 
