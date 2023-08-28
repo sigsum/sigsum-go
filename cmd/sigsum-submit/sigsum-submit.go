@@ -187,22 +187,23 @@ func main() {
 			}
 		}
 	} else {
-		// Output created add-leaf requests.
-		writeLeafRequest := func(inputFile string, leaf *requests.Leaf) {
-			if len(inputFile) == 0 && len(settings.outputFile) == 0 {
-				if err := leaf.ToASCII(os.Stdout); err != nil {
-					log.Fatal("Writing leaf request to stdout filed: %v", err)
+		sink := func(_ string, _ *requests.Leaf) {}
+		if len(settings.keyFile) > 0 {
+			// Output created add-leaf requests.
+			sink = func(inputFile string, leaf *requests.Leaf) {
+				if len(inputFile) == 0 && len(settings.outputFile) == 0 {
+					if err := leaf.ToASCII(os.Stdout); err != nil {
+						log.Fatal("Writing leaf request to stdout filed: %v", err)
+					}
+					return
 				}
-				return
-			}
-			outputFile := settings.getOutputFile(inputFile + ".req")
-			if err := withOutputFile(outputFile, leaf.ToASCII); err != nil {
-				log.Fatal("Writing leaf request failed: %v", err)
+				outputFile := settings.getOutputFile(inputFile + ".req")
+				if err := withOutputFile(outputFile, leaf.ToASCII); err != nil {
+					log.Fatal("Writing leaf request failed: %v", err)
+				}
 			}
 		}
-
-		source(func(_ string, _ *crypto.Hash, _ *crypto.PublicKey) bool { return false },
-			writeLeafRequest)
+		source(func(_ string, _ *crypto.Hash, _ *crypto.PublicKey) bool { return false }, sink)
 	}
 }
 
@@ -358,11 +359,7 @@ func readLeafRequestFile(name string) (requests.Leaf, error) {
 	}
 	defer r.Close()
 
-	var leaf requests.Leaf
-	if err := leaf.FromASCII(r); err != nil {
-		return requests.Leaf{}, fmt.Errorf("leaf request %q invalid: %v", name, err)
-	}
-	return leaf, nil
+	return readLeafRequest(r)
 }
 
 // Create temporary file, and atomically replace.
