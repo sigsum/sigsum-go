@@ -137,7 +137,10 @@ func main() {
 		}
 
 		skip := func(inputName string, msg *crypto.Hash, publicKey *crypto.PublicKey) bool {
-			proofName := settings.getOutputFile(inputName + ".proof")
+			if len(inputName) == 0 {
+				return false
+			}
+			proofName := settings.getOutputFile(inputName, ".proof")
 			f, err := os.Open(proofName)
 			if errors.Is(err, fs.ErrNotExist) {
 				return false
@@ -175,15 +178,8 @@ func main() {
 			if err != nil {
 				log.Fatal("Submit failed: %v", err)
 			}
-			if len(item.inputName) == 0 && len(settings.outputFile) == 0 {
-				if err := proof.ToASCII(os.Stdout); err != nil {
-					log.Fatal("Writing proof to stdout failed: %v", err)
-				}
-			} else {
-				proofFile := settings.getOutputFile(item.inputName + ".proof")
-				if err := withOutputFile(proofFile, proof.ToASCII); err != nil {
-					log.Fatal("Writing proof to %q failed: %v", proofFile, err)
-				}
+			if err := settings.withOutputFile(item.inputName, ".proof", proof.ToASCII); err != nil {
+				log.Fatal("Writing proof failed: %v", err)
 			}
 		}
 	} else {
@@ -191,14 +187,7 @@ func main() {
 		if len(settings.keyFile) > 0 {
 			// Output created add-leaf requests.
 			sink = func(inputFile string, leaf *requests.Leaf) {
-				if len(inputFile) == 0 && len(settings.outputFile) == 0 {
-					if err := leaf.ToASCII(os.Stdout); err != nil {
-						log.Fatal("Writing leaf request to stdout filed: %v", err)
-					}
-					return
-				}
-				outputFile := settings.getOutputFile(inputFile + ".req")
-				if err := withOutputFile(outputFile, leaf.ToASCII); err != nil {
+				if err := settings.withOutputFile(inputFile, ".req", leaf.ToASCII); err != nil {
 					log.Fatal("Writing leaf request failed: %v", err)
 				}
 			}
@@ -301,14 +290,28 @@ func (s *Settings) parse(args []string) {
 	}
 }
 
-func (s *Settings) getOutputFile(name string) string {
+// Empty input name means stdin. Empty output name means stdout should be used.
+func (s *Settings) getOutputFile(name, suffix string) string {
 	if len(s.outputFile) > 0 {
 		return s.outputFile
 	}
+	if len(name) == 0 {
+		return ""
+	}
+
+	name += suffix
 	if len(s.outputDir) > 0 {
 		return filepath.Join(s.outputDir, filepath.Base(name))
 	}
 	return name
+}
+
+func (s *Settings) withOutputFile(name, suffix string, writer func(f io.Writer) error) error {
+	outputFile := s.getOutputFile(name, suffix)
+	if len(outputFile) == 0 {
+		return writer(os.Stdout)
+	}
+	return withOutputFile(outputFile, writer)
 }
 
 // Reads the named input file, or stdin if filename is empty.
