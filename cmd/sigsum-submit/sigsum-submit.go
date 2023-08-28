@@ -29,6 +29,7 @@ type Settings struct {
 	rawHash      bool
 	keyFile      string
 	policyFile   string
+	leafHash     bool
 	diagnostics  string
 	inputFiles   []string
 	outputFile   string
@@ -184,7 +185,18 @@ func main() {
 		}
 	} else {
 		sink := func(_ string, _ *requests.Leaf) {}
-		if len(settings.keyFile) > 0 {
+		if settings.leafHash {
+			sink = func(inputFile string, req *requests.Leaf) {
+				leaf, err := req.Verify()
+				if err != nil {
+					log.Fatal("Internal error; leaf request invalid: %v", err)
+				}
+				settings.withOutputFile(inputFile, ".hash", func(w io.Writer) error {
+					_, err := fmt.Fprintf(w, "%x\n", leaf.ToHash())
+					return err
+				})
+			}
+		} else if len(settings.keyFile) > 0 {
 			// Output created add-leaf requests.
 			sink = func(inputFile string, leaf *requests.Leaf) {
 				if err := settings.withOutputFile(inputFile, ".req", leaf.ToASCII); err != nil {
@@ -225,6 +237,9 @@ func (s *Settings) parse(args []string) {
     With no -k and no -p, the request syntax and signature of the
     input request are verified, but there is no output.
 
+    The --leaf-hash option can be used to output the hash of the
+    resulting leaf, instead of submitting it.
+
     If input files are provided on the command line, each file
     corresponds to one request, and result is written to a
     corresponding output file, based on these rules:
@@ -260,6 +275,7 @@ func (s *Settings) parse(args []string) {
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input is already hashed")
 	set.FlagLong(&s.keyFile, "signing-key", 'k', "Key for signing the leaf", "file")
 	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file")
+	set.FlagLong(&s.leafHash, "leaf-hash", 0, "Output leaf hash")
 	set.Flag(&s.outputFile, 'o', "Write output to file, instead of stdout", "file")
 	set.FlagLong(&s.outputDir, "output-dir", 0, "Directory for output files", "directory")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
@@ -282,6 +298,9 @@ func (s *Settings) parse(args []string) {
 	}
 	if len(s.outputFile) > 0 && len(s.outputDir) > 0 {
 		log.Fatal("The -o and the --output-dir options are mutually exclusive.")
+	}
+	if len(s.policyFile) > 0 && s.leafHash {
+		log.Fatal("The -p (--policy) and --leaf-hash options are mutually exclusive.")
 	}
 	for _, f := range s.inputFiles {
 		if len(f) == 0 {
