@@ -300,13 +300,21 @@ material times out, `sigsum-submit` tries the next log.
 On submission success, the Sigsum proof is written to respective
 output file, as described above.
 
+## Producing a leaf hash
+
+The `--leaf-hash` options can be used to output the hex-encoded leaf
+hash for the leaf to be created. This option can be used with or
+without `-k`, but it is mutually exclusive with `-p`. When the output
+is written to a file (rather than stdout), a file suffix of ".hash" is
+used.
+
 ## Verifying a leaf request
 
-If neither a signing key (`-k`) or policy file (`-p`) is provided,
-`sigsum-submit` reads the leaf request(s) on the command line (or from
-standard input if there are no arguments). Syntax and signature of
-each leaf request is verified, but there is no output, just the exit
-code to signal success or failure.
+If neither a signing key (`-k`), policy file (`-p`) or the
+`--leaf-hash` option is provided, `sigsum-submit` reads the leaf
+request(s) on the command line (or from standard input if there are no
+arguments). Syntax and signature of each leaf request is verified, but
+there is no output, just the exit code to signal success or failure.
 
 ## Examples
 
