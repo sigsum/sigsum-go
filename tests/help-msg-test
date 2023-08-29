@@ -32,5 +32,3 @@ test_one ./bin/sigsum-token verify --help
 test_one ./bin/sigsum-submit --help
 test_one ./bin/sigsum-verify --help
 test_one ./bin/sigsum-witness --help
-test_one ./bin/sigsum-debug --help
-test_one ./bin/sigsum-debug leaf --help
