@@ -11,9 +11,9 @@ host test.sigsum.org || exit 77
 # Corresponding public key is registered on test.sigsum.org.
 printf '%064x\n' 1 > test.sigsum.key
 
-./bin/sigsum-token create -k test.sigsum.key --log test.log.key.pub --domain test.sigsum.org -o test.header
-./bin/sigsum-token verify --log test.log.key.pub < test.header
+./bin/sigsum-token create -k test.sigsum.key --log-key test.log.key.pub --domain test.sigsum.org -o test.header
+./bin/sigsum-token verify --log-key test.log.key.pub < test.header
 # Check that validation fails when log key is changed.
-if ./bin/sigsum-token verify --log test.key.pub < test.header 2>/dev/null; then
+if ./bin/sigsum-token verify --log-key test.key.pub < test.header 2>/dev/null; then
     exit 1
 fi

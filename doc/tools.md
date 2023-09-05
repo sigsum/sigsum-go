@@ -273,7 +273,7 @@ tried in random order.
 
 If the log(s) used are configured to apply domain-based rate limiting
 (as publicly accessible logs are expected to do), the
-`--token-key-file` option must be used to specify the private key used
+`--token-key` option must be used to specify the private key used
 for signing a submit token, and the `--token-domain` option specifies
 the domain (without the special "_sigsum_v1" label) where the
 corresponding public key is registered. An appropriate "sigsum-token:"
@@ -443,7 +443,7 @@ essentially a signature on the log's public key.
 
 To create a token, use `sigsum-token create`. There are two mandatory
 options, `-k` to specify the signing key, i.e., the private half of the
-rate limit keypair, and `--log`, to specify the file with the log's
+rate limit keypair, and `--log-key`, to specify the file with the log's
 public key. If no other options are used, the output is the token in
 the form of a hex string (representing an Ed25519 signature).
 
@@ -453,7 +453,7 @@ command outputs a complete HTTP header line.
 
 Note that when using `sigsum-submit`, you don't need `sigsum-token` to
 create any tokens; `sigsum-submit` creates appropriate tokens for each
-log if you pass the `--token-key-file` and `--token-domain` options.
+log if you pass the `--token-key` and `--token-domain` options.
 
 ## Verifying a submit token
 
@@ -475,6 +475,6 @@ _sigsum_v1 IN TXT "e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130
 
 Create a token, formatted as a HTTP header.
 ```
-$ sigsum-token create -k example.key --log poc.key.pub --domain test.example.org
+$ sigsum-token create -k example.key --log-key poc.key.pub --domain test.example.org
 sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e938f1b99dcc9333954c9eab1dfaf89643679a47c7a33fa2182c8f8cb8eb1222f90c55355a8b5b300
 ```
