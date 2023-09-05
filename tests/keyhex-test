@@ -2,7 +2,7 @@
 
 set -e
 
-# The pub key at _sigsum_v0.test.sigsum.org.
+# The pub key at _sigsum_v1.test.sigsum.org.
 HEXKEY=4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29
 PUBKEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEy1q/atefv1q7zK/MJp2FzSZR7UuIW1hp8kGu3wpbop"
 
