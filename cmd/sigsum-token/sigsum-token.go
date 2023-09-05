@@ -191,7 +191,7 @@ func (s *createSettings) parse(args []string) {
 	set := newOptionSet(args, "")
 	set.FlagLong(&s.keyFile, "key", 'k', "Private key", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Output", "file")
-	set.FlagLong(&s.logKeyFile, "log", 0, "Log's public key", "file").Mandatory()
+	set.FlagLong(&s.logKeyFile, "log-key", 0, "Log's public key", "file").Mandatory()
 	set.FlagLong(&s.domain, "domain", 0, "Domain")
 	parseNoArgs(set, args, `
     Create a token for submissions to the the given log, essentially a
@@ -212,7 +212,7 @@ func (s *recordSettings) parse(args []string) {
 func (s *verifySettings) parse(args []string) {
 	set := newOptionSet(args, "< token")
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
-	set.FlagLong(&s.logKeyFile, "log", 0, "Log's public key", "file").Mandatory()
+	set.FlagLong(&s.logKeyFile, "log-key", 0, "Log's public key", "file").Mandatory()
 	set.FlagLong(&s.domain, "domain", 0, "Domain")
 	set.FlagLong(&s.quiet, "quiet", 'q', "Quiet mode")
 	parseNoArgs(set, args, `

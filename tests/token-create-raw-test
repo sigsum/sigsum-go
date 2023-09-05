@@ -5,9 +5,9 @@ set -e
 ./bin/sigsum-key gen -o test.key
 ./bin/sigsum-key gen -o test.log.key
 
-./bin/sigsum-token create -k test.key --log test.log.key.pub -o test.token
-./bin/sigsum-token verify --log test.log.key.pub -k test.key.pub < test.token
+./bin/sigsum-token create -k test.key --log-key test.log.key.pub -o test.token
+./bin/sigsum-token verify --log-key test.log.key.pub -k test.key.pub < test.token
 # Check that validation fails when log key is changed.
-if ./bin/sigsum-token verify --log test.key.pub -k test.key.pub < test.token 2>/dev/null; then
+if ./bin/sigsum-token verify --log-key test.key.pub -k test.key.pub < test.token 2>/dev/null; then
     exit 1
 fi
