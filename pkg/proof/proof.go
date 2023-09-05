@@ -127,13 +127,7 @@ func (sp *SigsumProof) FromASCII(f io.Reader) error {
 			return err
 		}
 	}
-	if err := r.NextParagraph(); err != io.EOF {
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf("too many parts")
-	}
-	return nil
+	return r.GetEOF()
 }
 
 func (sp *SigsumProof) ToASCII(w io.Writer) error {

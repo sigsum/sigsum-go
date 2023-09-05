@@ -1,7 +1,6 @@
 package monitor
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -25,27 +24,26 @@ type storedMonitorState struct {
 	nextLeafIndex uint64
 }
 
-func (s *storedMonitorState) FromASCII(r io.Reader) error {
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return fmt.Errorf("reading monitor state failed: %w", err)
-	}
-	parts := bytes.Split(data, []byte{'\n', '\n'})
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid monitor state")
-	}
-	// Extend slice to get back a single newline.
-	parts[0] = append(parts[0], '\n')
+func (s *storedMonitorState) FromASCII(f io.Reader) error {
+	r := ascii.NewParagraphReader(f)
 
-	if err := s.sth.FromASCII(bytes.NewBuffer(parts[0])); err != nil {
+	if err := s.sth.FromASCII(r); err != nil {
 		return err
 	}
-	parser := ascii.NewParser(bytes.NewBuffer(parts[1]))
+	if err := r.NextParagraph(); err != nil {
+		return fmt.Errorf("missing leaf index part: %v", err)
+	}
+
+	parser := ascii.NewParser(r)
+	var err error
 	s.nextLeafIndex, err = parser.GetInt("next_leaf_index")
 	if err != nil {
 		return err
 	}
-	return parser.GetEOF()
+	if err := parser.GetEOF(); err != nil {
+		return err
+	}
+	return r.GetEOF()
 }
 
 func (s *storedMonitorState) ToASCII(w io.Writer) error {

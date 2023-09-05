@@ -117,6 +117,16 @@ func (pr *ParagraphReader) NextParagraph() error {
 	return fmt.Errorf("not at end of paragraph")
 }
 
+func (pr *ParagraphReader) GetEOF() error {
+	if err := pr.NextParagraph(); err != nil {
+		if err == io.EOF {
+			return nil
+		}
+		return err
+	}
+	return fmt.Errorf("too many paragraphs")
+}
+
 func NewParagraphReader(r io.Reader) *ParagraphReader {
 	return &ParagraphReader{r: r}
 }
