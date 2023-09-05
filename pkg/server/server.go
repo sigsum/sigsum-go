@@ -32,7 +32,7 @@ type handlerWithMethod struct {
 	handler http.Handler
 }
 
-type sigsumUrlArguments struct{}
+type sigsumURLArguments struct{}
 
 func (h *handlerWithMethod) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Error handling is based on RFC 7231, see Sections 6.5.5
@@ -89,7 +89,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), s.config.getTimeout())
 	defer cancel()
 	if strings.HasSuffix(pattern, "/") {
-		ctx = context.WithValue(ctx, sigsumUrlArguments{},
+		ctx = context.WithValue(ctx, sigsumURLArguments{},
 			strings.TrimPrefix(r.URL.Path, pattern))
 	}
 	handler.ServeHTTP(&response, r.WithContext(ctx))
@@ -97,7 +97,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Returns an empty string for missing arguments.
 func GetSigsumURLArguments(r *http.Request) string {
-	if args, ok := r.Context().Value(sigsumUrlArguments{}).(string); ok {
+	if args, ok := r.Context().Value(sigsumURLArguments{}).(string); ok {
 		return args
 	}
 	return ""
