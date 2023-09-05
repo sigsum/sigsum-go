@@ -1,7 +1,6 @@
 package monitor
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +15,7 @@ import (
 
 // TODO: Document storage of state properly. A directory with one file
 // per log, with hex keyhash as filename. Each file contains a signed
-// tree head, a newline, and a line nect_leaf_index=NUMBER.
+// tree head, a newline, and a line next_leaf_index=NUMBER.
 
 // Similar to MonitorState, but also inludes the treehead signature.
 type storedMonitorState struct {
@@ -26,26 +25,21 @@ type storedMonitorState struct {
 }
 
 func (s *storedMonitorState) FromASCII(r io.Reader) error {
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return fmt.Errorf("reading monitor state failed: %w", err)
-	}
-	parts := bytes.Split(data, []byte{'\n', '\n'})
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid monitor state")
-	}
-	// Extend slice to get back a single newline.
-	parts[0] = append(parts[0], '\n')
+	p := ascii.NewParser(r)
 
-	if err := s.sth.FromASCII(bytes.NewBuffer(parts[0])); err != nil {
+	if err := s.sth.Parse(&p); err != nil {
 		return err
 	}
-	parser := ascii.NewParser(bytes.NewBuffer(parts[1]))
-	s.nextLeafIndex, err = parser.GetInt("next_leaf_index")
+	if err := p.GetEmptyLine(); err != nil {
+		return fmt.Errorf("missing leaf index part: %v", err)
+	}
+
+	var err error
+	s.nextLeafIndex, err = p.GetInt("next_leaf_index")
 	if err != nil {
 		return err
 	}
-	return parser.GetEOF()
+	return p.GetEOF()
 }
 
 func (s *storedMonitorState) ToASCII(w io.Writer) error {
