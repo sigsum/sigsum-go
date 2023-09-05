@@ -16,7 +16,7 @@ import (
 )
 
 // Run HTTP request
-func queryServer(t *testing.T, server *server, method, url, body string) (*http.Response, string) {
+func queryServer(t *testing.T, server http.Handler, method, url, body string) (*http.Response, string) {
 	t.Helper()
 	var reqBody io.Reader
 	if len(body) > 0 {
