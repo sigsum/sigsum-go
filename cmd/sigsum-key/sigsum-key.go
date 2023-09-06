@@ -206,7 +206,7 @@ func (s *SignSettings) parse(args []string) {
 	s.namespace = ""
 
 	set := newOptionSet(args, true)
-	set.FlagLong(&s.keyFile, "key", 'k', "Private key", "file").Mandatory()
+	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key for signing", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Signature output", "file")
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
 	parseNoArgs(set, args)

@@ -92,7 +92,7 @@ func (s *Settings) parse(args []string) {
 
 	help := false
 
-	set.Flag(&s.keyFile, 'k', "Witness private key", "file").Mandatory()
+	set.FlagLong(&s.keyFile, "signing-key", 'k', "Witness private key", "file").Mandatory()
 	set.FlagLong(&s.logKey, "log-key", 0, "Log public key", "file").Mandatory()
 	// TODO: Better name?
 	set.FlagLong(&s.stateFile, "state-file", 0, "Name of state file", "file").Mandatory()
