@@ -189,7 +189,7 @@ func parseNoArgs(set *getopt.Set, args []string, usage string) {
 
 func (s *createSettings) parse(args []string) {
 	set := newOptionSet(args, "")
-	set.FlagLong(&s.keyFile, "key", 'k', "Private key", "file").Mandatory()
+	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key for signing", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Output", "file")
 	set.FlagLong(&s.logKeyFile, "log-key", 0, "Log's public key", "file").Mandatory()
 	set.FlagLong(&s.domain, "domain", 0, "Domain")

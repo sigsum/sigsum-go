@@ -32,13 +32,15 @@ for x in $(seq 5); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
     printf "%31s\n" foo-$x \
-	| ./bin/sigsum-submit --diagnostics=warning --timeout=5s --token-domain test.sigsum.org --token-key test.token.key --raw-hash -o test.$x.proof -k test.submit.key --policy test.policy
+	| ./bin/sigsum-submit --diagnostics=warning --timeout=5s \
+	     --token-domain test.sigsum.org --token-signing-key test.token.key \
+	     --raw-hash -o test.$x.proof --signing-key test.submit.key --policy test.policy
 done
 
 for x in $(seq 5); do
     echo >&2 "verify $x"
     printf "%31s\n" foo-$x \
-	| ./bin/sigsum-verify --raw-hash --key test.submit.key.pub --policy test.policy "test.$x.proof"
+	| ./bin/sigsum-verify --raw-hash -k test.submit.key.pub --policy test.policy "test.$x.proof"
 done
 
 # Check that the message is taken into account in validation.

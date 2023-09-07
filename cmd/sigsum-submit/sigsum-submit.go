@@ -281,7 +281,7 @@ func (s *Settings) parse(args []string) {
 	set.FlagLong(&s.outputDir, "output-dir", 0, "Directory for output files", "directory")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
 	set.FlagLong(&s.tokenDomain, "token-domain", 0, "Create a Sigsum-Token: header for this domain")
-	set.FlagLong(&s.tokenKeyFile, "token-key", 0, "Key for signing Sigsum-Token: header", "file")
+	set.FlagLong(&s.tokenKeyFile, "token-signing-key", 0, "Key for signing Sigsum-Token: header", "file")
 	set.FlagLong(&s.timeout, "timeout", 0, "Per-log submission timeout. Zero means library default, currently 45s", "duration")
 	set.FlagLong(&help, "help", 0, "Display help")
 	set.Parse(args)
