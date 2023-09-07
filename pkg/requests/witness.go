@@ -3,6 +3,7 @@ package requests
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -60,4 +61,18 @@ type GetTreeSize struct {
 
 func (req *GetTreeSize) ToURL(url string) string {
 	return fmt.Sprintf("%s%x", url, req.KeyHash)
+}
+
+func (req *GetTreeSize) FromURLArgs(args string) error {
+	var err error
+	req.KeyHash, err = crypto.HashFromHex(args)
+	return err
+}
+
+func (req *GetTreeSize) FromURL(url string) error {
+	split := strings.Split(url, "/")
+	if len(split) < 1 {
+		return fmt.Errorf("not enough input")
+	}
+	return req.FromURLArgs(split[len(split)-1])
 }
