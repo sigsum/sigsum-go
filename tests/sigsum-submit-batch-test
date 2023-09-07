@@ -37,7 +37,9 @@ rm -f test.*.proof
 
 ./bin/sigsum-submit -k test.submit.key --diagnostics=warning test.1.msg test.2.msg test.3.msg test.4.msg test.5.msg
 
-./bin/sigsum-submit -p test.policy --diagnostics=warning --timeout=5s --token-domain test.sigsum.org --token-key test.token.key test.1.msg.req test.2.msg.req test.3.msg.req test.4.msg.req test.5.msg.req
+./bin/sigsum-submit -p test.policy --diagnostics=warning --timeout=5s \
+  --token-domain test.sigsum.org --token-signing-key test.token.key \
+  test.1.msg.req test.2.msg.req test.3.msg.req test.4.msg.req test.5.msg.req
 
 for x in $(seq 5); do
     echo >&2 "verify $x"
