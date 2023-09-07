@@ -88,7 +88,7 @@ func TestAddTreeHead(t *testing.T) {
 		{url: "/foo/add-tree-head", status: 200},
 		{url: "/foo/add-tree-head/", status: 404},
 		{url: "/foo/add-tree-head", status: 403, err: api.ErrForbidden},
-		{url: "/foo/add-tree-head", status: 403, err: api.ErrForbidden},
+		{url: "/foo/add-tree-head", status: 409, err: api.ErrConflict},
 		{url: "/foo/add-tree-head", status: 400,
 			hook: func(req *requests.AddTreeHead) {
 				req.OldSize = 6
@@ -117,7 +117,7 @@ func TestAddTreeHead(t *testing.T) {
 				return
 			}
 			if got, want := body, writeFuncToString(t, cs.ToASCII); got != want {
-				t.Errorf("Unexpected resposne for %q, got %q, want %q", table.url, got, want)
+				t.Errorf("Unexpected response for %q, got %q, want %q", table.url, got, want)
 			}
 		}(req)
 	}
