@@ -378,7 +378,7 @@ func validCosignature(t *testing.T) *Cosignature {
 
 func validCosignatureASCII(t *testing.T) string {
 	t.Helper()
-	return fmt.Sprintf("%s=v1 %x %d %x\n",
+	return fmt.Sprintf("%s=%x %d %x\n",
 		"cosignature", newHashBufferInc(t)[:], 1, newSigBufferInc(t)[:])
 }
 
@@ -405,7 +405,7 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 
 func validCosignedTreeHeadASCII(t *testing.T) string {
 	t.Helper()
-	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=v1 %x %d %x\n%s=v1 %x %d %x\n",
+	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x %d %x\n%s=%x %d %x\n",
 		"size", 2,
 		"root_hash", newHashBufferInc(t)[:],
 		"signature", newSigBufferInc(t)[:],
