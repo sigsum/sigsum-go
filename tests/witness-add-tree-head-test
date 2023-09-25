@@ -32,7 +32,7 @@ test_one() {
 	| curl -s -w "%{http_code}" --data-binary @- http://localhost:7777/add-tree-head > test.rsp
     [ "$(tail -n1 test.rsp)" = $3 ] || die "Unexpected exit code for range $1, $2"
     if [ "$3" = 200 ] ; then
-	grep -E '^cosignature=v1 [0-9a-f]{64} [0-9]+ [0-9a-f]{128}$' test.rsp >/dev/null \
+	grep -E '^cosignature=[0-9a-f]{64} [0-9]+ [0-9a-f]{128}$' test.rsp >/dev/null \
 	    || die "cosignature missing in response"
     fi
 }

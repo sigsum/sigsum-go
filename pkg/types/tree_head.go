@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/base64"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 
@@ -16,11 +15,6 @@ import (
 const (
 	CosignatureNamespace = "cosignature/v1"
 	CheckpointNamePrefix = "sigsum.org/v1/tree/"
-	CosignatureVersion   = "v1"
-)
-
-var (
-	ErrUnknownCosignatureVersion = errors.New("unexpected cosignature version")
 )
 
 type TreeHead struct {
@@ -34,9 +28,6 @@ type SignedTreeHead struct {
 }
 
 type Cosignature struct {
-	// Note that on the wire, there's also a version field. That
-	// is not represented here, since the current implementation
-	// supports only the "v1" version.
 	KeyHash   crypto.Hash
 	Timestamp uint64
 	Signature crypto.Signature
@@ -172,26 +163,23 @@ func (cs *Cosignature) Verify(key *crypto.PublicKey, logKeyHash *crypto.Hash, th
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.WriteLine(w, "cosignature", CosignatureVersion, cs.KeyHash[:], cs.Timestamp, cs.Signature[:])
+	return ascii.WriteLine(w, "cosignature", cs.KeyHash[:], cs.Timestamp, cs.Signature[:])
 }
 
 func (cs *Cosignature) Parse(p *ascii.Parser) error {
-	v, err := p.GetValues("cosignature", 4)
+	v, err := p.GetValues("cosignature", 3)
 	if err != nil {
 		return err
 	}
-	if v[0] != CosignatureVersion {
-		return ErrUnknownCosignatureVersion
-	}
-	cs.KeyHash, err = crypto.HashFromHex(v[1])
+	cs.KeyHash, err = crypto.HashFromHex(v[0])
 	if err != nil {
 		return err
 	}
-	cs.Timestamp, err = ascii.IntFromDecimal(v[2])
+	cs.Timestamp, err = ascii.IntFromDecimal(v[1])
 	if err != nil {
 		return err
 	}
-	cs.Signature, err = crypto.SignatureFromHex(v[3])
+	cs.Signature, err = crypto.SignatureFromHex(v[2])
 	return err
 }
 
@@ -223,10 +211,6 @@ func ParseCosignatures(p *ascii.Parser) ([]Cosignature, error) {
 		err := cs.Parse(p)
 		if err == io.EOF {
 			return cosignatures, nil
-		}
-		if err == ErrUnknownCosignatureVersion {
-			// Silently ignore
-			continue
 		}
 		if err != nil {
 			return nil, err
