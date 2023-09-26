@@ -146,7 +146,7 @@ func (t *Tree) ProveInclusion(index, size uint64) ([]crypto.Hash, error) {
 	return reversePath(inclusion(t.leafs[:size], index, t.cRange, t.Size())), nil
 }
 
-// Based on RFC 9161, 2.1.4.1, but produces path in opposite order.
+// Based on RFC 9162, 2.1.4.1, but produces path in opposite order.
 func consistency(leaves []crypto.Hash, m uint64, cRange []crypto.Hash, size uint64) []crypto.Hash {
 	p := []crypto.Hash{}
 	complete := true
