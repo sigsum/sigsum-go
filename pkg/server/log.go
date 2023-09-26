@@ -25,9 +25,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 	server.register(types.EndpointGetInclusionProof, http.MethodGet,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.InclusionProof
-			// TODO: Take prefix into account, see
-			// https://git.glasklar.is/sigsum/core/log-go/-/issues/50
-			if err := req.FromURL(r.URL.Path); err != nil {
+			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
 				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
 			}
 			if req.Size < 2 {
@@ -49,9 +47,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 	server.register(types.EndpointGetConsistencyProof, http.MethodGet,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.ConsistencyProof
-			// TODO: Take prefix into account, see
-			// https://git.glasklar.is/sigsum/core/log-go/-/issues/50
-			if err := req.FromURL(r.URL.Path); err != nil {
+			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
 				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
 			}
 			if req.OldSize < 1 {
@@ -93,22 +89,20 @@ func NewLog(config *Config, log api.Log) http.Handler {
 					return
 				}
 			}
-			// TODO: Use an Accepted error?
+			// TODO: Change AddLeaf to return api.ErrAccepted, instead of the persisted flag?
 			persisted, err := log.AddLeaf(r.Context(), req, submitHeader)
 			if err != nil {
 				reportError(w, r.URL, err)
 				return
 			}
 			if !persisted {
-				w.WriteHeader(http.StatusAccepted)
+				reportError(w, r.URL, api.ErrAccepted)
 			}
 		}))
 	server.register(types.EndpointGetLeaves, http.MethodGet,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.Leaves
-			// TODO: Take prefix into account, see
-			// https://git.glasklar.is/sigsum/core/log-go/-/issues/50
-			if err := req.FromURL(r.URL.Path); err != nil {
+			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
 				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
 				return
 			}
