@@ -203,8 +203,8 @@ func TestMetrics(t *testing.T) {
 				method = "POST"
 			}
 			if table.status != 301 {
-				metrics.EXPECT().OnRequest("/foo/get-x/")
-				metrics.EXPECT().OnResponse("/foo/get-x/", table.status, gomock.Any()).Do(
+				metrics.EXPECT().OnRequest("get-x/")
+				metrics.EXPECT().OnResponse("get-x/", table.status, gomock.Any()).Do(
 					func(_ string, _ int, latency time.Duration) {
 						if table.slow {
 							if latency < testDelay {

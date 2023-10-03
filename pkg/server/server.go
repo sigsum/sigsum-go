@@ -77,13 +77,18 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(w, r)
 		return
 	}
-	s.config.Metrics.OnRequest(pattern)
+	endpoint := strings.TrimPrefix(pattern, "/")
+	if len(s.config.Prefix) > 0 {
+		endpoint = strings.TrimPrefix(endpoint, s.config.Prefix+"/")
+	}
+
+	s.config.Metrics.OnRequest(endpoint)
 	start := time.Now()
 
 	response := responseWriterWithStatus{w: w, statusCode: http.StatusOK}
 	defer func() {
 		latency := time.Now().Sub(start)
-		s.config.Metrics.OnResponse(pattern, response.statusCode, latency)
+		s.config.Metrics.OnResponse(endpoint, response.statusCode, latency)
 	}()
 
 	ctx, cancel := context.WithTimeout(r.Context(), s.config.getTimeout())

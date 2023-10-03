@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -10,8 +11,39 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-func NewLog(config *Config, log api.Log) http.Handler {
+func newGetLeavesServer(config *Config, getLeaves func(context.Context, requests.Leaves) ([]types.Leaf, error)) *server {
 	server := newServer(config)
+	server.register(types.EndpointGetLeaves, http.MethodGet,
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var req requests.Leaves
+			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
+				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+				return
+			}
+			if req.StartIndex >= req.EndIndex {
+				reportErrorCode(w, r.URL, http.StatusBadRequest,
+					fmt.Errorf("start_index(%d) must be less than end_index(%d)",
+						req.StartIndex, req.EndIndex))
+				return
+			}
+			leaves, err := getLeaves(r.Context(), req)
+			if err == nil {
+				err = types.LeavesToASCII(w, leaves)
+			}
+			if err != nil {
+				reportError(w, r.URL, err)
+			}
+		}))
+	return server
+}
+
+// Exported for the benefit of the primary node's internal endpoint.
+func NewGetLeavesServer(config *Config, getLeaves func(context.Context, requests.Leaves) ([]types.Leaf, error)) http.Handler {
+	return newGetLeavesServer(config, getLeaves)
+}
+
+func NewLog(config *Config, log api.Log) http.Handler {
+	server := newGetLeavesServer(config, log.GetLeaves)
 	server.register(types.EndpointGetTreeHead, http.MethodGet,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cth, err := log.GetTreeHead(r.Context())
@@ -27,6 +59,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 			var req requests.InclusionProof
 			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
 				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+				return
 			}
 			if req.Size < 2 {
 				// Size:0 => not possible to prove inclusion of anything
@@ -70,10 +103,6 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				reportError(w, r.URL, err)
 			}
 		}))
-	server.register(types.EndpointGetConsistencyProof, http.MethodGet,
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		}))
-
 	server.register(types.EndpointAddLeaf, http.MethodPost,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.Leaf
@@ -97,27 +126,6 @@ func NewLog(config *Config, log api.Log) http.Handler {
 			}
 			if !persisted {
 				reportError(w, r.URL, api.ErrAccepted)
-			}
-		}))
-	server.register(types.EndpointGetLeaves, http.MethodGet,
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var req requests.Leaves
-			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
-				return
-			}
-			if req.StartIndex >= req.EndIndex {
-				reportErrorCode(w, r.URL, http.StatusBadRequest,
-					fmt.Errorf("start_index(%d) must be less than end_index(%d)",
-						req.StartIndex, req.EndIndex))
-				return
-			}
-			leaves, err := log.GetLeaves(r.Context(), req)
-			if err == nil {
-				err = types.LeavesToASCII(w, leaves)
-			}
-			if err != nil {
-				reportError(w, r.URL, err)
 			}
 		}))
 
