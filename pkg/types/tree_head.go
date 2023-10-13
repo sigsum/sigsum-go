@@ -159,7 +159,8 @@ func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 }
 
 func (cs *Cosignature) Verify(key *crypto.PublicKey, logKeyHash *crypto.Hash, th *TreeHead) bool {
-	return crypto.Verify(key, []byte(th.toCosignedData(logKeyHash, cs.Timestamp)), &cs.Signature)
+	return cs.KeyHash == crypto.HashBytes(key[:]) &&
+		crypto.Verify(key, []byte(th.toCosignedData(logKeyHash, cs.Timestamp)), &cs.Signature)
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer) error {

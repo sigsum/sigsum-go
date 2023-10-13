@@ -255,6 +255,11 @@ func TestCosignAndVerify(t *testing.T) {
 			return "bad timestamp", th, mCs, logKeyHash
 		},
 		func() (string, TreeHead, Cosignature, crypto.Hash) {
+			mCs := cosignature
+			mCs.KeyHash[2]++
+			return "bad cs key hash", th, mCs, logKeyHash
+		},
+		func() (string, TreeHead, Cosignature, crypto.Hash) {
 			mKh := logKeyHash
 			mKh[3]++
 			return "bad log key hash", th, cosignature, mKh
