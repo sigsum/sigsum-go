@@ -7,6 +7,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/dchest/safefile"
+
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/log"
@@ -166,29 +168,18 @@ func (s *PersistedState) updateNextLeafIndex(keyHash *crypto.Hash, nextLeafIndex
 }
 
 func (s *PersistedState) writeState(keyHash *crypto.Hash, state *storedMonitorState) error {
-	// TODO: Use renameio? See https://git.glasklar.is/sigsum/core/sigsum-go/-/issues/58
 	fileName := fmt.Sprintf("%s/%x", s.directory, *keyHash)
-	tmpName := fileName + ".new"
-	f, err := os.OpenFile(tmpName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	f, err := safefile.Create(fileName, 0644)
 	if err != nil {
 		return err
 	}
-	// In case Close is called explictly below, the deferred call
-	// will fail, and error ignored.
 	defer f.Close()
-	defer os.Remove(tmpName) // Ignore error
 
 	if err := state.ToASCII(f); err != nil {
 		return err
 	}
-	if err := f.Sync(); err != nil {
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
 	// Atomically replace old file with new.
-	return os.Rename(tmpName, fileName)
+	return f.Commit()
 }
 
 type persistingCallbacks struct {
