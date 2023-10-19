@@ -109,6 +109,15 @@ It returns a channel, that is closed after monitor has been
 terminated. To stop the monitoring from the application, first cancel
 the passed in context, and then wait on that channel.
 
+### NewPersistedState
+
+The `monitor.NewPersistedState` function reads state from disk, and
+creates a book-keeping object. It has one exported method,
+`WrapCallbacks`. The returned callback interface is intended to be
+installed in `monitor.Config`, and for each callback with a new tree
+head or new leaves, it will first invoke the application's provided
+callback, and then update the stored state.
+
 <!--  LocalWords:  cosignature json submitters Config
       LocalWords:  MonitorLog goroutine StartMonitoring cryptographic
  -->
