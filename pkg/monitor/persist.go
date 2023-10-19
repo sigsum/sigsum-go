@@ -13,10 +13,6 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-// TODO: Document storage of state properly. A directory with one file
-// per log, with hex keyhash as filename. Each file contains a signed
-// tree head, a newline, and a line nect_leaf_index=NUMBER.
-
 // Similar to MonitorState, but also inludes the treehead signature.
 type storedMonitorState struct {
 	sth types.SignedTreeHead
