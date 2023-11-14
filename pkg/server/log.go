@@ -27,10 +27,15 @@ func newGetLeavesServer(config *Config, getLeaves func(context.Context, requests
 				return
 			}
 			leaves, err := getLeaves(r.Context(), req)
-			if err == nil {
-				err = types.LeavesToASCII(w, leaves)
-			}
 			if err != nil {
+				reportError(w, r.URL, err)
+				return
+			}
+			if got, max := uint64(len(leaves)), req.EndIndex-req.StartIndex; got == 0 || got > max {
+				reportError(w, r.URL, fmt.Errorf("bad leaf count %d, should have 0 < count <= %d", got, max))
+				return
+			}
+			if err := types.LeavesToASCII(w, leaves); err != nil {
 				reportError(w, r.URL, err)
 			}
 		}))
