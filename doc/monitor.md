@@ -2,8 +2,13 @@
 
 A Sigsum monitor is required to be able to detect, and hence act, on
 unexpected or unauthorized signatures appear in a log. This file
-documents the monitor program and corresponding library included in
-sigsum-go.
+documents the `sigsum-monitor` program and the corresponding library
+included in sigsum-go.
+
+Using the `sigsum-monitor` as-is provides the monitoring needed for
+key-usage transparency. Additional processing of leaves of
+interest could be done either as post-processing the output of the
+program, or by writing an extended monitor on top of the library.
 
 ## Cryptographic operations
 
@@ -16,7 +21,7 @@ that it gets to see all leaves included in the log.
 
 For each new leaf, the monitor compares the submitter's key hash with
 the monitor's list of configured keys, and for keys that
-match, the signature is varifies, and the leaf is output. As a special
+match, the signature is verified, and the leaf is output. As a special
 case, it is possible to run the monitor with an empty list of
 submitter keys; in that case, all new leaves are output, but without
 any verification of leaf signatures.
@@ -29,7 +34,8 @@ keys of interest.
 
 It writes one line to standard out for each leaf carrying a signature
 from one of the listed keys, and one line for each detected problem in
-the log.
+the log. This output could be used by non-cryptographic monitoring
+tools, to file issues or send out notifications.
 
 There are a few missing features: Witness cosignatures are not
 processed at all (it is desirable to log an alert if a witness
@@ -41,14 +47,14 @@ structured output, e.g., in json format.
 ### Invocation
 
 The `sigsum-monitor` has one mandatory option, `-p`, specifying the
-sigsum policy file, and a few optional options. It takes the list of
-submitters' public key files as non-option command line arguments. The
-options are: `--interval` for specifying how often to query logs for
-new tree head, `--diagnostics` for specifying the level of diagnostic
-output written to standard error, and `--state-directory` for
-specifying a directory where the monitor's state is stored, so that it
-can be stopped and restarted without starting over from the start of
-the log.
+sigsum [policy file](./policy.md), and a few optional options. It
+takes the list of submitters' public key files as non-option command
+line arguments. The options are: `--interval` for specifying how often
+to query logs for new tree head, `--diagnostics` for specifying the
+level of diagnostic output written to standard error, and
+`--state-directory` for specifying a directory where the monitor's
+state is stored, so that it can be stopped and restarted without
+starting over from the start of the log.
 
 ## Monitor state
 
@@ -58,18 +64,19 @@ and the number of leaves that the monitor has downloaded and verified
 batches).
 
 TODO: Consider if it really makes sense to store the tree head
-signature.
+signature; it could be demoted to a write-only log, to be used only
+for later troubleshooting.
 
 When the monitor's state is persisted to disk (using the
 `--state-directory` option), the directory can hold one file per log,
 with name being the lowercase hex hash of the log's key. The contents
-of the file is an ascii-format signed tree head. Format is the same as
+of the file is an ASCII-format signed tree head. Format is the same as
 returned by the `get-tree-head` request to the log, see [sigsum
 protocol][], except that there are no cosignature lines. This tree
 head is followed by an empty line, and a line
 "next_leaf_index=NUMBER".
 
-[sigsum protocol](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md)
+[sigsum protocol]: https://git.glasklar.is/sigsum/project/documentation/-/blob/log.md-release-v1.0.0/log.md
 
 ## Monitor go package
 
@@ -85,8 +92,8 @@ below.
 
 ### Callback interface
 
-The `monitor.Callback` interface includes call back functions invked by
-the monitr when a new tree head is seen, when new leaves are seen, and
+The `monitor.Callback` interface includes call back functions invoked by
+the monitor when a new tree head is seen, when new leaves are seen, and
 when any problems with the log are observed.
 
 ### MonitorLog
@@ -101,3 +108,7 @@ spawns one monitoring goroutine for each log, and returns immediately.
 It returns a channel, that is closed after monitor has been
 terminated. To stop the monitoring from the application, first cancel
 the passed in context, and then wait on that channel.
+
+<!--  LocalWords:  cosignature json submitters Config
+      LocalWords:  MonitorLog goroutine StartMonitoring cryptographic
+ -->
