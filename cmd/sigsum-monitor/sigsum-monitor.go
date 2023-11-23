@@ -27,20 +27,32 @@ type Settings struct {
 	directory   string
 }
 
-type callbacks struct{}
-
-func (_ callbacks) NewTreeHead(logKeyHash crypto.Hash, signedTreeHead types.SignedTreeHead) {
-	fmt.Printf("New %x tree, size %d\n", logKeyHash, signedTreeHead.Size)
+type callbacks struct {
+	stateDirectory *monitor.StateDirectory
 }
 
-func (_ callbacks) NewLeaves(logKeyHash crypto.Hash, numberOfProcessedLeaves uint64, indices []uint64, leaves []types.Leaf) {
-	fmt.Printf("New %x leaves, count %d, total processed %d\n", logKeyHash, len(leaves), numberOfProcessedLeaves)
+func (c *callbacks) persist(logKeyHash crypto.Hash, state monitor.MonitorState) {
+	if c.stateDirectory != nil {
+		if err := c.stateDirectory.WriteState(logKeyHash, state); err != nil {
+			log.Error("Failed to persist state for log %x, size = %d, next leaf index %d: %v",
+				logKeyHash, state.TreeHead.Size, state.NextLeafIndex, err)
+		}
+	}
+}
+func (c *callbacks) NewTreeHead(logKeyHash crypto.Hash, state monitor.MonitorState, cosignedTreeHead types.CosignedTreeHead) {
+	fmt.Printf("New %x tree, size %d\n", logKeyHash, cosignedTreeHead.Size)
+	c.persist(logKeyHash, state)
+}
+
+func (c *callbacks) NewLeaves(logKeyHash crypto.Hash, state monitor.MonitorState, indices []uint64, leaves []types.Leaf) {
+	fmt.Printf("New %x leaves, count %d, total processed %d\n", logKeyHash, len(leaves), state.NextLeafIndex)
 	for i, l := range leaves {
 		fmt.Printf("  index %d keyhash %x checksum %x\n", indices[i], l.KeyHash, l.Checksum)
 	}
+	c.persist(logKeyHash, state)
 }
 
-func (_ callbacks) Alert(logKeyHash crypto.Hash, e error) {
+func (_ *callbacks) Alert(logKeyHash crypto.Hash, e error) {
 	log.Fatal("Alert log %x: %v\n", logKeyHash, e)
 }
 
@@ -54,9 +66,10 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to create policy: %v", err)
 	}
+	callbacks := callbacks{}
 	config := monitor.Config{
 		QueryInterval: settings.interval,
-		Callbacks:     callbacks{},
+		Callbacks:     &callbacks,
 	}
 	if len(settings.keys) > 0 {
 		config.SubmitKeys = make(map[crypto.Hash]crypto.PublicKey)
@@ -69,19 +82,18 @@ func main() {
 		}
 	}
 	var initialState map[crypto.Hash]monitor.MonitorState
-
 	if len(settings.directory) > 0 {
+		callbacks.stateDirectory = monitor.NewStateDirectory(settings.directory)
 		var logKeys []crypto.PublicKey
 		for _, e := range policy.GetLogsWithUrl() {
 			logKeys = append(logKeys, e.PublicKey)
 		}
-		persisted, err := monitor.NewPersistedState(settings.directory, logKeys)
+		var err error
+		initialState, err = callbacks.stateDirectory.ReadStates(logKeys)
 		if err != nil {
-			log.Fatal("failed to read state directory %q: %v",
+			log.Fatal("failed to read state directory: %v",
 				settings.directory, err)
 		}
-		initialState = persisted.GetInitialState()
-		config.Callbacks = persisted.WrapCallbacks(config.Callbacks)
 	}
 	// TODO: Also store the list of submit keys, and discard state
 	// if keys are added, since whenever new keys are added, the

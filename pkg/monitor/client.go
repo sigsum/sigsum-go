@@ -30,26 +30,26 @@ func newMonitoringLogClient(logKey *crypto.PublicKey, URL string) *monitoringLog
 // state. TODO: Figure out cosignatures should be processed; it would
 // make some sense to return a CosignedTreeHead but where only
 // properly verified cosignatures are kept.
-func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.TreeHead) (types.SignedTreeHead, error) {
+func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.TreeHead) (types.CosignedTreeHead, error) {
 	cth, err := c.client.GetTreeHead(ctx)
 	if err != nil {
-		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-tree-head failed: %v", err)
+		return types.CosignedTreeHead{}, newAlert(AlertLogError, "get-tree-head failed: %v", err)
 	}
 	// For now, only check log's signature. TODO: Also check cosignatures.
 	if !cth.Verify(&c.logKey) {
-		return types.SignedTreeHead{}, newAlert(AlertInvalidLogSignature, "log signature invalid")
+		return types.CosignedTreeHead{}, newAlert(AlertInvalidLogSignature, "log signature invalid")
 	}
 	if cth.Size < treeHead.Size {
-		return types.SignedTreeHead{}, newAlert(AlertInconsistentTreeHead, "monitored log has shrunk, size %d, previous size %d", cth.Size, treeHead.Size)
+		return types.CosignedTreeHead{}, newAlert(AlertInconsistentTreeHead, "monitored log has shrunk, size %d, previous size %d", cth.Size, treeHead.Size)
 	}
 	proof, err := c.client.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: treeHead.Size, NewSize: cth.Size})
 	if err != nil {
-		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-consistency-proof failed: %v", err)
+		return types.CosignedTreeHead{}, newAlert(AlertLogError, "get-consistency-proof failed: %v", err)
 	}
 	if err := proof.Verify(treeHead, &cth.TreeHead); err != nil {
-		return types.SignedTreeHead{}, newAlert(AlertInconsistentTreeHead, "consistency proof not valid: %v", err)
+		return types.CosignedTreeHead{}, newAlert(AlertInconsistentTreeHead, "consistency proof not valid: %v", err)
 	}
-	return cth.SignedTreeHead, nil
+	return cth, nil
 }
 
 func (c *monitoringLogClient) getInclusionProofAtIndex(ctx context.Context,

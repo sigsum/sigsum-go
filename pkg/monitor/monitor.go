@@ -16,32 +16,26 @@ const (
 	DefaultQueryInterval = 10 * time.Minute
 )
 
-// TODO: Figure out the proper interface to the monitor. Are callbacks
-// the right way, or should we instead have one or more channels to
-// pass new data items and alerts?
-type Callbacks interface {
-	// Called when a log (identified by key hash) has a new tree
-	// head; application can use this to persist the tree head.
-	// TODO: Also include cosignatures?
-	NewTreeHead(logKeyHash crypto.Hash, signedTreeHead types.SignedTreeHead)
-	// Called when there are new leaves with submit key of
-	// interest. Includes only leaves with a known submit key, and
-	// where signature and inclusion proof are valid.
-	//
-	// The numberOfProcessedLeaves reports the monitoring
-	// progress; it is the number of leaves that have been
-	// retrieved from the log and that have been checked for
-	// proper inclusion; it may lag behind the tree size of the
-	// latest seen tree. indices and leaves represents the subset
-	// of new leaves that are of interest.
-	NewLeaves(logKeyHash crypto.Hash, numberOfProcessedLeaves uint64, indices []uint64, leaves []types.Leaf)
-	Alert(logKeyHash crypto.Hash, e error)
-}
-
 type MonitorState struct {
 	TreeHead types.TreeHead
 	// Index of next leaf to process.
 	NextLeafIndex uint64
+}
+
+// TODO: Figure out the proper interface to the monitor. Are callbacks
+// the right way, or should we instead have one or more channels to
+// pass new data items and alerts? There may be concurrent callbacks,
+// but not no concurrent callbacks referring to the same log.
+type Callbacks interface {
+	// Called when a log (identified by key hash) has a new tree
+	// head. The state may be persisted by the application.
+	NewTreeHead(logKeyHash crypto.Hash, state MonitorState, cosignedTreeHead types.CosignedTreeHead)
+	// Called when there are new leaves with submit key of
+	// interest. Includes only leaves with a known submit key, and
+	// where signature and inclusion proof are valid.
+	NewLeaves(logKeyHash crypto.Hash, state MonitorState, indices []uint64, leaves []types.Leaf)
+	// Called on detected problems with the log or witnesses.
+	Alert(logKeyHash crypto.Hash, e error)
 }
 
 type Config struct {
@@ -110,8 +104,8 @@ func MonitorLog(ctx context.Context, client *monitoringLogClient,
 			if err != nil {
 				config.Callbacks.Alert(keyHash, err)
 			} else if cth.Size > state.TreeHead.Size {
-				config.Callbacks.NewTreeHead(keyHash, cth)
 				state.TreeHead = cth.TreeHead
+				config.Callbacks.NewTreeHead(keyHash, state, cth)
 			}
 		}
 		for glState := (*getLeavesState)(nil); state.NextLeafIndex < state.TreeHead.Size; {
@@ -131,7 +125,7 @@ func MonitorLog(ctx context.Context, client *monitoringLogClient,
 				config.Callbacks.Alert(keyHash, err)
 			})
 			state.NextLeafIndex += uint64(len(allLeaves))
-			config.Callbacks.NewLeaves(keyHash, state.NextLeafIndex, indices, leaves)
+			config.Callbacks.NewLeaves(keyHash, state, indices, leaves)
 		}
 		// Waits until end of interval
 		<-updateCtx.Done()
