@@ -119,18 +119,18 @@ func MonitorLog(ctx context.Context, client *monitoringLogClient,
 			if end-state.NextLeafIndex > config.BatchSize {
 				end = state.NextLeafIndex + config.BatchSize
 			}
-			var leaves []types.Leaf
+			var allLeaves []types.Leaf
 			var err error
-			leaves, glState, err = client.getLeaves(ctx, glState, &state.TreeHead,
+			allLeaves, glState, err = client.getLeaves(ctx, glState, &state.TreeHead,
 				requests.Leaves{StartIndex: state.NextLeafIndex, EndIndex: end})
 			if err != nil {
 				config.Callbacks.Alert(keyHash, err)
 				break
 			}
-			indices, leaves := config.filterLeaves(leaves, state.NextLeafIndex, func(alert *Alert) {
+			indices, leaves := config.filterLeaves(allLeaves, state.NextLeafIndex, func(alert *Alert) {
 				config.Callbacks.Alert(keyHash, err)
 			})
-			state.NextLeafIndex += uint64(len(leaves))
+			state.NextLeafIndex += uint64(len(allLeaves))
 			config.Callbacks.NewLeaves(keyHash, state.NextLeafIndex, indices, leaves)
 		}
 		// Waits until end of interval
