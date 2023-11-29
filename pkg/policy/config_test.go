@@ -94,6 +94,93 @@ witness W4 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 	}
 }
 
+func TestNumericThreshold(t *testing.T) {
+	policy, err := ParseConfig(bytes.NewBufferString(`
+# example config
+log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa http://sigsum.example.org
+
+witness A1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1
+witness A2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2
+witness A3 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3
+witness B1 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1
+witness B2 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2
+witness B3 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3
+
+group A-group 1 A1 A2 A3
+group B-group 2 B1 B2 B3
+group G any A-group B-group
+
+quorum G
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy == nil {
+		t.Fatalf("ParseConfig returned nil policy")
+	}
+	if got, want := len(policy.logs), 1; got != want {
+		t.Errorf("Unexpected number of logs in policy, got %d, expected %d", got, want)
+	}
+
+	if got, want := len(policy.witnesses), 6; got != want {
+		t.Errorf("Unexpected number of logs in policy, got %d, expected %d", got, want)
+	}
+	if policy.quorum == nil {
+		t.Fatalf("No quorum defined")
+	}
+	kh := func(hex string) crypto.Hash {
+		key, err := crypto.PublicKeyFromHex(hex)
+		if err != nil {
+			t.Fatalf("internal error, bad key %q", hex)
+		}
+		return crypto.HashBytes(key[:])
+	}
+	aHashes := []crypto.Hash{
+		kh("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"),
+		kh("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2"),
+		kh("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3"),
+	}
+	bHashes := []crypto.Hash{
+		kh("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1"),
+		kh("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2"),
+		kh("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb3"),
+	}
+	for _, table := range []struct {
+		aWitnesses []int
+		bWitnesses []int
+		sufficient bool
+	}{
+		{[]int{}, []int{}, false},
+		// One A witness is sufficient.
+		{[]int{1}, []int{}, true},
+		{[]int{2}, []int{}, true},
+		{[]int{3}, []int{}, true},
+		{[]int{1, 3}, []int{}, true},
+		{[]int{1, 3}, []int{1}, true},
+
+		// Two B witnesses are sufficient.
+		{[]int{}, []int{1}, false},
+		{[]int{}, []int{2}, false},
+		{[]int{}, []int{3}, false},
+		{[]int{}, []int{1, 2}, true},
+		{[]int{}, []int{1, 3}, true},
+		{[]int{}, []int{2, 3}, true},
+		{[]int{}, []int{1, 2, 3}, true},
+		{[]int{2}, []int{1, 2, 3}, true},
+	} {
+		m := make(map[crypto.Hash]struct{})
+		for _, i := range table.aWitnesses {
+			m[aHashes[i-1]] = struct{}{}
+		}
+		for _, i := range table.bWitnesses {
+			m[bHashes[i-1]] = struct{}{}
+		}
+		if got, want := policy.quorum.IsQuorum(m), table.sufficient; got != want {
+			t.Errorf("Unexpected result of IsQuorum for set A %v, B %v, got %v, expected %v", table.aWitnesses, table.bWitnesses, got, want)
+		}
+	}
+}
+
 func TestInvalidConfig(t *testing.T) {
 	for _, table := range []struct {
 		desc   string
