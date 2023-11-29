@@ -81,6 +81,9 @@ func (c *config) parseGroup(args []string) error {
 	}
 	n := len(args) - 2
 	name := args[0]
+	if c.ifdef(name) {
+		return fmt.Errorf("duplicate name %q", name)
+	}
 	var threshold int
 	switch s := string(args[1]); s {
 	case "any":
@@ -89,16 +92,13 @@ func (c *config) parseGroup(args []string) error {
 		threshold = n
 	default:
 		var err error
-		threshold, err := strconv.Atoi(s)
+		threshold, err = strconv.Atoi(s)
 		if err != nil {
 			return err
 		}
-		if threshold < 1 || threshold > n {
-			return fmt.Errorf("threshold out of range")
-		}
 	}
-	if c.ifdef(name) {
-		return fmt.Errorf("duplicate name %q", name)
+	if threshold < 1 || threshold > n {
+		return fmt.Errorf("threshold out of range")
 	}
 
 	subQuorums := []Quorum{}
