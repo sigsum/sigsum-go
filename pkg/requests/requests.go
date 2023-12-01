@@ -35,7 +35,7 @@ type ConsistencyProof struct {
 // Returns the index of the nth last occurence of the substr, or -1 if
 // there are not enough occurences. If n <= 0, returns len(s).
 func nLastIndex(s, substr string, n int) int {
-	for ; n > 0; n-- {
+	for i := 0; i < n; i++ {
 		index := strings.LastIndex(s, substr)
 		if index < 0 {
 			return index

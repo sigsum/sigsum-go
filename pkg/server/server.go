@@ -1,3 +1,11 @@
+// package server implements the http-layer of the Sigsum apis.
+// It defines handlers for incoming HTTP requests, converting to
+// request to a method call on the approriate api interface. It checks
+// for errors where it's clear that a request is bad according to the
+// specs, regardless of what's backing the api interface. It converts
+// the api method's return values (success or errors) into a http
+// response to be returned to the client. Optionally, it can produce
+// basic request and response metrics.
 package server
 
 import (

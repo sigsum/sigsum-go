@@ -75,10 +75,11 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				return
 			}
 			proof, err := log.GetInclusionProof(r.Context(), req)
-			if err == nil {
-				err = proof.ToASCII(w)
-			}
 			if err != nil {
+				reportError(w, r.URL, err)
+				return
+			}
+			if err := proof.ToASCII(w); err != nil {
 				reportError(w, r.URL, err)
 			}
 		}))
@@ -101,10 +102,11 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				return
 			}
 			proof, err := log.GetConsistencyProof(r.Context(), req)
-			if err == nil {
-				err = proof.ToASCII(w)
-			}
 			if err != nil {
+				reportError(w, r.URL, err)
+				return
+			}
+			if err := proof.ToASCII(w); err != nil {
 				reportError(w, r.URL, err)
 			}
 		}))

@@ -19,10 +19,11 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 				return
 			}
 			size, err := witness.GetTreeSize(r.Context(), req)
-			if err == nil {
-				_, err = fmt.Fprintf(w, "size=%d", size)
-			}
 			if err != nil {
+				reportError(w, r.URL, err)
+				return
+			}
+			if _, err = fmt.Fprintf(w, "size=%d", size); err != nil {
 				reportError(w, r.URL, err)
 			}
 		}))
@@ -34,10 +35,11 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 				return
 			}
 			cs, err := witness.AddTreeHead(r.Context(), req)
-			if err == nil {
-				err = cs.ToASCII(w)
-			}
 			if err != nil {
+				reportError(w, r.URL, err)
+				return
+			}
+			if err := cs.ToASCII(w); err != nil {
 				reportError(w, r.URL, err)
 			}
 		}))

@@ -89,6 +89,8 @@ func TestGetInclusionProof(t *testing.T) {
 			status: 404,
 			err:    api.ErrNotFound,
 		},
+		{url: "/foo/get-inclusion-proof/0/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", status: 400},
+		{url: "/foo/get-inclusion-proof/1/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", status: 400},
 		{url: "/foo/get-inclusion-proof/2/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/b", status: 400},
 	} {
 		func() {
@@ -149,9 +151,9 @@ func TestGetConsistencyProof(t *testing.T) {
 			status: 403, // Arbitrary error
 			err:    api.ErrForbidden,
 		},
-		{url: "/foo/get-inclusion-proof/2/2", status: 400},
-		{url: "/foo/get-inclusion-proof/0/2", status: 400},
-		{url: "/foo/get-inclusion-proof/2/1", status: 400},
+		{url: "/foo/get-consistency-proof/2/2", status: 400},
+		{url: "/foo/get-consistency-proof/0/2", status: 400},
+		{url: "/foo/get-consistency-proof/2/1", status: 400},
 	} {
 		func() {
 			ctrl := gomock.NewController(t)

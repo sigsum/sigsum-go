@@ -12,10 +12,11 @@ func NewSecondary(config *Config, secondary api.Secondary) http.Handler {
 	server.register(types.EndpointGetSecondaryTreeHead, http.MethodGet,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			sth, err := secondary.GetSecondaryTreeHead(r.Context())
-			if err == nil {
-				err = sth.ToASCII(w)
-			}
 			if err != nil {
+				reportError(w, r.URL, err)
+				return
+			}
+			if err := sth.ToASCII(w); err != nil {
 				reportError(w, r.URL, err)
 			}
 		}))
