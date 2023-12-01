@@ -18,7 +18,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-// Implements client.Log.
+// Implements api.Log.
 // TODO: Move to some public package, and add an RWMutex for
 // syncronization.
 type testLog struct {
@@ -134,7 +134,7 @@ func TestGetTreeHeadErrors(t *testing.T) {
 	oneTest := func(description string, mungeTreeHead func(*types.CosignedTreeHead), mungeConsistency func(*types.ConsistencyProof)) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		mockLog := mocks.NewMockLogClient(ctrl)
+		mockLog := mocks.NewMockLog(ctrl)
 
 		mockLog.EXPECT().GetTreeHead(gomock.Any()).DoAndReturn(
 			func(ctx context.Context) (types.CosignedTreeHead, error) {

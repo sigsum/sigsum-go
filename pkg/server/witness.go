@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	// TODO: We shouldn't depend on the client package. Move
-	// shared interfaces and errors elsewhere, possibly to an api
-	// package.
-	"sigsum.org/sigsum-go/pkg/client"
+	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-func NewWitness(config *Config, witness client.Witness) http.Handler {
+func NewWitness(config *Config, witness api.Witness) http.Handler {
 	server := newServer(config)
 	server.register(types.EndpointGetTreeSize, http.MethodGet,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

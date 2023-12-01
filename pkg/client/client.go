@@ -19,26 +19,6 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-// Interface for log api.
-type Log interface {
-	GetTreeHead(context.Context) (types.CosignedTreeHead, error)
-	GetInclusionProof(context.Context, requests.InclusionProof) (types.InclusionProof, error)
-	GetConsistencyProof(context.Context, requests.ConsistencyProof) (types.ConsistencyProof, error)
-	GetLeaves(context.Context, requests.Leaves) ([]types.Leaf, error)
-
-	AddLeaf(context.Context, requests.Leaf, *token.SubmitHeader) (bool, error)
-}
-
-// Interface for the secondary node's api.
-type Secondary interface {
-	GetSecondaryTreeHead(context.Context) (types.SignedTreeHead, error)
-}
-
-type Witness interface {
-	GetTreeSize(context.Context, requests.GetTreeSize) (uint64, error)
-	AddTreeHead(context.Context, requests.AddTreeHead) (types.Cosignature, error)
-}
-
 type Config struct {
 	UserAgent string
 	URL       string

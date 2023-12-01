@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/client"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
@@ -15,7 +16,7 @@ import (
 // and it verifies consistency and inclusion of anything it returns.
 type monitoringLogClient struct {
 	logKey crypto.PublicKey // Identifies the log monitored.
-	client client.Log
+	client api.Log
 }
 
 func newMonitoringLogClient(logKey *crypto.PublicKey, URL string) *monitoringLogClient {

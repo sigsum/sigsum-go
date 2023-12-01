@@ -32,7 +32,7 @@ func TestGetTreeSize(t *testing.T) {
 		func() {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			witness := mocks.NewMockWitnessClient(ctrl)
+			witness := mocks.NewMockWitness(ctrl)
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 			server := NewWitness(&config, witness)
@@ -98,7 +98,7 @@ func TestAddTreeHead(t *testing.T) {
 		func(req requests.AddTreeHead) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			witness := mocks.NewMockWitnessClient(ctrl)
+			witness := mocks.NewMockWitness(ctrl)
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 			server := NewWitness(&config, witness)
