@@ -39,7 +39,7 @@ func TestSubmitSuccess(t *testing.T) {
 	oneTest := func(t *testing.T, i int) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		client := mocks.NewMockLogClient(ctrl)
+		client := mocks.NewMockLog(ctrl)
 
 		msg, sth, inclusionProof, req, leaf, leafHash := prepareResponse(t, submitSigner, logSigner, &tree, i)
 		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, nil)
@@ -88,7 +88,7 @@ func TestSubmitFailure(t *testing.T) {
 	oneTest := func(t *testing.T, i int) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		client := mocks.NewMockLogClient(ctrl)
+		client := mocks.NewMockLog(ctrl)
 
 		msg, sth, inclusionProof, req, leaf, leafHash := prepareResponse(t, submitSigner, logSigner, &tree, i)
 		var addError, getTHError, getInclusionError error
