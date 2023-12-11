@@ -52,10 +52,11 @@ func NewLog(config *Config, log api.Log) http.Handler {
 	server.register(types.EndpointGetTreeHead, http.MethodGet,
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cth, err := log.GetTreeHead(r.Context())
-			if err == nil {
-				err = cth.ToASCII(w)
-			}
 			if err != nil {
+				reportError(w, r.URL, err)
+				return
+			}
+			if err = cth.ToASCII(w); err != nil {
 				reportError(w, r.URL, err)
 			}
 		}))
