@@ -16,7 +16,8 @@ import (
 )
 
 // Run HTTP request
-func queryServer(t *testing.T, server http.Handler, method, url, body string) (*http.Response, string) {
+func queryServerHook(t *testing.T, server http.Handler, method, url, body string,
+	hook func(req *http.Request) *http.Request) (*http.Response, string) {
 	t.Helper()
 	var reqBody io.Reader
 	if len(body) > 0 {
@@ -26,6 +27,7 @@ func queryServer(t *testing.T, server http.Handler, method, url, body string) (*
 	if err != nil {
 		t.Fatalf("creating http %s request for %q failed: %v", method, url, err)
 	}
+	req = hook(req)
 
 	w := httptest.NewRecorder()
 	server.ServeHTTP(w, req)
@@ -36,6 +38,11 @@ func queryServer(t *testing.T, server http.Handler, method, url, body string) (*
 		t.Fatalf("reading http response for %q failed: %v", url, err)
 	}
 	return result, string(respBody)
+}
+
+func queryServer(t *testing.T, server http.Handler, method, url, body string) (*http.Response, string) {
+	t.Helper()
+	return queryServerHook(t, server, method, url, body, func(req *http.Request) *http.Request { return req })
 }
 
 func TestGet(t *testing.T) {
@@ -203,8 +210,8 @@ func TestMetrics(t *testing.T) {
 				method = "POST"
 			}
 			if table.status != 301 {
-				metrics.EXPECT().OnRequest("/foo/get-x/")
-				metrics.EXPECT().OnResponse("/foo/get-x/", table.status, gomock.Any()).Do(
+				metrics.EXPECT().OnRequest("get-x/")
+				metrics.EXPECT().OnResponse("get-x/", table.status, gomock.Any()).Do(
 					func(_ string, _ int, latency time.Duration) {
 						if table.slow {
 							if latency < testDelay {

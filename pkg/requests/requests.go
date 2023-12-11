@@ -32,6 +32,19 @@ type ConsistencyProof struct {
 	NewSize uint64
 }
 
+// Returns the index of the nth last occurence of the substr, or -1 if
+// there are not enough occurences. If n <= 0, returns len(s).
+func nLastIndex(s, substr string, n int) int {
+	for i := 0; i < n; i++ {
+		index := strings.LastIndex(s, substr)
+		if index < 0 {
+			return index
+		}
+		s = s[:index]
+	}
+	return len(s)
+}
+
 func (req *Leaf) ToASCII(w io.Writer) error {
 	if err := ascii.WriteLine(w, "message", req.Message[:]); err != nil {
 		return err
@@ -87,50 +100,65 @@ func (req *Leaf) FromASCII(r io.Reader) error {
 	return p.GetEOF()
 }
 
+func (req *Leaves) FromURLArgs(args string) (err error) {
+	split := strings.Split(args, "/")
+	if len(split) != 2 {
+		return fmt.Errorf("invalid arguments")
+	}
+	if req.StartIndex, err = ascii.IntFromDecimal(split[0]); err != nil {
+		return err
+	}
+	req.EndIndex, err = ascii.IntFromDecimal(split[1])
+	return err
+}
+
 // FromURL parses request parameters from a URL that is not slash-terminated
 func (req *Leaves) FromURL(url string) (err error) {
-	split := strings.Split(url, "/")
-	if len(split) < 2 {
+	index := nLastIndex(url, "/", 2)
+	if index < 0 {
 		return fmt.Errorf("not enough input")
 	}
-	startIndex := split[len(split)-2]
-	if req.StartIndex, err = ascii.IntFromDecimal(startIndex); err != nil {
+	return req.FromURLArgs(url[index+1:])
+}
+
+func (req *InclusionProof) FromURLArgs(args string) (err error) {
+	split := strings.Split(args, "/")
+	if len(split) != 2 {
+		return fmt.Errorf("invalid arguments")
+	}
+	if req.Size, err = ascii.IntFromDecimal(split[0]); err != nil {
 		return err
 	}
-	endIndex := split[len(split)-1]
-	if req.EndIndex, err = ascii.IntFromDecimal(endIndex); err != nil {
-		return err
-	}
-	return nil
+	req.LeafHash, err = crypto.HashFromHex(split[1])
+	return err
 }
 
 // FromURL parses request parameters from a URL that is not slash-terminated
 func (req *InclusionProof) FromURL(url string) (err error) {
-	split := strings.Split(url, "/")
-	if len(split) < 2 {
+	index := nLastIndex(url, "/", 2)
+	if index < 0 {
 		return fmt.Errorf("not enough input")
 	}
-	treeSize := split[len(split)-2]
-	if req.Size, err = ascii.IntFromDecimal(treeSize); err != nil {
+	return req.FromURLArgs(url[index+1:])
+}
+
+func (req *ConsistencyProof) FromURLArgs(args string) (err error) {
+	split := strings.Split(args, "/")
+	if len(split) != 2 {
+		return fmt.Errorf("invalid arguments")
+	}
+	if req.OldSize, err = ascii.IntFromDecimal(split[0]); err != nil {
 		return err
 	}
-	req.LeafHash, err = crypto.HashFromHex(split[len(split)-1])
+	req.NewSize, err = ascii.IntFromDecimal(split[1])
 	return err
 }
 
 // FromURL parses request parameters from a URL that is not slash-terminated
 func (req *ConsistencyProof) FromURL(url string) (err error) {
-	split := strings.Split(url, "/")
-	if len(split) < 2 {
+	index := nLastIndex(url, "/", 2)
+	if index < 0 {
 		return fmt.Errorf("not enough input")
 	}
-	oldSize := split[len(split)-2]
-	if req.OldSize, err = ascii.IntFromDecimal(oldSize); err != nil {
-		return err
-	}
-	newSize := split[len(split)-1]
-	if req.NewSize, err = ascii.IntFromDecimal(newSize); err != nil {
-		return err
-	}
-	return nil
+	return req.FromURLArgs(url[index+1:])
 }

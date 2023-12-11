@@ -1,3 +1,11 @@
+// package server implements the http-layer of the Sigsum apis.
+// It defines handlers for incoming HTTP requests, converting to
+// request to a method call on the approriate api interface. It checks
+// for errors where it's clear that a request is bad according to the
+// specs, regardless of what's backing the api interface. It converts
+// the api method's return values (success or errors) into a http
+// response to be returned to the client. Optionally, it can produce
+// basic request and response metrics.
 package server
 
 import (
@@ -77,13 +85,18 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(w, r)
 		return
 	}
-	s.config.Metrics.OnRequest(pattern)
+	endpoint := strings.TrimPrefix(pattern, "/")
+	if len(s.config.Prefix) > 0 {
+		endpoint = strings.TrimPrefix(endpoint, s.config.Prefix+"/")
+	}
+
+	s.config.Metrics.OnRequest(endpoint)
 	start := time.Now()
 
 	response := responseWriterWithStatus{w: w, statusCode: http.StatusOK}
 	defer func() {
 		latency := time.Now().Sub(start)
-		s.config.Metrics.OnResponse(pattern, response.statusCode, latency)
+		s.config.Metrics.OnResponse(endpoint, response.statusCode, latency)
 	}()
 
 	ctx, cancel := context.WithTimeout(r.Context(), s.config.getTimeout())
