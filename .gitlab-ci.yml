@@ -13,6 +13,10 @@ make-check:
   stage: test
   script: make check
 
+make-check-386:
+  stage: test
+  script: GOARCH=386 make check
+
 # Succeeds if no changes are suggested by gofmt -d .
 gofmt:
   stage: test
