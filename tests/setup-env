@@ -1,5 +1,21 @@
 #! /bin/sh
 
 set -e
-GOBIN=$(pwd)/bin go install ../cmd/...
-GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.14.0
+
+if [ "$GOARCH" ] ; then
+    # When crosscompiling, nevertheless build a native log server. We
+    # also need to use go build rather than go install, see
+    # https://github.com/golang/go/issues/57485
+
+    # Running the test scripts in cross compile environment assumes
+    # that we can run the cross-compiled executables; that may work
+    # for 386 executables on a amd64 system, or if qemu-user + binfmt
+    # magic is installed.
+
+    echo >&2 Cross-compiling for GOARCH=${GOARCH}
+    GOARCH="" GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.14.0
+    go build -o bin/ ../cmd/...
+else
+    GOBIN=$(pwd)/bin go install ../cmd/...
+    GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.14.0
+fi

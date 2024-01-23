@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	testCosignTimestamp = 72623859790382856
+	testCosignTimestamp uint64 = 72623859790382856
 )
 
 func TestTreeHeadToCheckpoint(t *testing.T) {
