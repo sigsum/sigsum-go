@@ -10,6 +10,7 @@ require (
 	github.com/pborman/getopt/v2 v2.1.0
 	golang.org/x/net v0.5.0
 	golang.org/x/text v0.6.0
+	sigsum.org/key-mgmt v0.1.0
 )
 
 require (

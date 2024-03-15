@@ -1,0 +1,5 @@
+go 1.19
+
+replace sigsum.org/key-mgmt => ../key-mgmt
+
+use .
