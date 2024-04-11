@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"sigsum.org/sigsum-go/pkg/api"
@@ -45,6 +46,10 @@ type Config struct {
 
 	// The policy specifies the logs and witnesses to use.
 	Policy *policy.Policy
+
+	// HTTPClient specifies the HTTP client to use when making requests to the log.
+	// If nil, http.DefaultClient is used.
+	HTTPClient *http.Client
 }
 
 func (c *Config) getPollDelay() time.Duration {
@@ -121,8 +126,9 @@ func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) 
 		}
 
 		client := client.New(client.Config{
-			UserAgent: config.getUserAgent(),
-			URL:       entity.URL,
+			UserAgent:  config.getUserAgent(),
+			URL:        entity.URL,
+			HTTPClient: config.HTTPClient,
 		})
 
 		logKeyHash := crypto.HashBytes(entity.PublicKey[:])
