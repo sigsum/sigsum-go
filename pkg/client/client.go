@@ -22,18 +22,29 @@ import (
 type Config struct {
 	UserAgent string
 	URL       string
+
+	// HTTPClient specifies the HTTP client to use when making requests to the log.
+	// If nil, a default client is created.
+	HTTPClient *http.Client
+}
+
+func (c Config) getHTTPClient() *http.Client {
+	if c.HTTPClient != nil {
+		return c.HTTPClient
+	}
+	return &http.Client{}
 }
 
 func New(cfg Config) *Client {
 	return &Client{
 		config: cfg,
-		client: http.Client{},
+		client: cfg.getHTTPClient(),
 	}
 }
 
 type Client struct {
 	config Config
-	client http.Client
+	client *http.Client
 }
 
 func (cli *Client) GetSecondaryTreeHead(ctx context.Context) (sth types.SignedTreeHead, err error) {
