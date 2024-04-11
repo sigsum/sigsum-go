@@ -48,7 +48,7 @@ type Config struct {
 	Policy *policy.Policy
 
 	// HTTPClient specifies the HTTP client to use when making requests to the log.
-	// If nil, http.DefaultClient is used.
+	// If nil, a default client is created.
 	HTTPClient *http.Client
 }
 

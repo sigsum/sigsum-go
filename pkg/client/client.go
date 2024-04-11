@@ -24,20 +24,21 @@ type Config struct {
 	URL       string
 
 	// HTTPClient specifies the HTTP client to use when making requests to the log.
-	// If nil, http.DefaultClient is used.
+	// If nil, a default client is created.
 	HTTPClient *http.Client
 }
 
-func New(cfg Config) *Client {
-	var httpClient *http.Client
-	if cfg.HTTPClient != nil {
-		httpClient = cfg.HTTPClient
-	} else {
-		httpClient = http.DefaultClient
+func (c Config) getHTTPClient() *http.Client {
+	if c.HTTPClient != nil {
+		return c.HTTPClient
 	}
+	return &http.Client{}
+}
+
+func New(cfg Config) *Client {
 	return &Client{
 		config: cfg,
-		client: httpClient,
+		client: cfg.getHTTPClient(),
 	}
 }
 
