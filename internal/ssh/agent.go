@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 
+	"sigsum.org/key-mgmt/pkg/ssh"
+
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -40,7 +42,7 @@ func Connect() (*Connection, error) {
 }
 
 func (c *Connection) request(msg []byte) ([]byte, error) {
-	request := serializeString(msg)
+	request := ssh.SerializeString(msg)
 	_, err := c.conn.Write(request)
 	if err != nil {
 		return nil, err
@@ -66,9 +68,9 @@ func (c *Connection) request(msg []byte) ([]byte, error) {
 func (c Connection) SignEd25519(publicKey *crypto.PublicKey, msg []byte) (crypto.Signature, error) {
 	buffer, err := c.request(bytes.Join([][]byte{
 		[]byte{sshAgentSignRequest},
-		serializeString(serializePublicEd25519(publicKey)),
-		serializeString(msg),
-		serializeUint32(0), // flags
+		ssh.SerializeString(ssh.SerializeEd25519PublicKey(publicKey[:])),
+		ssh.SerializeString(msg),
+		ssh.SerializeUint32(0), // flags
 	}, nil))
 	if err != nil {
 		return crypto.Signature{}, err
@@ -98,14 +100,16 @@ func (s *Signer) Public() crypto.PublicKey {
 	return s.publicKey
 }
 
+var signaturePrefix = bytes.Join([][]byte{
+	ssh.SerializeUint32(83), // length of signature
+	ssh.SerializeString("ssh-ed25519"),
+	ssh.SerializeUint32(crypto.SignatureSize)}, nil)
+
 func parseSignature(blob []byte) (crypto.Signature, error) {
-	signature := skipPrefix(blob, bytes.Join([][]byte{
-		serializeUint32(83), // length of signature
-		serializeString("ssh-ed25519"),
-		serializeUint32(crypto.SignatureSize)}, nil))
-	if signature == nil {
+	if !bytes.HasPrefix(blob, signaturePrefix) {
 		return crypto.Signature{}, fmt.Errorf("invalid signature blob")
 	}
+	signature := blob[len(signaturePrefix):]
 	if len(signature) != crypto.SignatureSize {
 		return crypto.Signature{}, fmt.Errorf("bad signature length: %d", len(signature))
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"sigsum.org/key-mgmt/pkg/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -101,11 +102,11 @@ func TestSignEd25519(t *testing.T) {
 		t.Fatalf("signing failed: %v", err)
 	}
 
-	response := serializeString(bytes.Join([][]byte{
+	response := ssh.SerializeString(bytes.Join([][]byte{
 		[]byte{sshAgentSignResponse},
-		serializeString(bytes.Join([][]byte{
-			serializeString("ssh-ed25519"),
-			serializeString(signature[:]),
+		ssh.SerializeString(bytes.Join([][]byte{
+			ssh.SerializeString("ssh-ed25519"),
+			ssh.SerializeString(signature[:]),
 		}, nil)),
 	}, nil))
 

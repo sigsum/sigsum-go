@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 
-	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
@@ -154,7 +153,7 @@ func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 	b := make([]byte, 40)
 	binary.BigEndian.PutUint64(b[:8], sth.Size)
 	copy(b[8:40], sth.RootHash[:])
-	return crypto.Verify(key, ssh.SignedData("signed-tree-head:v0@sigsum.org", b),
+	return crypto.Verify(key, sshSignedData("signed-tree-head:v0@sigsum.org", b),
 		&sth.Signature)
 }
 
