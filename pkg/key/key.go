@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"sigsum.org/key-mgmt/pkg/ssh"
-	intssh "sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -39,11 +38,11 @@ func ParsePrivateKey(ascii string) (crypto.Signer, error) {
 		if err != nil {
 			return nil, err
 		}
-		c, err := intssh.Connect()
+		signer, err := NewAgentSigner(&key)
 		if err != nil {
 			return nil, fmt.Errorf("only public key available, and no ssh-agent: %v", err)
 		}
-		return c.NewSigner(&key)
+		return signer, nil
 	}
 	blob, err := ssh.ParseAsciiEd25519PrivateKey([]byte(ascii))
 	if err == ssh.NoPEMError {

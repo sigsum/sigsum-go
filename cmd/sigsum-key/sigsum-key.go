@@ -10,7 +10,7 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
-	"sigsum.org/sigsum-go/internal/ssh"
+	"sigsum.org/key-mgmt/pkg/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 )
@@ -81,11 +81,11 @@ func main() {
 	case "gen":
 		var settings GenSettings
 		settings.parse(os.Args)
-		pub, signer, err := crypto.NewKeyPair()
+		_, signer, err := crypto.NewKeyPair()
 		if err != nil {
 			log.Fatalf("generating key failed: %v\n", err)
 		}
-		writeKeyFiles(settings.outputFile, &pub, signer)
+		writeKeyFiles(settings.outputFile, signer)
 	case "verify":
 		var settings VerifySettings
 		settings.parse(os.Args)
@@ -146,8 +146,7 @@ func main() {
 			log.Fatalf("invalid key: %v", err)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
-			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&pub))
-			return err
+			return ssh.WriteAsciiEd25519PublicKey(f, pub[:], "sigsum key")
 		})
 	}
 }
@@ -243,18 +242,19 @@ func withOutput(outputFile string, mode os.FileMode, f func(io.Writer) error) {
 	}
 }
 
-func writeKeyFiles(outputFile string, pub *crypto.PublicKey, signer *crypto.Ed25519Signer) {
+func writeKeyFiles(outputFile string, signer *crypto.Ed25519Signer) {
+	pub := signer.Public()
+	priv := signer.Private()
 	withOutput(outputFile, 0600, func(f io.Writer) error {
-		return ssh.WritePrivateKeyFile(f, signer)
+		return ssh.WriteAsciiEd25519PrivateKey(f, priv[:], pub[:])
 	})
 	if len(outputFile) > 0 {
 		// Openssh insists that also public key files have
 		// restrictive permissions.
 		withOutput(outputFile+".pub", 0600,
 			func(f io.Writer) error {
-				_, err := io.WriteString(f, ssh.FormatPublicEd25519(pub))
-				return err
-			})
+				return ssh.WriteAsciiEd25519PublicKey(f, pub[:], "sigsum key")
+		})
 	}
 }
 
