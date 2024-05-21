@@ -254,7 +254,7 @@ func writeKeyFiles(outputFile string, signer *crypto.Ed25519Signer) {
 		withOutput(outputFile+".pub", 0600,
 			func(f io.Writer) error {
 				return ssh.WriteAsciiEd25519PublicKey(f, pub[:], "sigsum key")
-		})
+			})
 	}
 }
 
