@@ -163,28 +163,21 @@ func main() {
 			return true
 		}
 
-		// An item to submit.
-		type Item struct {
-			leaf      requests.Leaf
-			inputName string // empty for stdin
+		b, err := submit.NewBatch(ctx, &config)
+		if err != nil {
+			log.Fatal("Preparing submit failed: %v", err)
 		}
-		var items []Item
-		// TODO: Actually do requests in batch.
+		defer b.Close()
 		source(skip, func(name string, leaf *requests.Leaf) {
-			items = append(items, Item{
-				leaf:      *leaf,
-				inputName: name,
-			})
+			b.SubmitLeafRequest(leaf,
+				func(proof proof.SigsumProof) {
+					if err := settings.withOutputFile(name, ".proof", proof.ToASCII); err != nil {
+						log.Fatal("Writing proof failed: %v", err)
+					}
+				})
 		})
-
-		for _, item := range items {
-			proof, err := submit.SubmitLeafRequest(ctx, &config, &item.leaf)
-			if err != nil {
-				log.Fatal("Submit failed: %v", err)
-			}
-			if err := settings.withOutputFile(item.inputName, ".proof", proof.ToASCII); err != nil {
-				log.Fatal("Writing proof failed: %v", err)
-			}
+		if err := b.Close(); err != nil {
+			log.Fatal("Submit failed: %v", err)
 		}
 	} else {
 		sink := func(_ string, _ *requests.Leaf) {}
