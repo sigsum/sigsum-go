@@ -77,9 +77,9 @@ func deleteFromSlice[T comparable](s []T, x T) []T {
 // All sent on the same channel, to get a well-defined order between
 // failures and retries. There are three cases:
 //
-// * Worker failure: w, err non-nil.
+//   - Worker failure: w, err non-nil.
 //
-// * Item success: item and pr non-nil.
+//   - Item success: item and pr non-nil.
 //
 //   - Item retry: item non-nil, pr nil. Should be sent to a worker for
 //     which there's no preceding failure.
