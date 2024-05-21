@@ -4,19 +4,16 @@ package submit
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"net/http"
 	"time"
 
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/client"
+//	"sigsum.org/sigsum-go/pkg/api"
+//	"sigsum.org/sigsum-go/pkg/client"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/log"
 	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
-	token "sigsum.org/sigsum-go/pkg/submit-token"
+//	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -91,6 +88,7 @@ func (c *Config) sleep(ctx context.Context) error {
 	return sleepWithContext(ctx, c.getPollDelay())
 }
 
+
 func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, message *crypto.Hash) (proof.SigsumProof, error) {
 	signature, err := types.SignLeafMessage(signer, message[:])
 	if err != nil {
@@ -104,111 +102,20 @@ func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, me
 }
 
 func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) (proof.SigsumProof, error) {
-	leaf, err := req.Verify()
+	log.Debug("Creating batch");
+	b, err := NewBatch(ctx, config)	
 	if err != nil {
-		return proof.SigsumProof{}, fmt.Errorf("verifying leaf request failed: %v", err)
+		return proof.SigsumProof{}, err
 	}
-	leafHash := leaf.ToHash()
-
-	logs := config.Policy.GetLogsWithUrl()
-	if len(logs) == 0 {
-		return proof.SigsumProof{}, fmt.Errorf("no logs defined in policy")
+	defer b.Close()
+	var pr proof.SigsumProof
+	log.Debug("Submitting request");
+	if err := b.SubmitLeafRequest(req, func(res proof.SigsumProof) { pr = res }); err != nil {
+		return proof.SigsumProof{}, err
 	}
-	for _, entity := range logs {
-		log.Info("Attempting submit to log: %s", entity.URL)
-		var header *token.SubmitHeader
-		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
-			signature, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
-			if err != nil {
-				return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
-			}
-			header = &token.SubmitHeader{Domain: config.Domain, Token: signature}
-		}
-
-		client := client.New(client.Config{
-			UserAgent:  config.getUserAgent(),
-			URL:        entity.URL,
-			HTTPClient: config.HTTPClient,
-		})
-
-		logKeyHash := crypto.HashBytes(entity.PublicKey[:])
-		pr, err := func() (proof.SigsumProof, error) {
-			ctx, cancel := context.WithTimeout(ctx, config.getTimeout())
-			defer cancel()
-			return submitLeafToLog(ctx, config.Policy, client, &logKeyHash, header, config.sleep, req, &leafHash)
-		}()
-		if err == nil {
-			pr.Leaf = proof.NewShortLeaf(&leaf)
-			return pr, nil
-		}
-		log.Error("Submitting to log %q failed: %v", entity.URL, err)
+	log.Debug("Waiting")
+	if err := b.Close(); err != nil {
+		return proof.SigsumProof{}, err
 	}
-	return proof.SigsumProof{}, fmt.Errorf("all logs failed, giving up")
-}
-
-func submitLeafToLog(ctx context.Context, policy *policy.Policy,
-	cli api.Log, logKeyHash *crypto.Hash, header *token.SubmitHeader, sleep func(context.Context) error,
-	req *requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
-	pr := proof.SigsumProof{
-		// Note: Leaves to caller to populate proof.Leaf.
-		LogKeyHash: *logKeyHash,
-	}
-
-	for {
-		persisted, err := cli.AddLeaf(ctx, *req, header)
-
-		if err != nil {
-			return proof.SigsumProof{}, err
-		}
-		if persisted {
-			break
-		}
-		log.Debug("Leaf submitted, waiting for it to be persisted.")
-		if err := sleep(ctx); err != nil {
-			return proof.SigsumProof{}, err
-		}
-	}
-	// Leaf submitted, now get a signed tree head + inclusion proof.
-	for {
-		var err error
-		pr.TreeHead, err = cli.GetTreeHead(ctx)
-		if err != nil {
-			return proof.SigsumProof{}, err
-		}
-		if err := policy.VerifyCosignedTreeHead(&pr.LogKeyHash, &pr.TreeHead); err != nil {
-			return proof.SigsumProof{}, fmt.Errorf("verifying tree head failed: %v", err)
-		}
-
-		// See if we can have an inclusion proof for this tree size.
-		if pr.TreeHead.Size == 0 {
-			// Certainly not included yet.
-			log.Debug("Signed tree is still empty, waiting.")
-			if err := sleep(ctx); err != nil {
-				return proof.SigsumProof{}, err
-			}
-			continue
-		}
-		pr.Inclusion, err = cli.GetInclusionProof(ctx,
-			requests.InclusionProof{
-				Size:     pr.TreeHead.Size,
-				LeafHash: *leafHash,
-			})
-		if errors.Is(err, api.ErrNotFound) {
-			log.Debug("No inclusion proof yet, waiting.")
-			if err := sleep(ctx); err != nil {
-				return proof.SigsumProof{}, err
-			}
-			continue
-		}
-		if err != nil {
-			return proof.SigsumProof{}, fmt.Errorf("failed to get inclusion proof: %v", err)
-		}
-
-		// Check validity.
-		if err = pr.Inclusion.Verify(leafHash, &pr.TreeHead.TreeHead); err != nil {
-			return proof.SigsumProof{}, fmt.Errorf("inclusion proof invalid: %v", err)
-		}
-
-		return pr, nil
-	}
+	return pr, nil
 }
