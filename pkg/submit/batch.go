@@ -70,7 +70,7 @@ func deleteFromSlice[T comparable](s []T, x T) []T{
 	for i := 0; i < len(s); i++ {
 		if s[i] == x {
 			s[i] = s[len(s)-1]
-			return s[:len(s)]
+			return s[:len(s)-1]
 		}
 	}
 	panic("item not found")
@@ -97,20 +97,9 @@ func (w *batchWorker) run(ctx context.Context,
 	in := w.c
 
 	log.Debug("Starting runner for log %s", w.url)
+loop:
 	for in != nil || len(newItems) > 0 || len(pendingItems) > 0 {
 		log.Debug("new: %d, pending: %d", len(newItems), len(pendingItems))
-		for i, item := range newItems {
-			persisted, err := w.cli.AddLeaf(item.ctx, item.req, w.header)
-			if err != nil {
-				done<-workerDone{w, err}
-				break
-			}
-			if persisted {
-				pendingItems = append(pendingItems, item)
-				newItems[i] = nil
-			}
-		}
-		newItems = compactSlice(newItems)
 		
 		if err := func () error {
 			var pollTime <-chan time.Time
@@ -134,30 +123,50 @@ func (w *batchWorker) run(ctx context.Context,
 			return nil
 		}(); err != nil {
 			done<-workerDone{w, err}
-			break
+			break loop
 		}
+
+		for i, item := range newItems {
+			persisted, err := w.cli.AddLeaf(item.ctx, item.req, w.header)
+			log.Debug("Add leaf request resp: %v, %v", persisted, err)
+			if err != nil {
+				done<-workerDone{w, err}
+				break loop
+			}
+			if persisted {
+				pendingItems = append(pendingItems, item)
+				newItems[i] = nil
+			}
+		}
+		newItems = compactSlice(newItems)
+
 		if len(pendingItems) > 0 {
 			th, err := w.cli.GetTreeHead(ctx)
 			if err != nil {
 				done<-workerDone{w, err}
-				break
+				break loop
 			}
-			// TODO: Retry, in case some witness is temporarily offline?
+			// TODO: Keep trying, in case some witness is temporarily offline?
 			if err := policy.VerifyCosignedTreeHead(&w.logKeyHash, &th); err != nil {
 				done<-workerDone{w, fmt.Errorf("verifying tree head failed: %v", err)}
-				break
+				break loop
 			}
 			if th.Size > latestSize {
 				latestSize = th.Size
 				for i, item := range pendingItems {
-					inclusionProof, err := w.cli.GetInclusionProof(item.ctx, requests.InclusionProof{
-						Size: th.Size,
-						LeafHash: item.leafHash,
-					})
+					var inclusionProof types.InclusionProof
+					var err error
+					if th.Size > 1 {
+						// TODO: Make GetInclusionProof handle any tree size (and talk to the server only for size > 1).
+						inclusionProof, err = w.cli.GetInclusionProof(item.ctx, requests.InclusionProof{
+							Size: th.Size,
+							LeafHash: item.leafHash,
+						})
+					}
 					if err == nil {
 						if err := inclusionProof.Verify(&item.leafHash, &th.TreeHead); err != nil {
 							done<-workerDone{w, err}
-							break
+							break loop
 						}
 							
 						item.pr =&proof.SigsumProof{LogKeyHash: w.logKeyHash,
@@ -169,7 +178,7 @@ func (w *batchWorker) run(ctx context.Context,
 						out <- item
 					} else if !errors.Is(err, api.ErrNotFound) {
 						done<-workerDone{w, err}
-						break
+						break loop
 					}
 				}
 				pendingItems = compactSlice(pendingItems)
@@ -181,6 +190,7 @@ func (w *batchWorker) run(ctx context.Context,
 	// the input is drained, since otherwise, the items might come
 	// back to us.
 	leftOver := compactSlice(append(newItems, pendingItems...))
+	log.Debug("Attempting to drain input")
 	if in != nil {
 		for item := range in { 
 			leftOver = append(leftOver, item)
@@ -331,7 +341,7 @@ func (b *Batch) run() {
 	for _, worker := range b.workers {
 		wg.Add(1)
 		go func() {
-			worker.run(b.ctx, done, out, b.config.Policy, b.config.getTimeout())
+			worker.run(b.ctx, done, out, b.config.Policy, b.config.getPollDelay())
 			log.Info("Log worker %s done", worker.url)
 			wg.Done()
 		}()
