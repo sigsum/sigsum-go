@@ -105,11 +105,9 @@ func (w *batchWorker) run(ctx context.Context, out chan<- workerOutput,
 	// ignored in the select statement below).
 	in := w.c
 
-	log.Debug("Starting runner for log %s", w.url)
+	log.Info("Starting worker for log %s", w.url)
 loop:
 	for in != nil || len(newItems) > 0 || len(pendingItems) > 0 {
-		log.Debug("new: %d, pending: %d", len(newItems), len(pendingItems))
-
 		if err := func() error {
 			var pollTime <-chan time.Time
 
@@ -137,7 +135,6 @@ loop:
 
 		for i, item := range newItems {
 			persisted, err := w.cli.AddLeaf(item.ctx, item.req, w.header)
-			log.Debug("Add leaf request resp: %v, %v", persisted, err)
 			if err != nil {
 				out <- workerOutput{w: w, err: err}
 				break loop
@@ -150,20 +147,18 @@ loop:
 		newItems = compactSlice(newItems)
 
 		if len(pendingItems) > 0 {
-			log.Debug("Process pending items")
 			th, err := w.cli.GetTreeHead(ctx)
 			if err != nil {
 				out <- workerOutput{w: w, err: err}
 				break loop
 			}
-			log.Debug("Got tree head size %d", th.Size)
 			// TODO: Keep trying, in case some witness is temporarily offline?
 			if err := policy.VerifyCosignedTreeHead(&w.logKeyHash, &th); err != nil {
 				out <- workerOutput{w: w, err: fmt.Errorf("verifying tree head failed: %v", err)}
 				break loop
 			}
 			if th.Size > latestSize {
-				log.Debug("Querying for inclusion proofs")
+				log.Info("New tree size %d for log %s", th.Size, w.url)
 
 				latestSize = th.Size
 				for i, item := range pendingItems {
@@ -177,7 +172,6 @@ loop:
 						})
 					}
 					if err == nil {
-						log.Debug("Got proof, index %d", inclusionProof.LeafIndex)
 						if err := inclusionProof.Verify(&item.leafHash, &th.TreeHead); err != nil {
 							out <- workerOutput{w: w, err: err}
 							break loop
@@ -335,7 +329,7 @@ func (b *Batch) submitUnlocked(item *itemState) {
 	// TODO: This context is never cancelled.
 	item.ctx, _ = context.WithTimeout(b.ctx, b.config.PerLogTimeout)
 
-	log.Debug("submitting to worker %d: %s", b.nextWorker, b.workers[b.nextWorker].url)
+	log.Debug("Submitting to worker %d: %s", b.nextWorker, b.workers[b.nextWorker].url)
 	b.workers[b.nextWorker].submit(item)
 	b.nextWorker = (b.nextWorker + 1) % len(b.workers)
 }
@@ -366,8 +360,6 @@ func (b *Batch) run() {
 	out := make(chan workerOutput)
 	var wg sync.WaitGroup
 
-	log.Debug("Starting workers")
-
 	for _, worker := range b.workers {
 		wg.Add(1)
 		go func(worker *batchWorker) {
@@ -382,7 +374,6 @@ func (b *Batch) run() {
 		close(out)
 	}()
 	for output := range out {
-		log.Debug("output: %#v", output)
 		switch {
 		case output.err != nil:
 			log.Warning("Log worker %s failed: %v", output.w.url, output.err)

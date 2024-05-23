@@ -81,25 +81,18 @@ func (l *testLog) AddLeaf(_ context.Context, req requests.Leaf, _ *token.SubmitH
 
 // Test the success path of submitting to a single log.
 func TestBatchSuccess(t *testing.T) {
-	logPub, logSigner, err := crypto.NewKeyPair()
-	if err != nil {
-		t.Fatalf("creating log key failed: %v", err)
-	}
-
 	submitPub, submitSigner, err := crypto.NewKeyPair()
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
+
+	log, logPub, logKeyHash := newTestLog(t)
 
 	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
 	if err != nil {
 		t.Fatalf("creating policy failed: %v", err)
 	}
 
-	log := testLog{
-		signer: logSigner,
-		tree:   merkle.NewTree(),
-	}
 	r := rand.New(rand.NewSource(1))
 
 	ctrl := gomock.NewController(t)
@@ -133,7 +126,7 @@ func TestBatchSuccess(t *testing.T) {
 		[]*batchWorker{
 			&batchWorker{
 				url:        "https://log.example.org/",
-				logKeyHash: crypto.HashBytes(logPub[:]),
+				logKeyHash: logKeyHash,
 				cli:        cli,
 				c:          make(chan *itemState),
 			},
@@ -161,12 +154,9 @@ func TestBatchSuccess(t *testing.T) {
 		for i := 0; i < size; i++ {
 			if proofs[i] == nil {
 				t.Errorf("Proof %d of %d missing", i, size)
-			} else {
-				t.Logf("Got proof with leaf index: %d", proofs[i].Inclusion.LeafIndex)
-				if err := proofs[i].Verify(&messages[i], map[crypto.Hash]crypto.PublicKey{
-					crypto.HashBytes(submitPub[:]): submitPub}, policy); err != nil {
-					t.Errorf("Proof %d of %d failed to verify: %v", i, size, err)
-				}
+			} else if err := proofs[i].Verify(&messages[i], map[crypto.Hash]crypto.PublicKey{
+				crypto.HashBytes(submitPub[:]): submitPub}, policy); err != nil {
+				t.Errorf("Proof %d of %d failed to verify: %v", i, size, err)
 			}
 		}
 	}
@@ -177,35 +167,17 @@ func TestBatchSuccess(t *testing.T) {
 
 // Test batch failover.
 func TestBatchFailover(t *testing.T) {
-	logAPub, logASigner, err := crypto.NewKeyPair()
-	if err != nil {
-		t.Fatalf("creating log key failed: %v", err)
-	}
-	logAKeyHash := crypto.HashBytes(logAPub[:])
-
-	logBPub, logBSigner, err := crypto.NewKeyPair()
-	if err != nil {
-		t.Fatalf("creating log key failed: %v", err)
-	}
-	logBKeyHash := crypto.HashBytes(logBPub[:])
-
 	submitPub, submitSigner, err := crypto.NewKeyPair()
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
 
+	logA, logAPub, logAKeyHash := newTestLog(t)
+	logB, logBPub, logBKeyHash := newTestLog(t)
+
 	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logAPub, logBPub}, nil, 0)
 	if err != nil {
 		t.Fatalf("creating policy failed: %v", err)
-	}
-
-	logA := testLog{
-		signer: logASigner,
-		tree:   merkle.NewTree(),
-	}
-	logB := testLog{
-		signer: logBSigner,
-		tree:   merkle.NewTree(),
 	}
 
 	ctrl := gomock.NewController(t)
@@ -243,7 +215,7 @@ func TestBatchFailover(t *testing.T) {
 			&batchWorker{
 				url:        "https://logA.example.org/",
 				logKeyHash: logAKeyHash,
-				cli:        &logA,
+				cli:        logA,
 				c:          make(chan *itemState),
 			},
 			&batchWorker{
@@ -275,7 +247,8 @@ func TestBatchFailover(t *testing.T) {
 		for i := 0; i < size; i++ {
 			if proofs[i] == nil {
 				t.Errorf("Proof %d of %d missing", i, size)
-			} else if err := proofs[i].Verify(&messages[i], &submitPub, policy); err != nil {
+			} else if err := proofs[i].Verify(&messages[i], map[crypto.Hash]crypto.PublicKey{
+				crypto.HashBytes(submitPub[:]): submitPub}, policy); err != nil {
 				t.Errorf("Proof %d of %d failed to verify: %v", i, size, err)
 			}
 		}
@@ -332,4 +305,14 @@ func sliceEqual[T comparable](a, b []T) bool {
 		}
 	}
 	return true
+}
+
+// Convenience functino to create a testLog and needed keys.
+func newTestLog(t *testing.T) (*testLog, crypto.PublicKey, crypto.Hash) {
+	pub, signer, err := crypto.NewKeyPair()
+	if err != nil {
+		t.Fatalf("creating log key failed: %v", err)
+	}
+	return &testLog{signer: signer, tree: merkle.NewTree()},
+		pub, crypto.HashBytes(pub[:])
 }
