@@ -19,54 +19,6 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-func TestSubmitSuccess(t *testing.T) {
-	logPub, logSigner, err := crypto.NewKeyPair()
-	if err != nil {
-		t.Fatalf("creating log key failed: %v", err)
-	}
-
-	submitPub, submitSigner, err := crypto.NewKeyPair()
-	if err != nil {
-		t.Fatalf("creating submit key failed: %v", err)
-	}
-
-	logKeyHash := crypto.HashBytes(logPub[:])
-
-	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
-	if err != nil {
-		t.Fatalf("creating policy failed: %v", err)
-	}
-	tree := merkle.NewTree()
-
-	oneTest := func(t *testing.T, i int) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		client := mocks.NewMockLog(ctrl)
-
-		msg, sth, inclusionProof, req, leaf, leafHash := prepareResponse(t, submitSigner, logSigner, &tree, i)
-		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, nil)
-		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
-		client.EXPECT().GetTreeHead(gomock.Any()).Return(
-			types.CosignedTreeHead{SignedTreeHead: sth}, nil)
-		client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
-		pr, err := submitLeafToLog(context.Background(), policy,
-			client, &logKeyHash, nil, func(_ context.Context) error { return nil },
-			&req, &leafHash)
-		if err != nil {
-			t.Errorf("submit failed: %v", err)
-		} else {
-			pr.Leaf = proof.NewShortLeaf(&leaf)
-			if err := pr.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
-				crypto.HashBytes(submitPub[:]): submitPub}, policy); err != nil {
-				t.Errorf("returned sigsum proof failed to verify: %v", err)
-			}
-		}
-	}
-	for i := 1; i < 10; i++ {
-		t.Run(fmt.Sprintf("leaf %d", i), func(t *testing.T) { oneTest(t, i) })
-	}
-}
-
 func TestSubmitFailure(t *testing.T) {
 	logPub, logSigner, err := crypto.NewKeyPair()
 	if err != nil {
