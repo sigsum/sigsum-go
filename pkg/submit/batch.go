@@ -241,16 +241,25 @@ type Batch struct {
 	lost int
 }
 
+func newBatchWithWorkers(ctx context.Context, config *Config,
+	workers []*batchWorker) *Batch {
+
+	batch := Batch{
+		ctx:     ctx,
+		config:  config.withDefaults(),
+		workers: workers,
+		done:    make(chan struct{}),
+	}
+	go batch.run()
+	return &batch
+}
+
 func NewBatch(ctx context.Context, config *Config) (*Batch, error) {
 	logs := config.Policy.GetLogsWithUrl()
 	if len(logs) == 0 {
 		return nil, fmt.Errorf("no logs defined in policy")
 	}
-	batch := Batch{
-		ctx:    ctx,
-		config: config.withDefaults(),
-		done:   make(chan struct{}),
-	}
+	var workers []*batchWorker
 
 	for _, entity := range logs {
 		var header *token.SubmitHeader
@@ -262,7 +271,7 @@ func NewBatch(ctx context.Context, config *Config) (*Batch, error) {
 			header = &token.SubmitHeader{Domain: config.Domain, Token: signature}
 		}
 
-		batch.workers = append(batch.workers, &batchWorker{
+		workers = append(workers, &batchWorker{
 			url:        entity.URL,
 			logKeyHash: crypto.HashBytes(entity.PublicKey[:]),
 			cli: client.New(client.Config{
@@ -274,8 +283,7 @@ func NewBatch(ctx context.Context, config *Config) (*Batch, error) {
 			c:      make(chan *itemState),
 		})
 	}
-	go batch.run()
-	return &batch, nil
+	return newBatchWithWorkers(ctx, config, workers), nil
 }
 
 func (b *Batch) SubmitMessage(signer crypto.Signer, message *crypto.Hash, done ProofCallback) error {
