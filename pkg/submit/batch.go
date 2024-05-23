@@ -63,15 +63,16 @@ func compactSlice[T any](s []*T) []*T {
 	return s
 }
 
-// Delete given item from slice. Panics if not present.
-func deleteFromSlice[T comparable](s []T, x T) []T {
+// Delete given item from slice. Returns true if the item was found
+// and deleted.
+func deleteFromSlice[T comparable](s []T, x T) ([]T, bool) {
 	for i := 0; i < len(s); i++ {
 		if s[i] == x {
 			s[i] = s[len(s)-1]
-			return s[:len(s)-1]
+			return s[:len(s)-1], true
 		}
 	}
-	panic("item not found")
+	return s, false
 }
 
 // All sent on the same channel, to get a well-defined order between
@@ -149,17 +150,21 @@ loop:
 		newItems = compactSlice(newItems)
 
 		if len(pendingItems) > 0 {
+			log.Debug("Process pending items")
 			th, err := w.cli.GetTreeHead(ctx)
 			if err != nil {
 				out <- workerOutput{w: w, err: err}
 				break loop
 			}
+			log.Debug("Got tree head size %d", th.Size)
 			// TODO: Keep trying, in case some witness is temporarily offline?
 			if err := policy.VerifyCosignedTreeHead(&w.logKeyHash, &th); err != nil {
 				out <- workerOutput{w: w, err: fmt.Errorf("verifying tree head failed: %v", err)}
 				break loop
 			}
 			if th.Size > latestSize {
+				log.Debug("Querying for inclusion proofs")
+
 				latestSize = th.Size
 				for i, item := range pendingItems {
 					var inclusionProof types.InclusionProof
@@ -172,6 +177,7 @@ loop:
 						})
 					}
 					if err == nil {
+						log.Debug("Got proof, index %d", inclusionProof.LeafIndex)
 						if err := inclusionProof.Verify(&item.leafHash, &th.TreeHead); err != nil {
 							out <- workerOutput{w: w, err: err}
 							break loop
@@ -310,7 +316,7 @@ func (b *Batch) SubmitLeafRequest(req *requests.Leaf, done ProofCallback) error 
 	b.m.Lock()
 	defer b.m.Unlock()
 	if b.status != batchOpen {
-		return fmt.Errorf("attempt to submit an leaf to a batch that is not open")
+		return fmt.Errorf("attempt to submit a leaf to a batch that is not open")
 	}
 	// TODO: Return error early in case there are no active workers?
 	b.pending.Add(1)
@@ -339,12 +345,18 @@ func (b *Batch) submit(item *itemState) {
 	b.submitUnlocked(item)
 }
 
-func (b *Batch) deleteWorker(w *batchWorker) {
+// Close worker's channel, and remove from list. Does nothing if
+// worker is already closed.
+func (b *Batch) closeWorker(w *batchWorker) {
 	b.m.Lock()
 	defer b.m.Unlock()
 
+	var deleted bool
+	b.workers, deleted = deleteFromSlice(b.workers, w)
+	if !deleted {
+		return
+	}
 	w.close()
-	b.workers = deleteFromSlice(b.workers, w)
 	if b.nextWorker >= len(b.workers) {
 		b.nextWorker = 0
 	}
@@ -358,11 +370,11 @@ func (b *Batch) run() {
 
 	for _, worker := range b.workers {
 		wg.Add(1)
-		go func() {
+		go func(worker *batchWorker) {
 			worker.run(b.ctx, out, b.config.Policy, b.config.PollDelay)
 			log.Info("Log worker %s done", worker.url)
 			wg.Done()
-		}()
+		}(worker) // Must evaluate the worker variable outside of the go call.
 	}
 
 	go func() {
@@ -370,19 +382,25 @@ func (b *Batch) run() {
 		close(out)
 	}()
 	for output := range out {
-		log.Debug("output: %v", output)
+		log.Debug("output: %#v", output)
 		switch {
 		case output.err != nil:
 			log.Warning("Log worker %s failed: %v", output.w.url, output.err)
-			b.deleteWorker(output.w)
+			b.closeWorker(output.w)
 		case output.pr != nil:
 			output.item.done(*output.pr)
 			b.pending.Done()
 		case output.item != nil:
-			// Retry on a different log.
-			b.submit(output.item)
+			// Retry on a different log. Done
+			// concurrently, since we'd deadlock if we
+			// block waiting for the worker to be ready to
+			// receive the item, at the same time as the
+			// worker blocks on us to get ready to receive
+			// the worker's output. TODO: Spawn a single
+			// longer-lived goroutine for retries?
+			go b.submit(output.item)
 		default:
-			panic(fmt.Sprintf("internal error, unexpected worker output: %v", output))
+			panic(fmt.Sprintf("internal error, unexpected worker output: %#v", output))
 		}
 	}
 	close(b.done)

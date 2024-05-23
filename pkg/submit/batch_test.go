@@ -8,9 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
+	"sigsum.org/sigsum-go/pkg/mocks"
 	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
@@ -26,7 +29,6 @@ type testLog struct {
 	leaves []types.Leaf
 	tree   merkle.Tree
 	signer crypto.Signer
-	r      *rand.Rand
 }
 
 func (l *testLog) GetTreeHead(_ context.Context) (types.CosignedTreeHead, error) {
@@ -71,12 +73,6 @@ func (l *testLog) AddLeaf(_ context.Context, req requests.Leaf, _ *token.SubmitH
 	}
 
 	h := leaf.ToHash()
-	if l.r != nil {
-		// Randomly return Accepted (202) rather than OK (200) fro new leaves.
-		if _, err := l.tree.GetLeafIndex(&h); err != nil && l.r.Intn(2) > 0 {
-			return false, nil
-		}
-	}
 	if l.tree.AddLeafHash(&h) {
 		l.leaves = append(l.leaves, leaf)
 	}
@@ -100,6 +96,33 @@ func TestBatchSuccess(t *testing.T) {
 		t.Fatalf("creating policy failed: %v", err)
 	}
 
+	log := testLog{
+		signer: logSigner,
+		tree:   merkle.NewTree(),
+	}
+	r := rand.New(rand.NewSource(1))
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cli := mocks.NewMockLog(ctrl)
+
+	cli.EXPECT().AddLeaf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+		func(ctx context.Context, req requests.Leaf, header *token.SubmitHeader) (bool, error) {
+			// Randomly return persisted == false for new leaves.
+			leaf, err := req.Verify()
+			if err != nil {
+				return false, api.ErrForbidden
+			}
+
+			h := leaf.ToHash()
+			if _, err := log.tree.GetLeafIndex(&h); err != nil && r.Intn(2) > 0 {
+				return false, nil
+			}
+			return log.AddLeaf(ctx, req, header)
+		})
+	cli.EXPECT().GetTreeHead(gomock.Any()).AnyTimes().DoAndReturn(log.GetTreeHead)
+	cli.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(log.GetInclusionProof)
+
 	batch := newBatchWithWorkers(
 		context.Background(),
 		&Config{
@@ -111,23 +134,20 @@ func TestBatchSuccess(t *testing.T) {
 			&batchWorker{
 				url:        "https://log.example.org/",
 				logKeyHash: crypto.HashBytes(logPub[:]),
-				cli: &testLog{
-					signer: logSigner,
-					tree:   merkle.NewTree(),
-					r:      rand.New(rand.NewSource(1)),
-				},
-				c: make(chan *itemState),
+				cli:        cli,
+				c:          make(chan *itemState),
 			},
 		})
 
 	message_id := uint32(0)
 
-	for size := 1; size < 5; size++ {
+	for size := 1; size <= 10; size++ {
 		messages := make([]crypto.Hash, size)
 		proofs := make([]*proof.SigsumProof, size)
 
 		for i := 0; i < size; i++ {
 			i := i
+			time.Sleep(30 * time.Millisecond)
 			message_id++
 			binary.BigEndian.PutUint32(messages[i][:4], message_id)
 			batch.SubmitMessage(submitSigner, &messages[i], func(pr proof.SigsumProof) {
@@ -153,4 +173,163 @@ func TestBatchSuccess(t *testing.T) {
 	if err := batch.Close(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// Test batch failover.
+func TestBatchFailover(t *testing.T) {
+	logAPub, logASigner, err := crypto.NewKeyPair()
+	if err != nil {
+		t.Fatalf("creating log key failed: %v", err)
+	}
+	logAKeyHash := crypto.HashBytes(logAPub[:])
+
+	logBPub, logBSigner, err := crypto.NewKeyPair()
+	if err != nil {
+		t.Fatalf("creating log key failed: %v", err)
+	}
+	logBKeyHash := crypto.HashBytes(logBPub[:])
+
+	submitPub, submitSigner, err := crypto.NewKeyPair()
+	if err != nil {
+		t.Fatalf("creating submit key failed: %v", err)
+	}
+
+	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logAPub, logBPub}, nil, 0)
+	if err != nil {
+		t.Fatalf("creating policy failed: %v", err)
+	}
+
+	logA := testLog{
+		signer: logASigner,
+		tree:   merkle.NewTree(),
+	}
+	logB := testLog{
+		signer: logBSigner,
+		tree:   merkle.NewTree(),
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cliB := mocks.NewMockLog(ctrl)
+
+	cliB.EXPECT().AddLeaf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+		func(ctx context.Context, req requests.Leaf, header *token.SubmitHeader) (bool, error) {
+			if err := ctx.Err(); err != nil {
+				return false, err
+			}
+			// Don't persist more than 5 leaves.
+			leaf, err := req.Verify()
+			if err != nil {
+				return false, api.ErrForbidden
+			}
+
+			h := leaf.ToHash()
+			if _, err := logB.tree.GetLeafIndex(&h); err != nil && logB.tree.Size() >= 5 {
+				return false, nil
+			}
+			return logB.AddLeaf(ctx, req, header)
+		})
+	cliB.EXPECT().GetTreeHead(gomock.Any()).AnyTimes().DoAndReturn(logB.GetTreeHead)
+	cliB.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(logB.GetInclusionProof)
+
+	batch := newBatchWithWorkers(
+		context.Background(),
+		&Config{
+			PerLogTimeout: 1 * time.Second,
+			PollDelay:     100 * time.Millisecond,
+			Policy:        policy,
+		},
+		[]*batchWorker{
+			&batchWorker{
+				url:        "https://logA.example.org/",
+				logKeyHash: logAKeyHash,
+				cli:        &logA,
+				c:          make(chan *itemState),
+			},
+			&batchWorker{
+				url:        "https://logB.example.org/",
+				logKeyHash: crypto.HashBytes(logBPub[:]),
+				cli:        cliB,
+				c:          make(chan *itemState),
+			},
+		})
+
+	message_id := uint32(0)
+	doBatch := func(size int) []*proof.SigsumProof {
+		messages := make([]crypto.Hash, size)
+		proofs := make([]*proof.SigsumProof, size)
+
+		for i := 0; i < size; i++ {
+			i := i
+			message_id++
+			binary.BigEndian.PutUint32(messages[i][:4], message_id)
+			batch.SubmitMessage(submitSigner, &messages[i], func(pr proof.SigsumProof) {
+				proofs[i] = &pr
+			})
+		}
+		err := batch.Wait()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for i := 0; i < size; i++ {
+			if proofs[i] == nil {
+				t.Errorf("Proof %d of %d missing", i, size)
+			} else if err := proofs[i].Verify(&messages[i], &submitPub, policy); err != nil {
+				t.Errorf("Proof %d of %d failed to verify: %v", i, size, err)
+			}
+		}
+		return proofs
+	}
+
+	leafsByLog := func(proofs []*proof.SigsumProof) map[crypto.Hash][]uint64 {
+		m := make(map[crypto.Hash][]uint64)
+		for _, pr := range proofs {
+			if pr != nil {
+				m[pr.LogKeyHash] = append(m[pr.LogKeyHash], pr.Inclusion.LeafIndex)
+			}
+		}
+		return m
+	}
+
+	success := leafsByLog(doBatch(7))
+	if got, want := success[logAKeyHash], []uint64{0, 1, 2, 3}; !sliceEqual(got, want) {
+		t.Errorf("Unexpected logA leafs, got: %v, want: %v", got, want)
+	}
+	if got, want := success[logBKeyHash], []uint64{0, 1, 2}; !sliceEqual(got, want) {
+		t.Errorf("Unexpected logB leafs, got: %v, want: %v", got, want)
+	}
+
+	failOver := leafsByLog(doBatch(6))
+	// TODO: Unclear why we get proof for leaf 7 before the proof for leaf 6.
+	if got, want := failOver[logAKeyHash], []uint64{4, 5, 7, 6}; !sliceEqual(got, want) {
+		t.Errorf("Unexpected logA leafs, got: %v, want: %v", got, want)
+	}
+	if got, want := failOver[logBKeyHash], []uint64{3, 4}; !sliceEqual(got, want) {
+		t.Errorf("Unexpected logB leafs, got: %v, want: %v", got, want)
+	}
+
+	singleLog := leafsByLog(doBatch(3))
+	if got, want := singleLog[logAKeyHash], []uint64{8, 9, 10}; !sliceEqual(got, want) {
+		t.Errorf("Unexpected logA leafs, got: %v, want: %v", got, want)
+	}
+	if got, want := singleLog[logBKeyHash], []uint64{}; !sliceEqual(got, want) {
+		t.Errorf("Unexpected logB leafs, got: %v, want: %v", got, want)
+	}
+
+	if err := batch.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func sliceEqual[T comparable](a, b []T) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, x := range a {
+		if x != b[i] {
+			return false
+		}
+	}
+	return true
 }
