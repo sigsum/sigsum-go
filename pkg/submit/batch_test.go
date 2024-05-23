@@ -3,6 +3,7 @@ package submit
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -292,6 +293,147 @@ func TestBatchFailover(t *testing.T) {
 
 	if err := batch.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Use a larger number of logs, all failing in different ways.
+func TestBatchErrors(t *testing.T) {
+	submitPub, submitSigner, err := crypto.NewKeyPair()
+	if err != nil {
+		t.Fatalf("creating submit key failed: %v", err)
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Log i should accept i+1 leaves (including producing valid proofs).
+	newMock := func(i int, log *testLog) api.Log {
+		cli := mocks.NewMockLog(ctrl)
+		if i == 0 {
+			cli.EXPECT().AddLeaf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+				func(ctx context.Context, req requests.Leaf, header *token.SubmitHeader) (bool, error) {
+					if log.tree.Size() > uint64(i) {
+						return false, errors.New("mocked add-leaf error")
+					}
+					return log.AddLeaf(ctx, req, header)
+				})
+		} else {
+			cli.EXPECT().AddLeaf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(log.AddLeaf)
+		}
+		if i == 1 {
+			cli.EXPECT().GetTreeHead(gomock.Any()).AnyTimes().DoAndReturn(
+				func(ctx context.Context) (types.CosignedTreeHead, error) {
+					if log.tree.Size() > uint64(i)+1 {
+						return types.CosignedTreeHead{}, errors.New("mocked get-tree-head error")
+					}
+					return log.GetTreeHead(ctx)
+				})
+		} else if i == 2 {
+			cli.EXPECT().GetTreeHead(gomock.Any()).AnyTimes().DoAndReturn(
+				func(ctx context.Context) (types.CosignedTreeHead, error) {
+					th, err := log.GetTreeHead(ctx)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if log.tree.Size() > uint64(i)+1 {
+						th.Signature[0] ^= 1
+					}
+					return th, nil
+				})
+		} else {
+			cli.EXPECT().GetTreeHead(gomock.Any()).AnyTimes().DoAndReturn(log.GetTreeHead)
+		}
+		if i == 3 {
+			cli.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+				func(ctx context.Context, req requests.InclusionProof) (types.InclusionProof, error) {
+					inclusion, err := log.GetInclusionProof(ctx, req)
+					if err == nil && inclusion.LeafIndex > uint64(i) {
+						return types.InclusionProof{}, errors.New("mocked get-inclusion-proof error")
+					}
+					return inclusion, err
+				})
+		} else if i == 4 {
+			cli.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
+				func(ctx context.Context, req requests.InclusionProof) (types.InclusionProof, error) {
+					inclusion, err := log.GetInclusionProof(ctx, req)
+					if err == nil && inclusion.LeafIndex > uint64(i) {
+						inclusion.Path[0][0] ^= 1
+					}
+					return inclusion, err
+				})
+		} else {
+			cli.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(log.GetInclusionProof)
+		}
+		return cli
+	}
+
+	var logs []*testLog
+	var pubKeys []crypto.PublicKey
+	var workers []*batchWorker
+
+	for i := 0; i < 5; i++ {
+		log, pub, keyHash := newTestLog(t)
+		logs = append(logs, log)
+		pubKeys = append(pubKeys, pub)
+		workers = append(workers, &batchWorker{
+			url:        fmt.Sprintf("https://log%d.example.org/", i),
+			logKeyHash: keyHash,
+			cli:        newMock(i, log),
+			c:          make(chan *itemState),
+		})
+	}
+
+	policy, err := policy.NewKofNPolicy(pubKeys, nil, 0)
+	if err != nil {
+		t.Fatalf("creating policy failed: %v", err)
+	}
+
+	batch := newBatchWithWorkers(
+		context.Background(),
+		&Config{
+			PerLogTimeout: 1 * time.Second,
+			PollDelay:     100 * time.Millisecond,
+			Policy:        policy,
+		},
+		workers)
+
+	const size = 16
+	messages := make([]crypto.Hash, size)
+	proofs := make([]*proof.SigsumProof, size)
+	message_id := uint32(0)
+
+	for i := 0; i < size; i++ {
+		i := i
+		message_id++
+
+		// Do one message at a time, for deterministic
+		// behavior (otherwise, a failure for GetTreeHead at a
+		// particular size n may affect any preceding leaves,
+		// depending on how order of calls.
+		if err := batch.Wait(); err != nil {
+			t.Fatalf("Unexpected wait failure after %d messages %err", i, err)
+		}
+		binary.BigEndian.PutUint32(messages[i][:4], message_id)
+		t.Logf("Submitting message %d", message_id)
+
+		batch.SubmitMessage(submitSigner, &messages[i], func(pr proof.SigsumProof) {
+			proofs[i] = &pr
+		})
+	}
+	if err := batch.Close(); err == nil {
+		t.Error("Unexpected success from batch.Close()")
+	} else {
+		t.Logf("Expected error: %v", err)
+	}
+	for i := 0; i < size-1; i++ {
+		if proofs[i] == nil {
+			t.Errorf("Proof %d missing", i)
+		} else if err := proofs[i].Verify(&messages[i], &submitPub, policy); err != nil {
+			t.Errorf("Proof %d of %d failed to verify: %v", i, size, err)
+		}
+	}
+	if proofs[size-1] != nil {
+		t.Errorf("Unexpected proof for final message")
 	}
 }
 

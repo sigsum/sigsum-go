@@ -108,6 +108,8 @@ func (w *batchWorker) run(ctx context.Context, out chan<- workerOutput,
 	log.Info("Starting worker for log %s", w.url)
 loop:
 	for in != nil || len(newItems) > 0 || len(pendingItems) > 0 {
+		log.Debug("worker %s: new %d, pending %d",
+			w.url, len(newItems), len(pendingItems))
 		if err := func() error {
 			var pollTime <-chan time.Time
 
@@ -193,11 +195,38 @@ loop:
 			}
 		}
 	}
+	log.Debug("worker %s cleanup: new %d, pending %d, seen close: %v",
+		w.url, len(newItems), len(pendingItems), in == nil)
 
-	// Submit any left-over messages for retry. At this point,
-	// either the input channel is already closed, or we have sent
-	// a failure message requesting that it be closed. In either
-	// case, the items we send here can not come back to us.
+	if in != nil {
+		// We get here when we exited the loop due to an error.
+
+		// There's a subtle deadlock risk here. The batch
+		// mutex is held over the send operation to workers
+		// (to guarantee no sends to closed workers). That
+		// means that a worker not processing input would
+		// cause the mutex to be held indefinitely. And the
+		// goroutine processing worker output also takes that
+		// mutex, when handling worker failures.
+
+		// The possibly dangerous case is if one goroutine is
+		// holding the mutex while attempting to sent to us,
+		// at the same time that the output goroutine is
+		// handling our error message. If the output goroutine
+		// is the only one waiting for the mutex, then
+		// receiving a single message unblocks it, but things
+		// may get harier if there are multiple threads
+		// attempting to send at the same time, or several
+		// errors to be handled in sequence.
+
+		// TODO: Needs further analysis, likely need either
+		// some buffering, or elimination of the mutex.
+		for item := range in {
+			out <- workerOutput{item: item}
+		}
+	}
+
+	// At this point, the input channel is closed and drained.
 	for _, item := range newItems {
 		if item != nil {
 			out <- workerOutput{item: item}
@@ -205,11 +234,6 @@ loop:
 	}
 	for _, item := range pendingItems {
 		if item != nil {
-			out <- workerOutput{item: item}
-		}
-	}
-	if in != nil {
-		for item := range in {
 			out <- workerOutput{item: item}
 		}
 	}
@@ -243,7 +267,6 @@ type Batch struct {
 
 func newBatchWithWorkers(ctx context.Context, config *Config,
 	workers []*batchWorker) *Batch {
-
 	batch := Batch{
 		ctx:     ctx,
 		config:  config.withDefaults(),
@@ -382,6 +405,7 @@ func (b *Batch) run() {
 			output.item.done(*output.pr)
 			b.pending.Done()
 		case output.item != nil:
+			log.Debug("Got an item for retry")
 			// Retry on a different log. Done
 			// concurrently, since we'd deadlock if we
 			// block waiting for the worker to be ready to
@@ -435,7 +459,7 @@ func (b *Batch) Close() error {
 			return true, nil
 		}
 		if b.status != batchOpen {
-			return false, fmt.Errorf("invalid state, calling Wait on a Batch that is already Waiting")
+			return false, fmt.Errorf("invalid state, calling Close on a Batch that is already Waiting")
 		}
 		b.status = batchWaiting
 		return false, nil
