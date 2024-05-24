@@ -63,52 +63,42 @@ func compactSlice[T any](s []*T) []*T {
 	return s
 }
 
-// Delete given item from slice. Returns true if the item was found
-// and deleted.
-func deleteFromSlice[T comparable](s []T, x T) ([]T, bool) {
+// Delete given item from slice. Panics if not present.
+func deleteFromSlice[T comparable](s []T, x T) []T {
 	for i := 0; i < len(s); i++ {
 		if s[i] == x {
 			s[i] = s[len(s)-1]
-			return s[:len(s)-1], true
+			return s[:len(s)-1]
 		}
 	}
-	return s, false
+	panic("item not found")
 }
 
+// Submission result, pr == nil for failure.
 type workerResult struct {
 	f  ProofCallback
 	pr *proof.SigsumProof
 }
 
-// All sent on the same channel, to get a well-defined order between
-// failures and retries. There are three cases:
-//
-//   - Worker failure: w, err non-nil.
-//
-//   - Item retry: item non-nil, pr nil. Should be sent to a worker for
-//     which there's no preceding failure.
-type workerError struct {
-	w    *batchWorker
-	err  error
-	item *itemState
-}
-
 // Any failure is reported via the done channel. Does not return until
 // the in channel is drained. Both completed (non-nil proof) and
 // incomplete items are send on the out channel.
-func (w *batchWorker) run(ctx context.Context, done chan<- workerResult, out chan<- workerError,
-	policy *policy.Policy, pollDelay time.Duration) {
+func (w *batchWorker) run(ctx context.Context, done chan<- workerResult,
+	policy *policy.Policy, pollDelay time.Duration) ([]*itemState, error) {
 
 	latestSize := uint64(0)
 
 	var newItems, pendingItems []*itemState
+
+	leftover := func(err error) ([]*itemState, error) {
+		return append(compactSlice(newItems), compactSlice(pendingItems)...), err
+	}
 
 	// Input channel, set to nil when drained (so that it is
 	// ignored in the select statement below).
 	in := w.c
 
 	log.Info("Starting worker for log %s", w.url)
-loop:
 	for in != nil || len(newItems) > 0 || len(pendingItems) > 0 {
 		log.Debug("worker %s: new %d, pending %d",
 			w.url, len(newItems), len(pendingItems))
@@ -133,15 +123,13 @@ loop:
 			}
 			return nil
 		}(); err != nil {
-			out <- workerError{w: w, err: err}
-			break loop
+			return leftover(err)
 		}
 
 		for i, item := range newItems {
 			persisted, err := w.cli.AddLeaf(item.ctx, item.req, w.header)
 			if err != nil {
-				out <- workerError{w: w, err: err}
-				break loop
+				return leftover(err)
 			}
 			if persisted {
 				pendingItems = append(pendingItems, item)
@@ -153,13 +141,11 @@ loop:
 		if len(pendingItems) > 0 {
 			th, err := w.cli.GetTreeHead(ctx)
 			if err != nil {
-				out <- workerError{w: w, err: err}
-				break loop
+				return leftover(err)
 			}
 			// TODO: Keep trying, in case some witness is temporarily offline?
 			if err := policy.VerifyCosignedTreeHead(&w.logKeyHash, &th); err != nil {
-				out <- workerError{w: w, err: fmt.Errorf("verifying tree head failed: %v", err)}
-				break loop
+				return leftover(fmt.Errorf("verifying tree head failed: %v", err))
 			}
 			if th.Size > latestSize {
 				log.Info("New tree size %d for log %s", th.Size, w.url)
@@ -177,8 +163,7 @@ loop:
 					}
 					if err == nil {
 						if err := inclusionProof.Verify(&item.leafHash, &th.TreeHead); err != nil {
-							out <- workerError{w: w, err: err}
-							break loop
+							return leftover(err)
 						}
 
 						pendingItems[i] = nil
@@ -190,56 +175,103 @@ loop:
 							},
 						}
 					} else if !errors.Is(err, api.ErrNotFound) {
-						out <- workerError{w: w, err: err}
-						break loop
+						return leftover(err)
 					}
 				}
 				pendingItems = compactSlice(pendingItems)
 			}
 		}
 	}
-	log.Debug("worker %s cleanup: new %d, pending %d, seen close: %v",
-		w.url, len(newItems), len(pendingItems), in == nil)
+	return nil, nil
+}
 
-	if in != nil {
-		// We get here when we exited the loop due to an error.
+func runWorkers(ctx context.Context, config *Config, workers []*batchWorker, in chan *itemState, out chan<- workerResult) {
+	var wg sync.WaitGroup
+	closing := make(chan *batchWorker, len(workers))
+	for _, worker := range workers {
+		wg.Add(1)
+		go func(worker *batchWorker) {
+			items, err := worker.run(ctx, out, config.Policy, config.PollDelay)
+			if err != nil {
+				log.Warning("Log worker %s failed: %v", worker.url, err)
 
-		// There's a subtle deadlock risk here. The batch
-		// mutex is held over the send operation to workers
-		// (to guarantee no sends to closed workers). That
-		// means that a worker not processing input would
-		// cause the mutex to be held indefinitely. And the
-		// goroutine processing worker output also takes that
-		// mutex, when handling worker failures.
+				closing <- worker // Never blocks, due to above capacity.
 
-		// The possibly dangerous case is if one goroutine is
-		// holding the mutex while attempting to sent to us,
-		// at the same time that the output goroutine is
-		// handling our error message. If the output goroutine
-		// is the only one waiting for the mutex, then
-		// receiving a single message unblocks it, but things
-		// may get harier if there are multiple threads
-		// attempting to send at the same time, or several
-		// errors to be handled in sequence.
+				// To avoid deadlock, we must serve
+				// this channel in paralells with
+				// retries, until it is drained, at
+				// which time we set c to nil.
+				c := worker.c
 
-		// TODO: Needs further analysis, likely need either
-		// some buffering, or elimination of the mutex.
-		for item := range in {
-			out <- workerError{item: item}
-		}
+				for c != nil || len(items) > 0 {
+					var retryChan chan<- *itemState
+					var retryItem *itemState
+
+					if len(items) > 0 {
+						retryChan = in
+						retryItem = items[0]
+					}
+					select {
+					case item, ok := <-c:
+						if ok {
+							items = append(items, item)
+						} else {
+							c = nil
+						}
+					case retryChan <- retryItem:
+						items = items[1:]
+					}
+				}
+			}
+			log.Info("Log worker %s done", worker.url)
+			wg.Done()
+		}(worker) // Must evaluate the worker variable outside of the go call.
 	}
 
-	// At this point, the input channel is closed and drained.
-	for _, item := range newItems {
-		if item != nil {
-			out <- workerError{item: item}
+	// Multiplex incoming items.
+	next := 0
+
+loop:
+	for {
+		// Process any closing workers first.
+		for len(closing) > 0 {
+			worker := <-closing
+			worker.close()
+			workers = deleteFromSlice(workers, worker)
+		}
+		select {
+		case worker := <-closing:
+			worker.close()
+			workers = deleteFromSlice(workers, worker)
+		case item, ok := <-in:
+			if !ok {
+				break loop
+			}
+
+			if len(workers) == 0 {
+				// Send a null output, to indicate an item was discarded.
+				out <- workerResult{}
+			} else {
+				if next >= len(workers) {
+					next = 0
+				}
+
+				// TODO: This context is never cancelled.
+				item.ctx, _ = context.WithTimeout(ctx, config.PerLogTimeout)
+				// From the above close processing,
+				// we'll submit at most one new item
+				// to a worker after it has sent its
+				// closing message.
+				workers[next].submit(item)
+				next++
+			}
 		}
 	}
-	for _, item := range pendingItems {
-		if item != nil {
-			out <- workerError{item: item}
-		}
+	for i := 0; i < len(workers); i++ {
+		workers[i].close()
 	}
+	wg.Wait()
+	close(closing)
 }
 
 type batchStatus int
@@ -251,32 +283,24 @@ const (
 )
 
 type Batch struct {
-	ctx    context.Context
-	config Config
-
 	// Counts pending items.
 	pending sync.WaitGroup
 
 	done chan struct{}
+	in   chan *itemState
 
-	m       sync.Mutex
-	status  batchStatus
-	workers []*batchWorker
-	// For round-robin scheduling.
-	nextWorker int
-	// Count of failed items.
-	lost int
+	m      sync.Mutex
+	status batchStatus
+	lost   int // Failure count.
 }
 
 func newBatchWithWorkers(ctx context.Context, config *Config,
 	workers []*batchWorker) *Batch {
 	batch := Batch{
-		ctx:     ctx,
-		config:  config.withDefaults(),
-		workers: workers,
-		done:    make(chan struct{}),
+		done: make(chan struct{}),
+		in:   make(chan *itemState),
 	}
-	go batch.run()
+	go batch.run(ctx, config.withDefaults(), workers)
 	return &batch
 }
 
@@ -340,88 +364,27 @@ func (b *Batch) SubmitLeafRequest(req *requests.Leaf, done ProofCallback) error 
 	}
 	// TODO: Return error early in case there are no active workers?
 	b.pending.Add(1)
-	b.submitUnlocked(&item)
+	b.in <- &item
 	return nil
 }
 
-// Submits an item to one log, resetting the per item timeout.
-func (b *Batch) submitUnlocked(item *itemState) {
-	if len(b.workers) == 0 {
-		b.pending.Done()
-		b.lost++
-		return
-	}
-
-	// TODO: This context is never cancelled.
-	item.ctx, _ = context.WithTimeout(b.ctx, b.config.PerLogTimeout)
-
-	log.Debug("Submitting to worker %d: %s", b.nextWorker, b.workers[b.nextWorker].url)
-	b.workers[b.nextWorker].submit(item)
-	b.nextWorker = (b.nextWorker + 1) % len(b.workers)
-}
-func (b *Batch) submit(item *itemState) {
-	b.m.Lock()
-	defer b.m.Unlock()
-	b.submitUnlocked(item)
-}
-
-// Close worker's channel, and remove from list. Does nothing if
-// worker is already closed.
-func (b *Batch) closeWorker(w *batchWorker) {
-	b.m.Lock()
-	defer b.m.Unlock()
-
-	var deleted bool
-	b.workers, deleted = deleteFromSlice(b.workers, w)
-	if !deleted {
-		return
-	}
-	w.close()
-	if b.nextWorker >= len(b.workers) {
-		b.nextWorker = 0
-	}
-}
-
-func (b *Batch) run() {
-	outDone := make(chan workerResult)
-	outErr := make(chan workerError)
-	var wg sync.WaitGroup
-	for _, worker := range b.workers {
-		wg.Add(1)
-		go func(worker *batchWorker) {
-			worker.run(b.ctx, outDone, outErr, b.config.Policy, b.config.PollDelay)
-			log.Info("Log worker %s done", worker.url)
-			wg.Done()
-		}(worker) // Must evaluate the worker variable outside of the go call.
-	}
+func (b *Batch) run(ctx context.Context, config Config, workers []*batchWorker) {
+	out := make(chan workerResult)
 
 	go func() {
-		wg.Wait()
-		close(outErr)
-		close(outDone)
+		runWorkers(ctx, &config, workers, b.in, out)
+		close(out)
 	}()
 
-	go func() {
-		for res := range outDone {
+	for res := range out {
+		if res.pr != nil {
 			res.f(*res.pr)
-			b.pending.Done()
-		}
-	}()
-	for output := range outErr {
-		if output.err != nil {
-			log.Warning("Log worker %s failed: %v", output.w.url, output.err)
-			b.closeWorker(output.w)
 		} else {
-			log.Debug("Got an item for retry")
-			// Retry on a different log. Done
-			// concurrently, since we'd deadlock if we
-			// block waiting for the worker to be ready to
-			// receive the item, at the same time as the
-			// worker blocks on us to get ready to receive
-			// the worker's output. TODO: Spawn a single
-			// longer-lived goroutine for retries?
-			go b.submit(output.item)
+			b.m.Lock()
+			b.lost++
+			b.m.Unlock()
 		}
+		b.pending.Done()
 	}
 	close(b.done)
 }
@@ -446,13 +409,11 @@ func (b *Batch) Wait() error {
 
 	b.m.Lock()
 	defer b.m.Unlock()
-	b.status = batchOpen
-	lost := b.lost
-	b.lost = 0
-
-	if lost != 0 {
-		return fmt.Errorf("%d items of the batch failed", lost)
+	if b.lost > 0 {
+		b.status = batchClosed
+		return fmt.Errorf("%d items of the batch failed", b.lost)
 	}
+	b.status = batchOpen
 	return nil
 }
 
@@ -470,29 +431,22 @@ func (b *Batch) Close() error {
 		return false, nil
 	}
 
-	closeWorkers := func() int {
-		b.m.Lock()
-		defer b.m.Unlock()
-		b.status = batchClosed
-		for _, w := range b.workers {
-			w.close()
-		}
-		b.workers = nil
-		return b.lost
-	}
-
 	if closed, err := setWaiting(); closed || err != nil {
 		return err
 	}
 
 	// Waits for processing of all items to complete or timeout.
 	b.pending.Wait()
+	close(b.in)
 
-	lost := closeWorkers()
 	<-b.done
 
-	if lost != 0 {
-		return fmt.Errorf("%d items of the batch failed", lost)
+	b.m.Lock()
+	defer b.m.Unlock()
+	b.status = batchClosed
+
+	if b.lost > 0 {
+		return fmt.Errorf("%d items of the batch failed", b.lost)
 	}
 	return nil
 }
