@@ -75,26 +75,28 @@ func deleteFromSlice[T comparable](s []T, x T) ([]T, bool) {
 	return s, false
 }
 
+type workerResult struct {
+	f  ProofCallback
+	pr *proof.SigsumProof
+}
+
 // All sent on the same channel, to get a well-defined order between
 // failures and retries. There are three cases:
 //
 //   - Worker failure: w, err non-nil.
 //
-//   - Item success: item and pr non-nil.
-//
 //   - Item retry: item non-nil, pr nil. Should be sent to a worker for
 //     which there's no preceding failure.
-type workerOutput struct {
+type workerError struct {
 	w    *batchWorker
 	err  error
 	item *itemState
-	pr   *proof.SigsumProof
 }
 
 // Any failure is reported via the done channel. Does not return until
 // the in channel is drained. Both completed (non-nil proof) and
 // incomplete items are send on the out channel.
-func (w *batchWorker) run(ctx context.Context, out chan<- workerOutput,
+func (w *batchWorker) run(ctx context.Context, done chan<- workerResult, out chan<- workerError,
 	policy *policy.Policy, pollDelay time.Duration) {
 
 	latestSize := uint64(0)
@@ -131,14 +133,14 @@ loop:
 			}
 			return nil
 		}(); err != nil {
-			out <- workerOutput{w: w, err: err}
+			out <- workerError{w: w, err: err}
 			break loop
 		}
 
 		for i, item := range newItems {
 			persisted, err := w.cli.AddLeaf(item.ctx, item.req, w.header)
 			if err != nil {
-				out <- workerOutput{w: w, err: err}
+				out <- workerError{w: w, err: err}
 				break loop
 			}
 			if persisted {
@@ -151,12 +153,12 @@ loop:
 		if len(pendingItems) > 0 {
 			th, err := w.cli.GetTreeHead(ctx)
 			if err != nil {
-				out <- workerOutput{w: w, err: err}
+				out <- workerError{w: w, err: err}
 				break loop
 			}
 			// TODO: Keep trying, in case some witness is temporarily offline?
 			if err := policy.VerifyCosignedTreeHead(&w.logKeyHash, &th); err != nil {
-				out <- workerOutput{w: w, err: fmt.Errorf("verifying tree head failed: %v", err)}
+				out <- workerError{w: w, err: fmt.Errorf("verifying tree head failed: %v", err)}
 				break loop
 			}
 			if th.Size > latestSize {
@@ -175,19 +177,20 @@ loop:
 					}
 					if err == nil {
 						if err := inclusionProof.Verify(&item.leafHash, &th.TreeHead); err != nil {
-							out <- workerOutput{w: w, err: err}
+							out <- workerError{w: w, err: err}
 							break loop
 						}
 
 						pendingItems[i] = nil
-						out <- workerOutput{item: item,
-							pr: &proof.SigsumProof{LogKeyHash: w.logKeyHash,
+						done <- workerResult{item.done,
+							&proof.SigsumProof{LogKeyHash: w.logKeyHash,
 								Leaf:      proof.NewShortLeaf(&item.leaf),
 								TreeHead:  th,
 								Inclusion: inclusionProof,
-							}}
+							},
+						}
 					} else if !errors.Is(err, api.ErrNotFound) {
-						out <- workerOutput{w: w, err: err}
+						out <- workerError{w: w, err: err}
 						break loop
 					}
 				}
@@ -222,19 +225,19 @@ loop:
 		// TODO: Needs further analysis, likely need either
 		// some buffering, or elimination of the mutex.
 		for item := range in {
-			out <- workerOutput{item: item}
+			out <- workerError{item: item}
 		}
 	}
 
 	// At this point, the input channel is closed and drained.
 	for _, item := range newItems {
 		if item != nil {
-			out <- workerOutput{item: item}
+			out <- workerError{item: item}
 		}
 	}
 	for _, item := range pendingItems {
 		if item != nil {
-			out <- workerOutput{item: item}
+			out <- workerError{item: item}
 		}
 	}
 }
@@ -380,13 +383,13 @@ func (b *Batch) closeWorker(w *batchWorker) {
 }
 
 func (b *Batch) run() {
-	out := make(chan workerOutput)
+	outDone := make(chan workerResult)
+	outErr := make(chan workerError)
 	var wg sync.WaitGroup
-
 	for _, worker := range b.workers {
 		wg.Add(1)
 		go func(worker *batchWorker) {
-			worker.run(b.ctx, out, b.config.Policy, b.config.PollDelay)
+			worker.run(b.ctx, outDone, outErr, b.config.Policy, b.config.PollDelay)
 			log.Info("Log worker %s done", worker.url)
 			wg.Done()
 		}(worker) // Must evaluate the worker variable outside of the go call.
@@ -394,17 +397,21 @@ func (b *Batch) run() {
 
 	go func() {
 		wg.Wait()
-		close(out)
+		close(outErr)
+		close(outDone)
 	}()
-	for output := range out {
-		switch {
-		case output.err != nil:
+
+	go func() {
+		for res := range outDone {
+			res.f(*res.pr)
+			b.pending.Done()
+		}
+	}()
+	for output := range outErr {
+		if output.err != nil {
 			log.Warning("Log worker %s failed: %v", output.w.url, output.err)
 			b.closeWorker(output.w)
-		case output.pr != nil:
-			output.item.done(*output.pr)
-			b.pending.Done()
-		case output.item != nil:
+		} else {
 			log.Debug("Got an item for retry")
 			// Retry on a different log. Done
 			// concurrently, since we'd deadlock if we
@@ -414,8 +421,6 @@ func (b *Batch) run() {
 			// the worker's output. TODO: Spawn a single
 			// longer-lived goroutine for retries?
 			go b.submit(output.item)
-		default:
-			panic(fmt.Sprintf("internal error, unexpected worker output: %#v", output))
 		}
 	}
 	close(b.done)
