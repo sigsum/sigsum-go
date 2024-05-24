@@ -36,16 +36,8 @@ type batchWorker struct {
 	cli        api.Log
 	header     *token.SubmitHeader
 
-	// For communicating with the go routine
-	c chan *itemState
-}
-
-func (b *batchWorker) submit(item *itemState) {
-	b.c <- item
-}
-
-func (b *batchWorker) close() {
-	close(b.c)
+	// Incoming items for the worker.
+	in chan *itemState
 }
 
 // Remove any nil elements.
@@ -74,29 +66,28 @@ func deleteFromSlice[T comparable](s []T, x T) []T {
 	panic("item not found")
 }
 
-// Submission result, pr == nil for failure.
-type workerResult struct {
-	f  ProofCallback
-	pr *proof.SigsumProof
-}
-
-// Any failure is reported via the done channel. Does not return until
-// the in channel is drained. Both completed (non-nil proof) and
-// incomplete items are send on the out channel.
-func (w *batchWorker) run(ctx context.Context, done chan<- workerResult,
+// Consumes the worker's input channel, each successful submit is sent on the done channel.
+// On error, also returns the non-empty list of unfinished items.
+func (w *batchWorker) run(ctx context.Context, done chan<- func(),
 	policy *policy.Policy, pollDelay time.Duration) ([]*itemState, error) {
 
 	latestSize := uint64(0)
 
 	var newItems, pendingItems []*itemState
 
+	// For error return
 	leftover := func(err error) ([]*itemState, error) {
 		return append(compactSlice(newItems), compactSlice(pendingItems)...), err
 	}
 
+	// Pass on the result of a successful submit.
+	result := func(callback ProofCallback, pr *proof.SigsumProof) {
+		done <- func() { callback(*pr) }
+	}
+
 	// Input channel, set to nil when drained (so that it is
 	// ignored in the select statement below).
-	in := w.c
+	in := w.in
 
 	log.Info("Starting worker for log %s", w.url)
 	for in != nil || len(newItems) > 0 || len(pendingItems) > 0 {
@@ -167,13 +158,12 @@ func (w *batchWorker) run(ctx context.Context, done chan<- workerResult,
 						}
 
 						pendingItems[i] = nil
-						done <- workerResult{item.done,
+						result(item.done,
 							&proof.SigsumProof{LogKeyHash: w.logKeyHash,
 								Leaf:      proof.NewShortLeaf(&item.leaf),
 								TreeHead:  th,
 								Inclusion: inclusionProof,
-							},
-						}
+							})
 					} else if !errors.Is(err, api.ErrNotFound) {
 						return leftover(err)
 					}
@@ -185,9 +175,10 @@ func (w *batchWorker) run(ctx context.Context, done chan<- workerResult,
 	return nil, nil
 }
 
-func runWorkers(ctx context.Context, config *Config, workers []*batchWorker, in chan *itemState, out chan<- workerResult) {
+func runWorkers(ctx context.Context, config *Config, workers []*batchWorker, in chan *itemState, out chan<- func()) {
 	var wg sync.WaitGroup
 	closing := make(chan *batchWorker, len(workers))
+
 	for _, worker := range workers {
 		wg.Add(1)
 		go func(worker *batchWorker) {
@@ -197,13 +188,11 @@ func runWorkers(ctx context.Context, config *Config, workers []*batchWorker, in 
 
 				closing <- worker // Never blocks, due to above capacity.
 
-				// To avoid deadlock, we must serve
-				// this channel in paralells with
-				// retries, until it is drained, at
-				// which time we set c to nil.
-				c := worker.c
+				// To avoid deadlock, we must serve this channel in parallells with
+				// retries, until it is drained, at which time we set it to nil.
+				wIn := worker.in
 
-				for c != nil || len(items) > 0 {
+				for wIn != nil || len(items) > 0 {
 					var retryChan chan<- *itemState
 					var retryItem *itemState
 
@@ -212,11 +201,11 @@ func runWorkers(ctx context.Context, config *Config, workers []*batchWorker, in 
 						retryItem = items[0]
 					}
 					select {
-					case item, ok := <-c:
+					case item, ok := <-wIn:
 						if ok {
 							items = append(items, item)
 						} else {
-							c = nil
+							wIn = nil
 						}
 					case retryChan <- retryItem:
 						items = items[1:]
@@ -236,12 +225,12 @@ loop:
 		// Process any closing workers first.
 		for len(closing) > 0 {
 			worker := <-closing
-			worker.close()
+			close(worker.in)
 			workers = deleteFromSlice(workers, worker)
 		}
 		select {
 		case worker := <-closing:
-			worker.close()
+			close(worker.in)
 			workers = deleteFromSlice(workers, worker)
 		case item, ok := <-in:
 			if !ok {
@@ -249,8 +238,8 @@ loop:
 			}
 
 			if len(workers) == 0 {
-				// Send a null output, to indicate an item was discarded.
-				out <- workerResult{}
+				// Send a nil output, to indicate an item was discarded.
+				out <- nil
 			} else {
 				if next >= len(workers) {
 					next = 0
@@ -258,17 +247,15 @@ loop:
 
 				// TODO: This context is never cancelled.
 				item.ctx, _ = context.WithTimeout(ctx, config.PerLogTimeout)
-				// From the above close processing,
-				// we'll submit at most one new item
-				// to a worker after it has sent its
-				// closing message.
-				workers[next].submit(item)
+				// From the above close processing, we'll submit at most one new item
+				// to a worker after it has sent its closing message.
+				workers[next].in <- item
 				next++
 			}
 		}
 	}
 	for i := 0; i < len(workers); i++ {
-		workers[i].close()
+		close(workers[i].in)
 	}
 	wg.Wait()
 	close(closing)
@@ -330,12 +317,17 @@ func NewBatch(ctx context.Context, config *Config) (*Batch, error) {
 				HTTPClient: config.HTTPClient,
 			}),
 			header: header,
-			c:      make(chan *itemState),
+			in:     make(chan *itemState),
 		})
 	}
 	return newBatchWithWorkers(ctx, config, workers), nil
 }
 
+// The done callback is invoked with the resulting proof when the
+// submission succeeds. All callbacks are invoked sequentially, from
+// the same goroutine. It is expected to return quickly, otherwise it
+// will block the batch processing. The callback must *not* call any
+// methods on the Batch object, since doing so may deadlock.
 func (b *Batch) SubmitMessage(signer crypto.Signer, message *crypto.Hash, done ProofCallback) error {
 	signature, err := types.SignLeafMessage(signer, message[:])
 	if err != nil {
@@ -369,16 +361,16 @@ func (b *Batch) SubmitLeafRequest(req *requests.Leaf, done ProofCallback) error 
 }
 
 func (b *Batch) run(ctx context.Context, config Config, workers []*batchWorker) {
-	out := make(chan workerResult)
+	out := make(chan func())
 
 	go func() {
 		runWorkers(ctx, &config, workers, b.in, out)
 		close(out)
 	}()
 
-	for res := range out {
-		if res.pr != nil {
-			res.f(*res.pr)
+	for f := range out {
+		if f != nil {
+			f()
 		} else {
 			b.m.Lock()
 			b.lost++

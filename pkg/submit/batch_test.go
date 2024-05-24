@@ -129,7 +129,7 @@ func TestBatchSuccess(t *testing.T) {
 				url:        "https://log.example.org/",
 				logKeyHash: logKeyHash,
 				cli:        cli,
-				c:          make(chan *itemState),
+				in:         make(chan *itemState),
 			},
 		})
 
@@ -217,13 +217,13 @@ func TestBatchFailover(t *testing.T) {
 				url:        "https://logA.example.org/",
 				logKeyHash: logAKeyHash,
 				cli:        logA,
-				c:          make(chan *itemState),
+				in:         make(chan *itemState),
 			},
 			&batchWorker{
 				url:        "https://logB.example.org/",
 				logKeyHash: crypto.HashBytes(logBPub[:]),
 				cli:        cliB,
-				c:          make(chan *itemState),
+				in:         make(chan *itemState),
 			},
 		})
 
@@ -379,7 +379,7 @@ func TestBatchErrors(t *testing.T) {
 			url:        fmt.Sprintf("https://log%d.example.org/", i),
 			logKeyHash: keyHash,
 			cli:        newMock(i, log),
-			c:          make(chan *itemState),
+			in:         make(chan *itemState),
 		})
 	}
 
