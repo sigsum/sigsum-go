@@ -71,6 +71,12 @@ func deleteFromSlice[T comparable](s []T, x T) []T {
 func (w *batchWorker) run(ctx context.Context, done chan<- func(),
 	policy *policy.Policy, pollDelay time.Duration) ([]*itemState, error) {
 
+	// Input channel, set to nil when drained (so that it is
+	// ignored in the select statement below).
+	in := w.in
+
+	// Latest seen tree size; only retry querying for inclusion
+	// proofs when it grows.
 	latestSize := uint64(0)
 
 	var newItems, pendingItems []*itemState
@@ -85,35 +91,36 @@ func (w *batchWorker) run(ctx context.Context, done chan<- func(),
 		done <- func() { callback(*pr) }
 	}
 
-	// Input channel, set to nil when drained (so that it is
-	// ignored in the select statement below).
-	in := w.in
+	// Wait until we get a new item, or it's time to poll log, or
+	// the context is cancelled.
+	poll := func() error {
+		var pollTime <-chan time.Time
+
+		if len(newItems) > 0 || len(pendingItems) > 0 {
+			timer := time.NewTimer(pollDelay)
+			defer timer.Stop()
+			pollTime = timer.C
+		}
+		select {
+		case item, ok := <-in:
+			if !ok {
+				in = nil
+			} else {
+				newItems = append(newItems, item)
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-pollTime:
+		}
+		return nil
+	}
 
 	log.Info("Starting worker for log %s", w.url)
 	for in != nil || len(newItems) > 0 || len(pendingItems) > 0 {
 		log.Debug("worker %s: new %d, pending %d",
 			w.url, len(newItems), len(pendingItems))
-		if err := func() error {
-			var pollTime <-chan time.Time
 
-			if len(newItems) > 0 || len(pendingItems) > 0 {
-				timer := time.NewTimer(pollDelay)
-				defer timer.Stop()
-				pollTime = timer.C
-			}
-			select {
-			case item, ok := <-in:
-				if !ok {
-					in = nil
-				} else {
-					newItems = append(newItems, item)
-				}
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-pollTime:
-			}
-			return nil
-		}(); err != nil {
+		if err := poll(); err != nil {
 			return leftover(err)
 		}
 
@@ -125,6 +132,9 @@ func (w *batchWorker) run(ctx context.Context, done chan<- func(),
 			if persisted {
 				pendingItems = append(pendingItems, item)
 				newItems[i] = nil
+				// Since it's possible that the leaf is an old one, and not actually added to the tree now,
+				// we should ask for an inclusion proof regardless of previous tree size seen.
+				latestSize = 0
 			}
 		}
 		newItems = compactSlice(newItems)
