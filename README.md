@@ -27,7 +27,7 @@ like GitHub.
 
 Besides go unit tests (`go test ./...`), the [tests](./tests)
 directory contains integration tests for all command line tools, in
-the form of shell scripts. There are all run by the top-level `make
+the form of shell scripts. They are all run by the top-level `make
 check` Makefile target.
 
 ## Contact
