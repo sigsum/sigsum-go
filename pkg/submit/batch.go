@@ -162,21 +162,24 @@ func (w *batchWorker) run(ctx context.Context, done chan<- func(),
 							LeafHash: item.leafHash,
 						})
 					}
-					if err == nil {
-						if err := inclusionProof.Verify(&item.leafHash, &th.TreeHead); err != nil {
-							return leftover(err)
+					if err != nil {
+						if errors.Is(err, api.ErrNotFound) {
+							continue
 						}
-
-						pendingItems[i] = nil
-						result(item.done,
-							&proof.SigsumProof{LogKeyHash: w.logKeyHash,
-								Leaf:      proof.NewShortLeaf(&item.leaf),
-								TreeHead:  th,
-								Inclusion: inclusionProof,
-							})
-					} else if !errors.Is(err, api.ErrNotFound) {
 						return leftover(err)
 					}
+
+					if err := inclusionProof.Verify(&item.leafHash, &th.TreeHead); err != nil {
+						return leftover(err)
+					}
+
+					pendingItems[i] = nil
+					result(item.done,
+						&proof.SigsumProof{LogKeyHash: w.logKeyHash,
+							Leaf:      proof.NewShortLeaf(&item.leaf),
+							TreeHead:  th,
+							Inclusion: inclusionProof,
+						})
 				}
 				pendingItems = compactSlice(pendingItems)
 			}
@@ -198,7 +201,7 @@ func runWorkers(ctx context.Context, config *Config, workers []*batchWorker, in 
 
 				closing <- worker // Never blocks, due to above capacity.
 
-				// To avoid deadlock, we must serve this channel in parallells with
+				// To avoid deadlock, we must serve this channel in parallell with
 				// retries, until it is drained, at which time we set it to nil.
 				wIn := worker.in
 
@@ -301,6 +304,7 @@ func newBatchWithWorkers(ctx context.Context, config *Config,
 	return &batch
 }
 
+// TODO: Define behavior when ctx is cancelled.
 func NewBatch(ctx context.Context, config *Config) (*Batch, error) {
 	logs := config.Policy.GetLogsWithUrl()
 	if len(logs) == 0 {
