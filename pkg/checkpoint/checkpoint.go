@@ -112,8 +112,7 @@ func (cp *Checkpoint) parseWithKeyName(p *ascii.LineReader, keyName string) erro
 		keyId, signature, err := ParseEd25519SignatureLine(line, keyName)
 		if err != nil {
 			if err != ErrUnwantedSignature {
-				fmt.Errorf("invalid signature line %d: %s", signatureCount, err)
-				return err
+				return fmt.Errorf("invalid signature line %d: %s", signatureCount, err)
 			}
 			continue
 		}
