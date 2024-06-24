@@ -256,7 +256,7 @@ func TestBatchFailover(t *testing.T) {
 		return proofs
 	}
 
-	leafsByLog := func(proofs []*proof.SigsumProof) map[crypto.Hash][]uint64 {
+	leavesByLog := func(proofs []*proof.SigsumProof) map[crypto.Hash][]uint64 {
 		m := make(map[crypto.Hash][]uint64)
 		for _, pr := range proofs {
 			if pr != nil {
@@ -266,29 +266,29 @@ func TestBatchFailover(t *testing.T) {
 		return m
 	}
 
-	success := leafsByLog(doBatch(7))
+	success := leavesByLog(doBatch(7))
 	if got, want := success[logAKeyHash], []uint64{0, 1, 2, 3}; !sliceEqual(got, want) {
-		t.Errorf("Unexpected logA leafs, got: %v, want: %v", got, want)
+		t.Errorf("Unexpected logA leaves, got: %v, want: %v", got, want)
 	}
 	if got, want := success[logBKeyHash], []uint64{0, 1, 2}; !sliceEqual(got, want) {
-		t.Errorf("Unexpected logB leafs, got: %v, want: %v", got, want)
+		t.Errorf("Unexpected logB leaves, got: %v, want: %v", got, want)
 	}
 
-	failOver := leafsByLog(doBatch(6))
+	failOver := leavesByLog(doBatch(6))
 	// TODO: Unclear why we get proof for leaf 7 before the proof for leaf 6.
 	if got, want := failOver[logAKeyHash], []uint64{4, 5, 7, 6}; !sliceEqual(got, want) {
-		t.Errorf("Unexpected logA leafs, got: %v, want: %v", got, want)
+		t.Errorf("Unexpected logA leaves, got: %v, want: %v", got, want)
 	}
 	if got, want := failOver[logBKeyHash], []uint64{3, 4}; !sliceEqual(got, want) {
-		t.Errorf("Unexpected logB leafs, got: %v, want: %v", got, want)
+		t.Errorf("Unexpected logB leaves, got: %v, want: %v", got, want)
 	}
 
-	singleLog := leafsByLog(doBatch(3))
+	singleLog := leavesByLog(doBatch(3))
 	if got, want := singleLog[logAKeyHash], []uint64{8, 9, 10}; !sliceEqual(got, want) {
-		t.Errorf("Unexpected logA leafs, got: %v, want: %v", got, want)
+		t.Errorf("Unexpected logA leaves, got: %v, want: %v", got, want)
 	}
 	if got, want := singleLog[logBKeyHash], []uint64{}; !sliceEqual(got, want) {
-		t.Errorf("Unexpected logB leafs, got: %v, want: %v", got, want)
+		t.Errorf("Unexpected logB leaves, got: %v, want: %v", got, want)
 	}
 
 	if err := batch.Close(); err != nil {

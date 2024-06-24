@@ -1,5 +1,5 @@
 // package submit acts as a sigsum submit client
-// It submits one or more leaf to the logs specified by policy, and
+// It submits one or more leaves to the logs specified by policy, and
 // collects corresponding sigsum proofs.
 package submit
 
