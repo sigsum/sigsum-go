@@ -48,11 +48,11 @@ func TestInternal(t *testing.T) {
 		if !tree.AddLeafHash(&h) {
 			t.Fatalf("AddLeafHash failed at size %d", tree.Size())
 		}
-		if len(tree.leafs) != len(tree.leafIndex) {
-			t.Fatalf("invalid state: %d leafs, %d index entries",
-				len(tree.leafs), len(tree.leafIndex))
+		if len(tree.leaves) != len(tree.leafIndex) {
+			t.Fatalf("invalid state: %d leaves, %d index entries",
+				len(tree.leaves), len(tree.leafIndex))
 		}
-		if popc := bits.OnesCount(uint(len(tree.leafs))); popc != len(tree.cRange) {
+		if popc := bits.OnesCount(uint(len(tree.leaves))); popc != len(tree.cRange) {
 			t.Fatalf("internal error: popc %d, len 0x%x", popc, len(tree.cRange))
 		}
 	}
