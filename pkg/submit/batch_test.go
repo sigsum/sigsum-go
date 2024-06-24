@@ -428,7 +428,8 @@ func TestBatchErrors(t *testing.T) {
 	for i := 0; i < size-1; i++ {
 		if proofs[i] == nil {
 			t.Errorf("Proof %d missing", i)
-		} else if err := proofs[i].Verify(&messages[i], &submitPub, policy); err != nil {
+		} else if err := proofs[i].Verify(&messages[i], map[crypto.Hash]crypto.PublicKey{
+			crypto.HashBytes(submitPub[:]): submitPub}, policy); err != nil {
 			t.Errorf("Proof %d of %d failed to verify: %v", i, size, err)
 		}
 	}
