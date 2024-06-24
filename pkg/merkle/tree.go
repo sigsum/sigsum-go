@@ -45,7 +45,7 @@ func (cr compactRange) getRootHash() crypto.Hash {
 // Represents a tree of leaf hashes. Not concurrency safe; needs
 // external synchronization.
 type Tree struct {
-	leafs []crypto.Hash
+	leaves []crypto.Hash
 	// Maps leaf hash to index.
 	leafIndex map[crypto.Hash]int
 	// Compact range; hash of one power-of-two subtree per one-bit
@@ -58,7 +58,7 @@ func NewTree() Tree {
 }
 
 func (t *Tree) Size() uint64 {
-	return uint64(len(t.leafs))
+	return uint64(len(t.leaves))
 }
 
 // Returns true if added, false for duplicates.
@@ -67,9 +67,9 @@ func (t *Tree) AddLeafHash(leafHash *crypto.Hash) bool {
 		return false
 	}
 	h := *leafHash
-	t.leafIndex[h] = len(t.leafs)
-	t.leafs = append(t.leafs, h)
-	t.cRange = t.cRange.extend(uint64(len(t.leafs))-1, h, HashInteriorNode)
+	t.leafIndex[h] = len(t.leaves)
+	t.leaves = append(t.leaves, h)
+	t.cRange = t.cRange.extend(uint64(len(t.leaves))-1, h, HashInteriorNode)
 	return true
 }
 
@@ -143,7 +143,7 @@ func (t *Tree) ProveInclusion(index, size uint64) ([]crypto.Hash, error) {
 	if index >= size || size > t.Size() {
 		return nil, fmt.Errorf("invalid argument index %d, size %d, tree %d", index, size, t.Size())
 	}
-	return reversePath(inclusion(t.leafs[:size], index, t.cRange, t.Size())), nil
+	return reversePath(inclusion(t.leaves[:size], index, t.cRange, t.Size())), nil
 }
 
 // Based on RFC 9162, 2.1.4.1, but produces path in opposite order.
@@ -205,7 +205,7 @@ func (t *Tree) ProveConsistency(m, n uint64) ([]crypto.Hash, error) {
 	if m == 0 || m == n {
 		return []crypto.Hash{}, nil
 	}
-	return reversePath(consistency(t.leafs[:n], m, t.cRange, t.Size())), nil
+	return reversePath(consistency(t.leaves[:n], m, t.cRange, t.Size())), nil
 }
 
 // Returns largest power of 2 smaller than n. Requires n >= 2.
