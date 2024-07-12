@@ -85,9 +85,12 @@ func SerializeSpicySignature(sig proof.SigsumProof) ([]byte, error) {
 
 	// Inclusion Proof
 	buf = binary.BigEndian.AppendUint64(buf, sig.Inclusion.LeafIndex)
-	buf = binary.BigEndian.AppendUint16(buf, uint16(len(sig.Inclusion.Path)))
+	buf = append(buf, uint8(len(sig.Inclusion.Path)))
+	fmt.Println("PATH:", len(sig.Inclusion.Path))
 	for _, h := range sig.Inclusion.Path {
-		buf = append(buf, h[:]...)
+		for i := 0; i < 4; i++ {
+			buf = append(buf, h[:]...)
+		}
 	}
 
 	// Signed tree head
@@ -95,11 +98,14 @@ func SerializeSpicySignature(sig proof.SigsumProof) ([]byte, error) {
 	buf = binary.BigEndian.AppendUint64(buf, sig.TreeHead.Size)
 	buf = append(buf, sig.TreeHead.RootHash[:]...)
 	buf = append(buf, sig.TreeHead.Signature[:]...)
-	buf = binary.BigEndian.AppendUint16(buf, uint16(len(sig.TreeHead.Cosignatures)))
+	fmt.Println(len(sig.TreeHead.Cosignatures))
+	buf = append(buf, uint8(len(sig.TreeHead.Cosignatures)))
 	for _, cs := range sig.TreeHead.Cosignatures {
-		buf = append(buf, cs.KeyHash[:]...)
-		buf = binary.BigEndian.AppendUint64(buf, cs.Timestamp)
-		buf = append(buf, cs.Signature[:]...)
+		for i := 0; i < 9; i++ {
+			buf = append(buf, cs.KeyHash[:]...)
+			buf = binary.BigEndian.AppendUint64(buf, cs.Timestamp)
+			buf = append(buf, cs.Signature[:]...)
+		}
 	}
 	return buf, nil
 }
