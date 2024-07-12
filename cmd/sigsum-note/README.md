@@ -1,0 +1,17 @@
+# sigsum-note
+
+## Sign a spicy note
+
+```console
+$ echo 'Hello, spicy!' | sigsum-note -sign -k signingkey -p policy -n example.com/mykey
+Hello, spicy!
+
+— example.com/mykey ZXhhbf1+w+jm+PstL4e54D9KdSFSAsNFJCuRS9L5IVbwqR2hEdGreBdTYnvZl6/RJQGaU0OsuUZWKBtksltQNtk5kgwAAAAAAABuIAxkluM5V+cC5mzYU0RhmSYhqh28B4qF2C2cY7LyfaJqYzbbQvVArdD6jA/zn2L+Si/EX0eqjM20jz3/iAuT+QMqCzQ3wX7f7CI4NJ0gJaRUyWfiNnXWYmpaMFq44wSs7X2mXudMN08mG2o/dkjaRWhdrB9eoAqLaMWJx9zUVPh3//U3CtlRNCTT/WZ3YiHl2YmUEA9xpkFS+k4hLLX2bPBZLStVfwm1suMj9f5WgGJLTebNy2VAxpA4W0k+iwAusHeG97cVSSVf/I7FieozlXeAaPd/sFc7KnSRHFeryJp4zn64JWDLCUEskhNxHsnHqIKfANTuqa+GlW6Pd94UOkXySAv1Up8IMndkxp+7KIPoUwakMYfzh1va6DxVHwC74xw5DDzBKde2znSbd/KEOMB7B34Clhyi9YDqelW2kxiNunYIbKQf6VBX7u327ZftzlVf8gHPPf41+C53Fu7d7xPjySmvn2cx9jpJNmhif1iBDYktxR+Kocmk3hVzzT5R5i/J5SW5j0Eu3hhf8qxav3CSCi5jpq4xyIsROLhd4yhwawAAAAAAAG5QDhUpZc1gBZvgmtLNWPI6/EoOxrjCXedHtP/gI774a0YeOznUwJOsyGa+DMoAUYamCDjFeziAJQFzM9gspIvRsmol9fUSh42SKSG8IAzeYL33rVavABhmYM6Y6OCYSuEOAhyZcmHxbm6B0T9CCQCiVCpLagScLZljJO5dgqkMozYMAAAAAGaRM14J643k3rKdho+ZU5w44TVuIGibZVetMGXM8ZSWIFHH7yGMVmuwaMb8czCjT8elba4QaKXVg6mbpKZ1vzPlVf0NcLhhoBDyUDDeb/alJn4LlR5wwEsguko85B5/unubffwAAAAAZpEzXuFf7H3harVjj+gYxd8po44Vnn1yRkYYyzH4tjf0zKjvHfqzeyr0qSr1slbDGXJy1KzN/klyOitSzG93PrZc5ww=
+```
+
+## Verify a spicy note
+
+```console
+$ cat hello.note | sigsum-note -verify -k signingkey.pub -p policy -n example.com/mykey
+Hello, spicy!
+```
