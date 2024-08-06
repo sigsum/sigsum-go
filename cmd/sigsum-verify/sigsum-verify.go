@@ -26,7 +26,7 @@ func main() {
 	log.SetFlags(0)
 	var settings Settings
 	settings.parse(os.Args)
-	submitKey, err := key.ReadPublicKeyFile(settings.submitKey)
+	submitKeys, err := key.ReadPublicKeyListFile(settings.submitKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,9 +47,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create policy: %v", err)
 	}
-	if err := pr.Verify(&msg, &submitKey, policy); err != nil {
-		log.Fatalf("sigsum proof failed to verify: %v", err)
+	for _, submitKey := range submitKeys {
+		if err := pr.Verify(&msg, &submitKey, policy); err == proof.ErrIncorrectKey {
+			continue
+		} else if err != nil {
+			log.Fatalf("sigsum proof failed to verify: %v", err)
+		} else {
+			os.Exit(0)
+		}
 	}
+	log.Fatalf("sigsum proof failed to verify: submit public key(s) do not match")
 }
 
 func (s *Settings) parse(args []string) {

@@ -1,6 +1,7 @@
 package key
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -54,6 +55,35 @@ func ReadPublicKeyFile(fileName string) (crypto.PublicKey, error) {
 			fileName, err)
 	}
 	return key, nil
+}
+
+func ReadPublicKeyListFile(fileName string) ([]crypto.PublicKey, error) {
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
+	}
+	var keys []crypto.PublicKey
+	scanner := bufio.NewScanner(f)
+	var n int
+	for scanner.Scan() {
+		n++
+		line := scanner.Text()
+		if strings.HasPrefix(line, "#") || line == "" {
+			continue
+		}
+		k, err := ParsePublicKey(line)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse public key on line %d of file %q: %v", n, fileName, err)
+		}
+		keys = append(keys, k)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("failed to read public keys file %q: %v", fileName, err)
+	}
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("no public keys found in file %q", fileName)
+	}
+	return keys, nil
 }
 
 func ReadPrivateKeyFile(fileName string) (crypto.Signer, error) {

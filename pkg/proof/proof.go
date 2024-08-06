@@ -163,6 +163,8 @@ func (sp *SigsumProof) ToASCII(w io.Writer) error {
 	return sp.Inclusion.ToASCII(w)
 }
 
+var ErrIncorrectKey = fmt.Errorf("incorrect submit key hash")
+
 func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKey *crypto.PublicKey, policy *policy.Policy) error {
 	checksum := crypto.HashBytes(msg[:])
 	leaf, err := sp.Leaf.ToLeaf(&checksum)
@@ -170,7 +172,7 @@ func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKey *crypto.PublicKey, pol
 		return err
 	}
 	if sp.Leaf.KeyHash != crypto.HashBytes(submitKey[:]) {
-		return fmt.Errorf("unexpected submit key hash")
+		return ErrIncorrectKey
 	}
 	if !leaf.Verify(submitKey) {
 		return fmt.Errorf("leaf signature not valid")
