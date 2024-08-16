@@ -12,7 +12,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-// A monitoringLogClient can retrieve tree heads and leafs from a log,
+// A monitoringLogClient can retrieve tree heads and leaves from a log,
 // and it verifies consistency and inclusion of anything it returns.
 type monitoringLogClient struct {
 	logKey crypto.PublicKey // Identifies the log monitored.
