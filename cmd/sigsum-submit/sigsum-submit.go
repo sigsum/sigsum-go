@@ -155,7 +155,8 @@ func main() {
 			if err := sigsumProof.FromASCII(f); err != nil {
 				log.Fatal("Parsing proof file %q failed: %v", proofName, err)
 			}
-			if err := sigsumProof.Verify(msg, publicKey, policy); err != nil {
+			if err := sigsumProof.Verify(msg, map[crypto.Hash]crypto.PublicKey{
+				crypto.HashBytes(publicKey[:]): *publicKey}, policy); err != nil {
 				log.Fatal("Existing proof file %q is not valid: %v", proofName, err)
 			}
 			return true

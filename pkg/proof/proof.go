@@ -163,18 +163,17 @@ func (sp *SigsumProof) ToASCII(w io.Writer) error {
 	return sp.Inclusion.ToASCII(w)
 }
 
-var ErrIncorrectKey = fmt.Errorf("incorrect submit key hash")
-
-func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKey *crypto.PublicKey, policy *policy.Policy) error {
+func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKeys map[crypto.Hash]crypto.PublicKey, policy *policy.Policy) error {
 	checksum := crypto.HashBytes(msg[:])
 	leaf, err := sp.Leaf.ToLeaf(&checksum)
 	if err != nil {
 		return err
 	}
-	if sp.Leaf.KeyHash != crypto.HashBytes(submitKey[:]) {
-		return ErrIncorrectKey
+	submitKey, ok := submitKeys[sp.Leaf.KeyHash]
+	if !ok {
+		return fmt.Errorf("unknown leaf key hash")
 	}
-	if !leaf.Verify(submitKey) {
+	if !leaf.Verify(&submitKey) {
 		return fmt.Errorf("leaf signature not valid")
 	}
 	if err := policy.VerifyCosignedTreeHead(&sp.LogKeyHash, &sp.TreeHead); err != nil {
@@ -184,10 +183,10 @@ func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKey *crypto.PublicKey, pol
 	return sp.Inclusion.Verify(&leafHash, &sp.TreeHead.TreeHead)
 }
 
-func (sp *SigsumProof) VerifyNoCosignatures(msg *crypto.Hash, submitKey *crypto.PublicKey, logKey *crypto.PublicKey) error {
+func (sp *SigsumProof) VerifyNoCosignatures(msg *crypto.Hash, submitKeys map[crypto.Hash]crypto.PublicKey, logKey *crypto.PublicKey) error {
 	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{*logKey}, nil, 0)
 	if err != nil {
 		return fmt.Errorf("internal error: %v", err)
 	}
-	return sp.Verify(msg, submitKey, policy)
+	return sp.Verify(msg, submitKeys, policy)
 }

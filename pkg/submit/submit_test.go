@@ -54,7 +54,8 @@ func TestSubmitSuccess(t *testing.T) {
 			t.Errorf("submit failed: %v", err)
 		} else {
 			pr.Leaf = proof.NewShortLeaf(&leaf)
-			if err := pr.Verify(&msg, &submitPub, policy); err != nil {
+			if err := pr.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
+				crypto.HashBytes(submitPub[:]): submitPub}, policy); err != nil {
 				t.Errorf("returned sigsum proof failed to verify: %v", err)
 			}
 		}
@@ -115,7 +116,8 @@ func TestSubmitFailure(t *testing.T) {
 			&req, &leafHash)
 		if err == nil {
 			pr.Leaf = proof.NewShortLeaf(&leaf)
-			err := pr.Verify(&msg, &submitPub, policy)
+			err := pr.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
+				crypto.HashBytes(submitPub[:]): submitPub}, policy)
 			if err == nil {
 				t.Errorf("case %d submit and verify succeeded; should have failed", i)
 			}
