@@ -450,7 +450,7 @@ func sliceEqual[T comparable](a, b []T) bool {
 	return true
 }
 
-// Convenience functino to create a testLog and needed keys.
+// Convenience function to create a testLog and needed keys.
 func newTestLog(t *testing.T) (*testLog, crypto.PublicKey, crypto.Hash) {
 	pub, signer, err := crypto.NewKeyPair()
 	if err != nil {
