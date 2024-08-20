@@ -201,28 +201,18 @@ func runWorkers(ctx context.Context, config *Config, workers []*batchWorker, in 
 
 				closing <- worker // Never blocks, due to above capacity.
 
-				// To avoid deadlock, we must serve this channel in parallell with
-				// retries, until it is drained, at which time we set it to nil.
-				wIn := worker.in
+				// To avoid deadlock, drain input
+				// channel before issuing retries.
+				// There should be at most one more
+				// incoming item after above send to
+				// the closing channel.
+				for item := range worker.in {
+					items = append(items, item)
+				}
 
-				for wIn != nil || len(items) > 0 {
-					var retryChan chan<- *itemState
-					var retryItem *itemState
-
-					if len(items) > 0 {
-						retryChan = in
-						retryItem = items[0]
-					}
-					select {
-					case item, ok := <-wIn:
-						if ok {
-							items = append(items, item)
-						} else {
-							wIn = nil
-						}
-					case retryChan <- retryItem:
-						items = items[1:]
-					}
+				// Send items back, for retry on some other worker.
+				for _, item := range items {
+					in <- item
 				}
 			}
 			log.Info("Log worker %s done", worker.url)
