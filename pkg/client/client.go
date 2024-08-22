@@ -58,11 +58,22 @@ func (cli *Client) GetTreeHead(ctx context.Context) (cth types.CosignedTreeHead,
 }
 
 func (cli *Client) GetInclusionProof(ctx context.Context, req requests.InclusionProof) (proof types.InclusionProof, err error) {
+	if req.Size == 0 {
+		return types.InclusionProof{}, api.ErrNotFound
+	}
+	if req.Size == 1 {
+		// Trivial proof: index 0, empty path
+		return types.InclusionProof{}, nil
+	}
 	err = cli.get(ctx, req.ToURL(types.EndpointGetInclusionProof.Path(cli.config.URL)), proof.FromASCII)
 	return
 }
 
 func (cli *Client) GetConsistencyProof(ctx context.Context, req requests.ConsistencyProof) (proof types.ConsistencyProof, err error) {
+	if req.OldSize == 0 || req.OldSize == req.NewSize {
+		// Trivial proof: empty path
+		return types.ConsistencyProof{}, nil
+	}
 	err = cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.config.URL)), proof.FromASCII)
 	return
 }
