@@ -12,11 +12,6 @@ import (
 	"sigsum.org/sigsum-go/pkg/merkle"
 )
 
-const (
-	CosignatureNamespace = "cosignature/v1"
-	CheckpointNamePrefix = "sigsum.org/v1/tree/"
-)
-
 type TreeHead struct {
 	Size     uint64
 	RootHash crypto.Hash
@@ -128,6 +123,21 @@ func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
 	return ascii.WriteSignature(w, "signature", &sth.Signature)
 }
 
+// See https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md for
+// specification.
+func (sth *SignedTreeHead) ToCheckpoint(w io.Writer, logKey *crypto.PublicKey) error {
+	keyHash := crypto.HashBytes(logKey[:])
+	origin := sigsumLogOrigin(&keyHash)
+
+	if _, err := fmt.Fprintf(w, "%s\n", sth.formatCheckpoint(origin)); err != nil {
+		return err
+	}
+
+	// TODO: Constructs origin string twice. Should have some
+	// object to cache origin and key id.
+	return WriteNoteLogSignature(w, origin, CheckpointLogKeyId(logKey), &sth.Signature)
+}
+
 func (sth *SignedTreeHead) Parse(p *ascii.Parser) error {
 	err := sth.TreeHead.Parse(p)
 	if err != nil {
@@ -151,6 +161,7 @@ func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
 	return crypto.Verify(key, []byte(sth.toCheckpoint(&keyHash)), &sth.Signature)
 }
 
+// Deprecated: This backwards compatibility function should be deleted.
 func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 	// Prefix used temporarily, for version v0.1.15 and v0.2.0.
 	keyHash := crypto.HashBytes(key[:])

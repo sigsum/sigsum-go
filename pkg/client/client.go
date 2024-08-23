@@ -124,6 +124,7 @@ func (cli *Client) GetTreeSize(ctx context.Context, req requests.GetTreeSize) (u
 	return size, nil
 }
 
+// Deprecated: New witness protocol uses AddCheckPoint instead
 func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (crypto.Hash, types.Cosignature, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
@@ -139,6 +140,11 @@ func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (c
 	}
 	return keyHash, cs, nil
 }
+
+// TODO: XXX
+// // See https://github.com/C2SP/C2SP/blob/main/tlog-witness.md for specification.
+// func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddTreeHead) (types.Cosignature, error) {
+// }
 
 func (cli *Client) get(ctx context.Context, url string,
 	parseBody func(io.Reader) error) error {
