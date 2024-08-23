@@ -25,8 +25,15 @@ const (
 	signatureTypeCosignature noteSignatureType = 0x04
 )
 
-func sigsumLogOrigin(keyHash *crypto.Hash) string {
-	return fmt.Sprintf("%s%x", CheckpointNamePrefix, keyHash)
+type noteKeyId [4]byte
+
+func checkpointSigsumOriginFromHash(keyHash *crypto.Hash) string {
+	return fmt.Sprintf("%s%x", CheckpointNamePrefix, *keyHash)
+}
+
+func checkpointSigsumOrigin(publicKey *crypto.PublicKey) string {
+	keyHash := crypto.HashBytes(publicKey[:])
+	return checkpointSigsumOriginFromHash(&keyHash)
 }
 
 func checkpointCosignedData(timestamp uint64, body string) string {
@@ -34,59 +41,87 @@ func checkpointCosignedData(timestamp uint64, body string) string {
 		CosignatureNamespace, timestamp, body)
 }
 
-func makeKeyId(keyName string, sigType noteSignatureType, pubKey *crypto.PublicKey) (res [4]byte) {
+func makeKeyId(keyName string, sigType noteSignatureType, pubKey *crypto.PublicKey) (res noteKeyId) {
 	hash := crypto.HashBytes(bytes.Join([][]byte{[]byte(keyName), []byte{byte(sigType)}, pubKey[:]}, nil))
 	copy(res[:], hash[:4])
 	return
 }
 
-func CheckpointLogKeyId(pubKey *crypto.PublicKey) [4]byte {
-	keyHash := crypto.HashBytes(pubKey[:])
-	return makeKeyId(sigsumLogOrigin(&keyHash), signatureTypeEd25519, pubKey)
+// Information needed to represent a (Sigsum9 log when creating or
+// verifying checkpoints.
+type CheckpointLog struct {
+	PublicKey crypto.PublicKey
+	KeyHash   crypto.Hash // TODO: Really needed?
+	Origin    string
+	KeyId     noteKeyId
 }
 
-func writeNoteSignature(w io.Writer, origin string, sig []byte) error {
-	_, err := fmt.Fprintf(w, "\u2014 %s %s\n", origin, base64.StdEncoding.EncodeToString(sig))
+func NewCheckpointLog(publicKey *crypto.PublicKey) CheckpointLog {
+	keyHash := crypto.HashBytes(publicKey[:])
+	origin := checkpointSigsumOriginFromHash(&keyHash)
+	return CheckpointLog{
+		PublicKey: *publicKey,
+		KeyHash:   keyHash,
+		Origin:    origin,
+		KeyId:     makeKeyId(origin, signatureTypeEd25519, publicKey),
+	}
+}
+
+func writeNoteSignature(w io.Writer, keyName string, sig []byte) error {
+	_, err := fmt.Fprintf(w, "\u2014 %s %s\n", keyName, base64.StdEncoding.EncodeToString(sig))
 	return err
 }
 
-func WriteNoteLogSignature(w io.Writer, origin string, keyId [4]byte, sig *crypto.Signature) error {
-	return writeNoteSignature(w, origin, bytes.Join([][]byte{keyId[:], sig[:]}, nil))
+func (log *CheckpointLog) WriteLogSignature(w io.Writer, sig *crypto.Signature) error {
+	return writeNoteSignature(w, log.Origin, bytes.Join([][]byte{log.KeyId[:], sig[:]}, nil))
 }
 
-func WriteNoteCosignature(w io.Writer, origin string, keyId [4]byte, timestamp uint64, sig *crypto.Signature) error {
+// See https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md for
+// specification.
+func (log *CheckpointLog) WriteCheckpoint(w io.Writer, sth *SignedTreeHead) error {
+	if _, err := fmt.Fprintf(w, "%s\n", sth.formatCheckpoint(log.Origin)); err != nil {
+		return err
+	}
+
+	return log.WriteLogSignature(w, &sth.Signature)
+
+}
+
+func WriteNoteCosignature(w io.Writer, keyName string, keyId noteKeyId, timestamp uint64, sig *crypto.Signature) error {
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], timestamp)
-	return writeNoteSignature(w, origin, bytes.Join([][]byte{keyId[:], buf[:], sig[:]}, nil))
+	return writeNoteSignature(w, keyName, bytes.Join([][]byte{keyId[:], buf[:], sig[:]}, nil))
 }
 
 // Represent a half-processed signature line.
 type signatureLine struct {
-	keyName string
-	keyId   [4]byte
-	// Always at least the size of an ed25519 signature, i.e., 32 bytes.
-	signature []byte
+	keyName   string
+	keyId     noteKeyId
+	signature crypto.Signature
 }
 
-// Imput is a single signature line, with new trailign newline character.
-func parseSignatureLine(line string) (signatureLine, error) {
+// Input is a single signature line, with no trailing newline character.
+// Fails if signature blob is not of the expected size.
+func parseSignatureLine(line string, prefixSize int) (signatureLine, []byte, error) {
 	fields := strings.Split(line, " ")
 	if len(fields) != 3 || fields[0] != "\u2014" {
-		return signatureLine{}, fmt.Errorf("invalid signature line %q", line)
+		return signatureLine{}, nil, fmt.Errorf("invalid signature line %q", line)
 	}
 	signature, err := base64.StdEncoding.DecodeString(fields[2])
 	if err != nil {
-		return signatureLine{}, fmt.Errorf("invalid base signature on line %q: %v", line, err)
+		return signatureLine{}, nil, fmt.Errorf("invalid base signature on line %q: %v", line, err)
 	}
-	if len(signature) < 36 {
-		return signatureLine{}, fmt.Errorf("signature blob too short on line %q: %v", line, err)
+	if want := 4 + prefixSize + crypto.SignatureSize; len(signature) != want {
+		return signatureLine{}, nil, fmt.Errorf("unexpected signature blob size, got %d, wanted %d, on line %q", len(signature), want, line)
 	}
-	var keyId [4]byte
-	copy(keyId[:], signature[:4])
-	return signatureLine{keyName: fields[1], keyId: keyId, signature: signature[4:]}, nil
+	res := signatureLine{keyName: fields[1]}
+	copy(res.keyId[:], signature[:4])
+	copy(res.signature[:], signature[4+prefixSize:])
 
+	return res, signature[4 : 4+prefixSize], nil
 }
 
+// Parse note, keeping only signatures of Ed25519 size.
 func parseNote(note string) (string, []signatureLine, error) {
 	sep := strings.LastIndex(note, "\n\n")
 	if sep < 0 {
@@ -103,11 +138,11 @@ func parseNote(note string) (string, []signatureLine, error) {
 		if i == len(lines)-1 && line == "" {
 			break
 		}
-		signature, err := parseSignatureLine(line)
-		if err != nil {
-			return "", nil, fmt.Errorf("error in signature line #%d: %v", i, err)
+		signature, _, err := parseSignatureLine(line, 0)
+		// Silently ignore any errors.
+		if err == nil {
+			signatures = append(signatures, signature)
 		}
-		signatures = append(signatures, signature)
 	}
 	return body, signatures, nil
 }
@@ -140,32 +175,23 @@ func parseCheckpointBody(body, origin string) (TreeHead, error) {
 	return th, nil
 }
 
-// Checks only the logs signature, ignores any other signature lines,
+// Checks only the log's signature, ignores any other signature lines,
 // including cosignatures.
-func ParseCheckpoint(checkpoint string, logKey *crypto.PublicKey) (SignedTreeHead, error) {
-	keyHash := crypto.HashBytes(logKey[:])
-	origin := sigsumLogOrigin(&keyHash)
-	keyId := makeKeyId(origin, signatureTypeEd25519, logKey)
-
+func (log *CheckpointLog) ParseCheckpoint(checkpoint string) (SignedTreeHead, error) {
 	body, signatures, err := parseNote(checkpoint)
 	if err != nil {
 		return SignedTreeHead{}, err
 	}
-	for _, signature := range signatures {
-		var sig crypto.Signature
-		if signature.keyName != origin || signature.keyId != keyId {
+	for _, line := range signatures {
+		if line.keyName != log.Origin || line.keyId != log.KeyId {
 			continue
 		}
-		if len(signature.signature) != len(sig) {
-			continue
-		}
-		copy(sig[:], signature.signature)
-		if crypto.Verify(logKey, []byte(body), &sig) {
-			th, err := parseCheckpointBody(body, origin)
+		if crypto.Verify(&log.PublicKey, []byte(body), &line.signature) {
+			th, err := parseCheckpointBody(body, log.Origin)
 			if err != nil {
 				return SignedTreeHead{}, err
 			}
-			return SignedTreeHead{TreeHead: th, Signature: sig}, nil
+			return SignedTreeHead{TreeHead: th, Signature: line.signature}, nil
 		}
 	}
 	return SignedTreeHead{}, fmt.Errorf("checkpoint has no valid log signature")
@@ -174,29 +200,24 @@ func ParseCheckpoint(checkpoint string, logKey *crypto.PublicKey) (SignedTreeHea
 // Expects signature with a particular witness public key, and ignores
 // the key name on the line, except that it is used to match the
 // keyId.
-func ParseCheckpointCosignature(body string, line string, pubKey *crypto.PublicKey) (Cosignature, error) {
-	signature, err := parseSignatureLine(line)
+func ParseCheckpointCosignature(body string, in string, publicKey *crypto.PublicKey) (Cosignature, error) {
+	line, prefix, err := parseSignatureLine(in, 8)
 	if err != nil {
 		return Cosignature{}, err
 	}
-	if len(signature.signature) != 40 {
-		return Cosignature{}, fmt.Errorf("unexpected signature size")
-	}
-	if keyId := makeKeyId(signature.keyName, signatureTypeCosignature, pubKey); signature.keyId != keyId {
+	if keyId := makeKeyId(line.keyName, signatureTypeCosignature, publicKey); line.keyId != keyId {
 		return Cosignature{}, fmt.Errorf("unexpected signature keyId")
 	}
 
-	timestamp := binary.BigEndian.Uint64(signature.signature[:8])
+	timestamp := binary.BigEndian.Uint64(prefix)
 
 	msg := checkpointCosignedData(timestamp, body)
-	var sig crypto.Signature
-	copy(sig[:], signature.signature[8:])
-	if !crypto.Verify(pubKey, []byte(msg), &sig) {
+	if !crypto.Verify(publicKey, []byte(msg), &line.signature) {
 		return Cosignature{}, fmt.Errorf("invalid cosignature")
 	}
 	return Cosignature{
-		KeyHash:   crypto.HashBytes(pubKey[:]),
+		KeyHash:   crypto.HashBytes(publicKey[:]),
 		Timestamp: timestamp,
-		Signature: sig,
+		Signature: line.signature,
 	}, nil
 }
