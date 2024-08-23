@@ -13,11 +13,11 @@ import (
 
 func NewWitness(config *Config, witness api.Witness) http.Handler {
 	server := newServer(config)
-	server.register(types.EndpointGetTreeSize, http.MethodGet,
+	server.register(http.MethodGet, types.EndpointGetTreeSize, "{hash}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.GetTreeSize
-			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+			if err := req.FromURLArgs(r.PathValue("hash")); err != nil {
+				reportError(w, r.URL, api.ErrBadRequest.WithError(err))
 				return
 			}
 			size, err := witness.GetTreeSize(r.Context(), req)
@@ -29,11 +29,11 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 				logError(r.URL, err)
 			}
 		}))
-	server.register(types.EndpointAddTreeHead, http.MethodPost,
+	server.register(http.MethodPost, types.EndpointAddTreeHead, "",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.AddTreeHead
 			if err := req.FromASCII(r.Body); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+				reportError(w, r.URL, api.ErrBadRequest.WithError(err))
 				return
 			}
 			keyHash, cs, err := witness.AddTreeHead(r.Context(), req)
@@ -46,11 +46,11 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 			}
 		}))
 
-	server.register(types.EndpointAddCheckpoint, http.MethodPost,
+	server.register(http.MethodPost, types.EndpointAddCheckpoint, "",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.AddCheckpoint
 			if err := req.FromASCII(r.Body); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+				reportError(w, r.URL, api.ErrBadRequest.WithError(err))
 				return
 			}
 
@@ -72,7 +72,7 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 			for _, signature := range signatures {
 				if err := signature.ToASCII(w); err != nil {
 					logError(r.URL, err)
-					break
+					return
 				}
 			}
 		}))

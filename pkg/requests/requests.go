@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"strings"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -30,19 +29,6 @@ type InclusionProof struct {
 type ConsistencyProof struct {
 	OldSize uint64
 	NewSize uint64
-}
-
-// Returns the index of the nth last occurence of the substr, or -1 if
-// there are not enough occurences. If n <= 0, returns len(s).
-func nLastIndex(s, substr string, n int) int {
-	for i := 0; i < n; i++ {
-		index := strings.LastIndex(s, substr)
-		if index < 0 {
-			return index
-		}
-		s = s[:index]
-	}
-	return len(s)
 }
 
 func (req *Leaf) ToASCII(w io.Writer) error {
@@ -100,65 +86,26 @@ func (req *Leaf) FromASCII(r io.Reader) error {
 	return p.GetEOF()
 }
 
-func (req *Leaves) FromURLArgs(args string) (err error) {
-	split := strings.Split(args, "/")
-	if len(split) != 2 {
-		return fmt.Errorf("invalid arguments")
-	}
-	if req.StartIndex, err = ascii.IntFromDecimal(split[0]); err != nil {
+func (req *Leaves) FromURLArgs(start, end string) (err error) {
+	if req.StartIndex, err = ascii.IntFromDecimal(start); err != nil {
 		return err
 	}
-	req.EndIndex, err = ascii.IntFromDecimal(split[1])
+	req.EndIndex, err = ascii.IntFromDecimal(end)
 	return err
 }
 
-// FromURL parses request parameters from a URL that is not slash-terminated
-func (req *Leaves) FromURL(url string) (err error) {
-	index := nLastIndex(url, "/", 2)
-	if index < 0 {
-		return fmt.Errorf("not enough input")
-	}
-	return req.FromURLArgs(url[index+1:])
-}
-
-func (req *InclusionProof) FromURLArgs(args string) (err error) {
-	split := strings.Split(args, "/")
-	if len(split) != 2 {
-		return fmt.Errorf("invalid arguments")
-	}
-	if req.Size, err = ascii.IntFromDecimal(split[0]); err != nil {
+func (req *InclusionProof) FromURLArgs(size, hash string) (err error) {
+	if req.Size, err = ascii.IntFromDecimal(size); err != nil {
 		return err
 	}
-	req.LeafHash, err = crypto.HashFromHex(split[1])
+	req.LeafHash, err = crypto.HashFromHex(hash)
 	return err
 }
 
-// FromURL parses request parameters from a URL that is not slash-terminated
-func (req *InclusionProof) FromURL(url string) (err error) {
-	index := nLastIndex(url, "/", 2)
-	if index < 0 {
-		return fmt.Errorf("not enough input")
-	}
-	return req.FromURLArgs(url[index+1:])
-}
-
-func (req *ConsistencyProof) FromURLArgs(args string) (err error) {
-	split := strings.Split(args, "/")
-	if len(split) != 2 {
-		return fmt.Errorf("invalid arguments")
-	}
-	if req.OldSize, err = ascii.IntFromDecimal(split[0]); err != nil {
+func (req *ConsistencyProof) FromURLArgs(old, new string) (err error) {
+	if req.OldSize, err = ascii.IntFromDecimal(old); err != nil {
 		return err
 	}
-	req.NewSize, err = ascii.IntFromDecimal(split[1])
+	req.NewSize, err = ascii.IntFromDecimal(new)
 	return err
-}
-
-// FromURL parses request parameters from a URL that is not slash-terminated
-func (req *ConsistencyProof) FromURL(url string) (err error) {
-	index := nLastIndex(url, "/", 2)
-	if index < 0 {
-		return fmt.Errorf("not enough input")
-	}
-	return req.FromURLArgs(url[index+1:])
 }
