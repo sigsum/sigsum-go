@@ -12,11 +12,11 @@ import (
 
 func NewWitness(config *Config, witness api.Witness) http.Handler {
 	server := newServer(config)
-	server.register(types.EndpointAddCheckpoint, http.MethodPost,
+	server.register(http.MethodPost, types.EndpointAddCheckpoint, "",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.AddCheckpoint
 			if err := req.FromASCII(r.Body); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+				reportError(w, r.URL, api.ErrBadRequest.WithError(err))
 				return
 			}
 
@@ -38,7 +38,7 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 			for _, signature := range signatures {
 				if err := signature.ToASCII(w); err != nil {
 					logError(r.URL, err)
-					break
+					return
 				}
 			}
 		}))

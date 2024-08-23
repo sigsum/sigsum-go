@@ -49,21 +49,22 @@ func queryServer(t *testing.T, server http.Handler, method, url, body string) (*
 func TestGet(t *testing.T) {
 	config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 	server := newServer(&config)
-	server.register("get-x", http.MethodGet,
+	server.register(http.MethodGet, "get-x", "",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := fmt.Fprintf(w, "x-response\n")
 			if err != nil {
 				t.Fatalf("writing response failed: %v\n", err)
 			}
 		}))
-	server.register("get-y/", http.MethodGet,
+	server.register(http.MethodGet, "get-y/", "{args...}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			args := GetSigsumURLArguments(r)
+			args := r.PathValue("args")
 			if len(args) == 0 {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, fmt.Errorf("missing y"))
+				reportError(w, r.URL, api.ErrBadRequest.WithError(
+					fmt.Errorf("missing y")))
 				return
 			}
-			_, err := fmt.Fprintf(w, "y-response: %s\n", GetSigsumURLArguments(r))
+			_, err := fmt.Fprintf(w, "y-response: %s\n", args)
 			if err != nil {
 				t.Fatalf("writing response failed: %v\n", err)
 			}
@@ -80,7 +81,7 @@ func TestGet(t *testing.T) {
 		{url: "/foo/get-x", status: 405, usePost: true, response: "Method Not Allowed\n"},
 		{url: "/foo/get-xx", status: 404},
 		{url: "/foo/get-y", status: 301, htmlContentType: true},
-		{url: "/foo/get-y/", status: 400, response: "missing y\n"},
+		{url: "/foo/get-y/", status: 400, response: "(400) missing y\n"},
 		{url: "/foo/get-y/bar", status: 200, response: "y-response: bar\n"},
 	} {
 		method := "GET"
@@ -110,7 +111,7 @@ func TestGet(t *testing.T) {
 func TestPost(t *testing.T) {
 	config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 	server := newServer(&config)
-	server.register("add-x", http.MethodPost,
+	server.register(http.MethodPost, "add-x", "",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
@@ -118,7 +119,8 @@ func TestPost(t *testing.T) {
 			}
 			switch string(body) {
 			default:
-				reportErrorCode(w, r.URL, http.StatusBadRequest, fmt.Errorf("bad request %q", body))
+				reportError(w, r.URL, api.ErrBadRequest.WithError(
+					fmt.Errorf("bad request %q", body)))
 			case "accept":
 				reportError(w, r.URL, api.ErrAccepted)
 			case "ok":
@@ -175,9 +177,10 @@ func TestMetrics(t *testing.T) {
 	testDelay := 200 * time.Millisecond
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch args := GetSigsumURLArguments(r); args {
+		switch args := r.PathValue("args"); args {
 		default:
-			reportErrorCode(w, r.URL, http.StatusBadRequest, fmt.Errorf("bad request %q", args))
+			reportError(w, r.URL, api.ErrBadRequest.WithError(
+				fmt.Errorf("bad request %q", args)))
 		case "ok":
 			// Do nothing
 		case "accept":
@@ -205,7 +208,7 @@ func TestMetrics(t *testing.T) {
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute, Metrics: metrics}
 			server := newServer(&config)
-			server.register("get-x/", http.MethodGet, handler)
+			server.register(http.MethodGet, "get-x/", "{args...}", handler)
 			method := "GET"
 			if table.usePost {
 				method = "POST"
