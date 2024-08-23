@@ -73,9 +73,9 @@ func TestGetInclusionProof(t *testing.T) {
 		status int
 		err    error
 	}{
-		{url: "/foo/get-inclusion-proof", status: 301},
-		{url: "/foo/get-inclusion-proof/", status: 400},
-		{url: "/foo/get-inclusion-proof/x", status: 400},
+		{url: "/foo/get-inclusion-proof", status: 404},
+		{url: "/foo/get-inclusion-proof/", status: 404},
+		{url: "/foo/get-inclusion-proof/x", status: 404},
 		{url: "/foo/get-inclusion-proof/2/x", status: 400},
 		{url: "/foo/get-inclusion-proof/2/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			req:    &req,
@@ -90,7 +90,7 @@ func TestGetInclusionProof(t *testing.T) {
 		},
 		{url: "/foo/get-inclusion-proof/0/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", status: 400},
 		{url: "/foo/get-inclusion-proof/1/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", status: 400},
-		{url: "/foo/get-inclusion-proof/2/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/b", status: 400},
+		{url: "/foo/get-inclusion-proof/2/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/b", status: 404},
 	} {
 		func() {
 			ctrl := gomock.NewController(t)
@@ -135,9 +135,9 @@ func TestGetConsistencyProof(t *testing.T) {
 		status int
 		err    error
 	}{
-		{url: "/foo/get-consistency-proof", status: 301},
-		{url: "/foo/get-consistency-proof/", status: 400},
-		{url: "/foo/get-consistency-proof/x", status: 400},
+		{url: "/foo/get-consistency-proof", status: 404},
+		{url: "/foo/get-consistency-proof/", status: 404},
+		{url: "/foo/get-consistency-proof/x", status: 404},
 		{url: "/foo/get-consistency-proof/2/x", status: 400},
 		{url: "/foo/get-consistency-proof/2/5",
 			req:    &req,
@@ -190,9 +190,9 @@ func TestGetLeaves(t *testing.T) {
 		status int
 		err    error
 	}{
-		{url: "/foo/get-leaves", status: 301},
-		{url: "/foo/get-leaves/", status: 400},
-		{url: "/foo/get-leaves/x", status: 400},
+		{url: "/foo/get-leaves", status: 404},
+		{url: "/foo/get-leaves/", status: 404},
+		{url: "/foo/get-leaves/x", status: 404},
 		{url: "/foo/get-leaves/2/x", status: 400},
 		{url: "/foo/get-leaves/2/5",
 			req:    &req,

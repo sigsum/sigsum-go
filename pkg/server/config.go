@@ -24,9 +24,13 @@ type Config struct {
 	Metrics Metrics
 }
 
-func (c *Config) getTimeout() time.Duration {
-	if c.Timeout > 0 {
-		return c.Timeout
+func (c *Config) withDefaults() Config {
+	config := *c
+	if config.Timeout == 0 {
+		config.Timeout = defaultTimeout
 	}
-	return defaultTimeout
+	if config.Metrics == nil {
+		config.Metrics = noMetrics{}
+	}
+	return config
 }
