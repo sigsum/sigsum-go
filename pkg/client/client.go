@@ -141,10 +141,18 @@ func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (c
 	return keyHash, cs, nil
 }
 
-// TODO: XXX
-// // See https://github.com/C2SP/C2SP/blob/main/tlog-witness.md for specification.
-// func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddTreeHead) (types.Cosignature, error) {
-// }
+// See https://github.com/C2SP/C2SP/blob/main/tlog-witness.md for
+// specification. TODO: Should it return a slice of note signature
+// lines, or a cosignature? In the latter case, it needs witness key
+// as input.
+func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint) ([]string, error) {
+	buf := bytes.Buffer{}
+	req.ToASCII(&buf)
+	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf, func(_ io.Reader) error { return fmt.Errorf("XXX not implemented") }); err != nil {
+		return nil, err
+	}
+	return nil, fmt.Errorf("XXX not implemented")
+}
 
 func (cli *Client) get(ctx context.Context, url string,
 	parseBody func(io.Reader) error) error {

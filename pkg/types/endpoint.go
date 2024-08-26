@@ -13,7 +13,9 @@ const (
 	// For primary/secondary replication.
 	EndpointGetSecondaryTreeHead = Endpoint("get-secondary-tree-head")
 
-	// Sigsum witness api.
+	EndpointAddCheckpoint = Endpoint("add-checkpoint")
+
+	// Deprecated: Old Sigsum witness api.
 	EndpointAddTreeHead = Endpoint("add-tree-head")
 	EndpointGetTreeSize = Endpoint("get-tree-size/")
 )

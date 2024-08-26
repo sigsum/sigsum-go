@@ -97,6 +97,7 @@ func WriteNoteCosignature(w io.Writer, keyName string, keyId noteKeyId, timestam
 type signatureLine struct {
 	keyName   string
 	keyId     noteKeyId
+	prefix    []byte
 	signature crypto.Signature
 }
 
@@ -160,19 +161,14 @@ func parseCheckpointBody(body, origin string) (TreeHead, error) {
 	if err != nil {
 		return TreeHead{}, fmt.Errorf("invalid checkpoint, bad size %q", lines[1])
 	}
-	rootHash, err := base64.StdEncoding.DecodeString(lines[2])
+	rootHash, err := crypto.HashFromBase64(lines[2])
 	if err != nil {
 		return TreeHead{}, fmt.Errorf("invalid checkpoint, bad root hash %q: %v", lines[2], err)
 	}
-	if len(rootHash) != 32 {
-		return TreeHead{}, fmt.Errorf("invalid checkpoint, root hash %q has wrong size", lines[2])
+	if size == 0 && rootHash != merkle.HashEmptyTree() {
+		return TreeHead{}, fmt.Errorf("unexpected root hash %x for empty tree", rootHash)
 	}
-	th := TreeHead{Size: size}
-	copy(th.RootHash[:], rootHash)
-	if size == 0 && th.RootHash != merkle.HashEmptyTree() {
-		return TreeHead{}, fmt.Errorf("unexpected root hash %x for empty tree", th.RootHash)
-	}
-	return th, nil
+	return TreeHead{Size: size, RootHash: rootHash}, nil
 }
 
 // Checks only the log's signature, ignores any other signature lines,
