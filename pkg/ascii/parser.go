@@ -13,6 +13,9 @@ import (
 )
 
 func IntFromDecimal(s string) (uint64, error) {
+	if len(s) > 1 && s[0] == '0' {
+		return 0, fmt.Errorf("invalid decimal number %q, must be no leading zeros", s)
+	}
 	// Use ParseUint, to not accept leading +/-.
 	return strconv.ParseUint(s, 10, 63)
 }
