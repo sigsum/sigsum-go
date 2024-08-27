@@ -3,12 +3,14 @@ package checkpoint
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 // See https://github.com/C2SP/C2SP/blob/signed-note/v1.0.0-rc.1/signed-note.md
@@ -83,4 +85,30 @@ func ParseEd25519SignatureLine(line, keyName string) (KeyId, crypto.Signature, e
 	copy(signature[:], blob)
 
 	return keyId, signature, nil
+}
+
+func WriteCosignature(w io.Writer, keyName string, keyId KeyId, timestamp uint64, sig *crypto.Signature) error {
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], timestamp)
+	return writeNoteSignature(w, keyName, keyId, bytes.Join([][]byte{buf[:], sig[:]}, nil))
+}
+
+// Looks for a signature with a particular witness public key, and
+// ignores the key name on the line, except that it is used to match
+// the keyId. Does not verify the signature.
+func ParseCosignature(line string, publicKey *crypto.PublicKey) (types.Cosignature, error) {
+	keyName, keyId, blob, err := parseNoteSignature(line, 8+crypto.SignatureSize)
+	if err != nil {
+		return types.Cosignature{}, err
+	}
+	if keyId != makeKeyId(keyName, sigTypeCosignature, publicKey) {
+		return types.Cosignature{}, ErrUnwantedSignature
+	}
+
+	cs := types.Cosignature{
+		KeyHash:   crypto.HashBytes(publicKey[:]),
+		Timestamp: binary.BigEndian.Uint64(blob[:8]),
+	}
+	copy(cs.Signature[:], blob[8:])
+	return cs, nil
 }
