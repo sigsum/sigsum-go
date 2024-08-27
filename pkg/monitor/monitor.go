@@ -155,10 +155,10 @@ func StartMonitoring(
 		}
 
 		wg.Add(1)
-		go func() {
+		go func(l policy.Entity) {
 			MonitorLog(ctx, newMonitoringLogClient(&l.PublicKey, l.URL), initialState, config)
 			wg.Done()
-		}()
+		}(l)
 	}
 	ch := make(chan struct{})
 	go func() {
