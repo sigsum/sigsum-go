@@ -15,10 +15,13 @@ import (
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/checkpoint"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
 )
+
+const contentTypeTlogSize = "text/x.tlog.size"
 
 type Config struct {
 	UserAgent string
@@ -142,16 +145,30 @@ func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (c
 }
 
 // See https://github.com/C2SP/C2SP/blob/main/tlog-witness.md for
-// specification. TODO: Should it return a slice of note signature
-// lines, or a cosignature? In the latter case, it needs witness key
-// as input.
-func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint) ([]string, error) {
+// specification.
+func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint) ([]checkpoint.SignatureLine, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
-	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf, func(_ io.Reader) error { return fmt.Errorf("XXX not implemented") }); err != nil {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, types.EndpointAddTreeHead.Path(cli.config.URL), &buf)
+	if err != nil {
 		return nil, err
 	}
-	return nil, fmt.Errorf("XXX not implemented")
+	// TODO: Add error handling hooks to cli.post(...).
+	httpReq.Header.Set("User-Agent", cli.config.UserAgent)
+
+	rsp, err := cli.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("send request: %w", err)
+	}
+	defer rsp.Body.Close()
+	if rsp.StatusCode == http.StatusOK {
+		// TODO: Parse signature lines.
+		return nil, fmt.Errorf("XXX not implemented")
+	}
+	if rsp.StatusCode == http.StatusConflict && rsp.Header.Get("Content-Type") == contentTypeTlogSize {
+		return nil, fmt.Errorf("XXX not implemented")
+	}
+	return nil, responseErrorHandling(rsp)
 }
 
 func (cli *Client) get(ctx context.Context, url string,
@@ -186,13 +203,19 @@ func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error) error 
 	if rsp.StatusCode == http.StatusOK && parseBody != nil {
 		return parseBody(rsp.Body)
 	}
+	return responseErrorHandling(rsp)
+}
+
+func responseErrorHandling(rsp *http.Response) error {
 	b, err := io.ReadAll(rsp.Body)
 	if err != nil {
-		return fmt.Errorf("status code %d, no server response: %w",
-			rsp.StatusCode, err)
+		return api.NewError(rsp.StatusCode, fmt.Errorf("no server response: %w", err))
 	}
 	if rsp.StatusCode != http.StatusOK {
 		return api.NewError(rsp.StatusCode, fmt.Errorf("server: %q", b))
+	}
+	if len(b) > 0 {
+		return fmt.Errorf("unexpected server response (status OK): %q", b)
 	}
 	return nil
 }
