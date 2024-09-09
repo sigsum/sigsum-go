@@ -62,7 +62,6 @@ func (cli *Client) GetInclusionProof(ctx context.Context, req requests.Inclusion
 		return types.InclusionProof{}, api.ErrNotFound
 	}
 	if req.Size == 1 {
-		// Trivial proof: index 0, empty path
 		return types.InclusionProof{}, nil
 	}
 	err = cli.get(ctx, req.ToURL(types.EndpointGetInclusionProof.Path(cli.config.URL)), proof.FromASCII)
@@ -71,7 +70,6 @@ func (cli *Client) GetInclusionProof(ctx context.Context, req requests.Inclusion
 
 func (cli *Client) GetConsistencyProof(ctx context.Context, req requests.ConsistencyProof) (proof types.ConsistencyProof, err error) {
 	if req.OldSize == 0 || req.OldSize == req.NewSize {
-		// Trivial proof: empty path
 		return types.ConsistencyProof{}, nil
 	}
 	err = cli.get(ctx, req.ToURL(types.EndpointGetConsistencyProof.Path(cli.config.URL)), proof.FromASCII)

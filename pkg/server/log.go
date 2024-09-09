@@ -47,6 +47,11 @@ func NewGetLeavesServer(config *Config, getLeaves func(context.Context, requests
 	return newGetLeavesServer(config, getLeaves)
 }
 
+// Returns a HTTP handler for a Sigsum log, represented by the passed
+// in api.Log. The handler checks the validity of requests as far as
+// possibly without knowledge of the log's current state. In
+// particular, requests for trivial inclusion and consistency proofs
+// are rejected, and not passed on to the underlying api.Log.
 func NewLog(config *Config, log api.Log) http.Handler {
 	server := newGetLeavesServer(config, log.GetLeaves)
 	server.register(types.EndpointGetTreeHead, http.MethodGet,
