@@ -95,6 +95,32 @@ func (pr *ParagraphReader) Read(p []byte) (int, error) {
 	return n, pr.err
 }
 
+// // Reads buffered data followed by data from underlying reader. Reads
+// // as much as possible, until request is satisfied or until there's an error or EOF
+// // on the underlying reader.
+// // TODO: Currently resets paragraph parsing state unconditionally.
+// // Consider if there's something more useful to do.
+// func (pr *ParagraphReader) ReadRaw(p []byte) (int, error) {
+// 	pr.atEndOfLine = false
+// 	pr.atEnd = false
+//
+// 	if len(p) <= len(pr.buf) {
+// 		copy(p, pr.buf)
+// 		pr.buf := pr.buf[len(p):]
+// 		return len(p), nil
+// 	}
+// 	buffered := len(pr.buf)
+// 	copy(p, pr.buf)
+// 	pr.buf := nil
+// 	if pr.err != nil {
+// 		return buffered, pr.err
+// 	}
+// 	res, err := pr.r.Read(p[buffered:])
+// 	res += buffered
+// 	pr.err = err
+// 	return res, err
+// }
+
 // Advances to next paragraph, if at a paragraph separator. Should be
 // called only after encountering EOF from Read. If at the end of the
 // data from the underlying io.Reader, returns the corresponding

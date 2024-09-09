@@ -104,7 +104,6 @@ func ParseCosignature(line string, publicKey *crypto.PublicKey) (types.Cosignatu
 	if keyId != makeKeyId(keyName, sigTypeCosignature, publicKey) {
 		return types.Cosignature{}, ErrUnwantedSignature
 	}
-
 	cs := types.Cosignature{
 		KeyHash:   crypto.HashBytes(publicKey[:]),
 		Timestamp: binary.BigEndian.Uint64(blob[:8]),
