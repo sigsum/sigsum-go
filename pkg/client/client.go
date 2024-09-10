@@ -21,8 +21,6 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-const contentTypeTlogSize = "text/x.tlog.size"
-
 // bytes.CutSuffix added in go-1.20.
 func cutSuffix(b, suffix []byte) ([]byte, bool) {
 	if bytes.HasSuffix(b, suffix) {
@@ -181,7 +179,7 @@ func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint
 		},
 		func(rsp *http.Response) error {
 			if rsp.StatusCode == http.StatusConflict {
-				if got := rsp.Header.Get("Content-Type"); got != contentTypeTlogSize {
+				if got := rsp.Header.Get("content-type"); got != checkpoint.ContentTypeTlogSize {
 					return api.ErrConflict.WithError(fmt.Errorf("unexpected content type for Conflict response: %q", got))
 				}
 				data, err := io.ReadAll(rsp.Body)

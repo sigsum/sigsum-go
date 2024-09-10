@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
@@ -17,6 +18,7 @@ import (
 
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/api"
+	"sigsum.org/sigsum-go/pkg/checkpoint"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/requests"
@@ -128,11 +130,12 @@ type witness struct {
 	signer  crypto.Signer
 	keyHash crypto.Hash
 	logPub  crypto.PublicKey
+	logKeyHash crypto.Hash
 	state   *state
 }
 
 func (s *witness) GetTreeSize(_ context.Context, req requests.GetTreeSize) (uint64, error) {
-	if req.KeyHash != crypto.HashBytes(s.logPub[:]) {
+	if req.KeyHash != s.logKeyHash {
 		return 0, api.ErrNotFound
 	}
 	return s.state.GetSize(), nil
@@ -148,12 +151,37 @@ func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (cryp
 	}
 	cs, err := s.state.Update(&req.TreeHead, req.OldSize, &req.Proof, &s.keyHash,
 		func() (types.Cosignature, error) {
-			return req.TreeHead.Cosign(s.signer, &logKeyHash, uint64(time.Now().Unix()))
+			return req.TreeHead.Cosign(s.signer, &s.logKeyHash, uint64(time.Now().Unix()))
 		})
 	if err != nil {
 		return crypto.Hash{}, types.Cosignature{}, err
 	}
 	return s.keyHash, cs, nil
+}
+
+func (s *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error) {
+	if req.Checkpoint.Origin != s.log.Origin {
+		return nil, api.ErrNotFound
+	}
+	sth, err := s.log.FromCheckpoint(&req.Checkpoint)
+	if err != nil {
+		return nil, api.ErrForbidden.WithError(err)
+	}
+	cs, err := s.state.Update(&sth, req.OldSize, &req.Proof,
+		func() (types.Cosignature, error) {
+			return sth.Cosign(s.signer, &s.logKeyHash, uint64(time.Now().Unix()))
+		})
+	if err != nil {
+		return nil, err
+	}
+	// TODO: XXX Begs for suitable library helpers.
+	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", cs.KeyHash)
+	publicKey := s.signer.Public()
+	keyId := checkpoint.NewWitnessKeyId(keyName, &publicKey)
+	prefix := [8]byte{}
+	binary.BigEndian.PutUint64(prefix[:], cs.Timestamp)
+	return []checkpoint.SignatureLine{checkpoint.SignatureLine{
+		KeyName: keyName, KeyId: keyId, Prefix: prefix[:], Signature: cs.Signature}}, nil
 }
 
 type state struct {
@@ -230,7 +258,7 @@ func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, proof *types.C
 	defer s.m.Unlock()
 
 	if s.th.Size != oldSize {
-		return types.Cosignature{}, api.ErrConflict
+		return types.Cosignature{}, api.ErrConflict.WithOldSize(s.th.Size)
 	}
 
 	if err := proof.Verify(&s.th, &sth.TreeHead); err != nil {
