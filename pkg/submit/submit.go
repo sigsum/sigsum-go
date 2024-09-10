@@ -188,23 +188,20 @@ func submitLeafToLog(ctx context.Context, policy *policy.Policy,
 			}
 			continue
 		}
-		// For TreeHead.Size == 1, inclusion proof is trivial.
-		if pr.TreeHead.Size > 1 {
-			pr.Inclusion, err = cli.GetInclusionProof(ctx,
-				requests.InclusionProof{
-					Size:     pr.TreeHead.Size,
-					LeafHash: *leafHash,
-				})
-			if errors.Is(err, api.ErrNotFound) {
-				log.Debug("No inclusion proof yet, waiting.")
-				if err := sleep(ctx); err != nil {
-					return proof.SigsumProof{}, err
-				}
-				continue
+		pr.Inclusion, err = cli.GetInclusionProof(ctx,
+			requests.InclusionProof{
+				Size:     pr.TreeHead.Size,
+				LeafHash: *leafHash,
+			})
+		if errors.Is(err, api.ErrNotFound) {
+			log.Debug("No inclusion proof yet, waiting.")
+			if err := sleep(ctx); err != nil {
+				return proof.SigsumProof{}, err
 			}
-			if err != nil {
-				return proof.SigsumProof{}, fmt.Errorf("failed to get inclusion proof: %v", err)
-			}
+			continue
+		}
+		if err != nil {
+			return proof.SigsumProof{}, fmt.Errorf("failed to get inclusion proof: %v", err)
 		}
 
 		// Check validity.

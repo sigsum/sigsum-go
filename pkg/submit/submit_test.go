@@ -46,9 +46,7 @@ func TestSubmitSuccess(t *testing.T) {
 		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
 		client.EXPECT().GetTreeHead(gomock.Any()).Return(
 			types.CosignedTreeHead{SignedTreeHead: sth}, nil)
-		if len(inclusionProof.Path) > 0 {
-			client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
-		}
+		client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
 		pr, err := submitLeafToLog(context.Background(), policy,
 			client, &logKeyHash, nil, func(_ context.Context) error { return nil },
 			&req, &leafHash)

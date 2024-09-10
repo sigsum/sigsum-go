@@ -9,7 +9,10 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-// Interface for log api.
+// Interface for Sigsum's log api, corresponding to the end points of
+// the HTTP wire protocol. Implementations of this interface are
+// expected to support requests for trivial inclusion and consistency
+// proofs, even though such requests are not allowed on the wire.
 type Log interface {
 	GetTreeHead(context.Context) (types.CosignedTreeHead, error)
 	GetInclusionProof(context.Context, requests.InclusionProof) (types.InclusionProof, error)

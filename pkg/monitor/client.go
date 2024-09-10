@@ -42,13 +42,9 @@ func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.T
 	if cth.Size < treeHead.Size {
 		return types.SignedTreeHead{}, newAlert(AlertInconsistentTreeHead, "monitored log has shrunk, size %d, previous size %d", cth.Size, treeHead.Size)
 	}
-	var proof types.ConsistencyProof
-	if treeHead.Size > 0 && cth.Size > treeHead.Size {
-		var err error
-		proof, err = c.client.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: treeHead.Size, NewSize: cth.Size})
-		if err != nil {
-			return types.SignedTreeHead{}, newAlert(AlertLogError, "get-consistency-proof failed: %v", err)
-		}
+	proof, err := c.client.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: treeHead.Size, NewSize: cth.Size})
+	if err != nil {
+		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-consistency-proof failed: %v", err)
 	}
 	if err := proof.Verify(treeHead, &cth.TreeHead); err != nil {
 		return types.SignedTreeHead{}, newAlert(AlertInconsistentTreeHead, "consistency proof not valid: %v", err)
@@ -58,10 +54,6 @@ func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.T
 
 func (c *monitoringLogClient) getInclusionProofAtIndex(ctx context.Context,
 	index uint64, req requests.InclusionProof) (types.InclusionProof, error) {
-	if req.Size == 1 {
-		// Trivial proof: index 0, empty path
-		return types.InclusionProof{}, nil
-	}
 	proof, err := c.client.GetInclusionProof(ctx, req)
 	if err != nil {
 		return types.InclusionProof{}, newAlert(AlertLogError, "get-inclusion-proof failed: %v", err)
