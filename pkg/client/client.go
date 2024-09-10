@@ -23,6 +23,14 @@ import (
 
 const contentTypeTlogSize = "text/x.tlog.size"
 
+// bytes.CutSuffix added in go-1.20.
+func cutSuffix(b, suffix []byte) ([]byte, bool) {
+	if bytes.HasSuffix(b, suffix) {
+		return b[:len(b)-len(suffix)], true
+	}
+	return b, false
+}
+
 type Config struct {
 	UserAgent string
 	URL       string
@@ -101,7 +109,7 @@ func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf, header *token
 		s := header.ToHeader()
 		tokenHeader = &s
 	}
-	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.URL), tokenHeader, &buf, nil); err != nil {
+	if err := cli.post(ctx, types.EndpointAddLeaf.Path(cli.config.URL), tokenHeader, &buf, nil, nil); err != nil {
 		if errors.Is(err, api.ErrAccepted) {
 			return false, nil
 		}
@@ -138,7 +146,7 @@ func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (c
 			var err error
 			keyHash, err = cs.FromASCII(r)
 			return err
-		}); err != nil {
+		}, nil); err != nil {
 		return crypto.Hash{}, types.Cosignature{}, err
 	}
 	return keyHash, cs, nil
@@ -149,26 +157,52 @@ func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (c
 func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint) ([]checkpoint.SignatureLine, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, types.EndpointAddTreeHead.Path(cli.config.URL), &buf)
-	if err != nil {
+	var signatures []checkpoint.SignatureLine
+	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf,
+		func(body io.Reader) error {
+			reader := ascii.NewLineReader(body)
+			for {
+				line, err := reader.GetLine()
+				if err == io.EOF {
+					return nil
+				}
+				if err != nil {
+					return err
+				}
+				signature, err := checkpoint.ParseSignatureLine(line)
+				if err != nil {
+					return err
+				}
+				// Ignore lines with sizes that don't match cosignatures
+				if len(signature.Prefix) == 8 {
+					signatures = append(signatures, signature)
+				}
+			}
+		},
+		func(rsp *http.Response) error {
+			if rsp.StatusCode == http.StatusConflict {
+				if got := rsp.Header.Get("Content-Type"); got != contentTypeTlogSize {
+					return api.ErrConflict.WithError(fmt.Errorf("unexpected content type for Conflict response: %q", got))
+				}
+				data, err := io.ReadAll(rsp.Body)
+				if err != nil {
+					return err
+				}
+				data, found := cutSuffix(data, []byte{'\n'})
+				if !found {
+					return api.ErrConflict.WithError(fmt.Errorf("invalid response, no end of line: %q", data))
+				}
+				oldSize, err := ascii.IntFromDecimal(string(data))
+				if err != nil {
+					return api.ErrConflict.WithError(fmt.Errorf("invalid response %q: %s", data, err))
+				}
+				return api.ErrConflict.WithOldSize(oldSize)
+			}
+			return responseErrorHandling(rsp)
+		}); err != nil {
 		return nil, err
 	}
-	// TODO: Add error handling hooks to cli.post(...).
-	httpReq.Header.Set("User-Agent", cli.config.UserAgent)
-
-	rsp, err := cli.client.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("send request: %w", err)
-	}
-	defer rsp.Body.Close()
-	if rsp.StatusCode == http.StatusOK {
-		// TODO: Parse signature lines.
-		return nil, fmt.Errorf("XXX not implemented")
-	}
-	if rsp.StatusCode == http.StatusConflict && rsp.Header.Get("Content-Type") == contentTypeTlogSize {
-		return nil, fmt.Errorf("XXX not implemented")
-	}
-	return nil, responseErrorHandling(rsp)
+	return signatures, nil
 }
 
 func (cli *Client) get(ctx context.Context, url string,
@@ -177,10 +211,10 @@ func (cli *Client) get(ctx context.Context, url string,
 	if err != nil {
 		return err
 	}
-	return cli.do(req, parseBody)
+	return cli.do(req, parseBody, nil)
 }
 
-func (cli *Client) post(ctx context.Context, url string, tokenHeader *string, requestBody io.Reader, parseResponse func(io.Reader) error) error {
+func (cli *Client) post(ctx context.Context, url string, tokenHeader *string, requestBody io.Reader, parseResponse func(io.Reader) error, errorHook func(*http.Response) error) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, requestBody)
 	if err != nil {
 		return err
@@ -188,10 +222,10 @@ func (cli *Client) post(ctx context.Context, url string, tokenHeader *string, re
 	if tokenHeader != nil {
 		req.Header.Add(token.HeaderName, *tokenHeader)
 	}
-	return cli.do(req, parseResponse)
+	return cli.do(req, parseResponse, errorHook)
 }
 
-func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error) error {
+func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error, errorHook func(*http.Response) error) error {
 	// TODO: redirects, see go doc http.Client.CheckRedirect
 	req.Header.Set("User-Agent", cli.config.UserAgent)
 
@@ -203,13 +237,21 @@ func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error) error 
 	if rsp.StatusCode == http.StatusOK && parseBody != nil {
 		return parseBody(rsp.Body)
 	}
+	if errorHook != nil {
+		return errorHook(rsp)
+	}
 	return responseErrorHandling(rsp)
 }
 
 func responseErrorHandling(rsp *http.Response) error {
 	b, err := io.ReadAll(rsp.Body)
 	if err != nil {
-		return api.NewError(rsp.StatusCode, fmt.Errorf("no server response: %w", err))
+		err := fmt.Errorf("reading server response failed: %w", err)
+
+		if rsp.StatusCode == http.StatusOK {
+			return err
+		}
+		return api.NewError(rsp.StatusCode, err)
 	}
 	if rsp.StatusCode != http.StatusOK {
 		return api.NewError(rsp.StatusCode, fmt.Errorf("server: %q", b))

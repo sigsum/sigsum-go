@@ -19,9 +19,9 @@ var ErrForbidden *Error = NewError(http.StatusForbidden, fmt.Errorf("Forbidden")
 // E.g., GetInclusionProof fails because leaf isn't included.
 var ErrNotFound *Error = NewError(http.StatusNotFound, fmt.Errorf("Not Found")) // 404
 
-// Failure of witness AddTreeHead, caller should retry with correct
+// Failure of witness AddCheckpoint, caller should retry with correct
 // tree size.
-var ErrConflict *Error = NewError(http.StatusConflict, fmt.Errorf("Conflict")) // 409
+var ErrConflict *Error = NewError(http.StatusConflict, fmt.Errorf("Conflict"))
 
 // Failure of witness AddTreeHead, invalid consistency proof.
 var ErrUnprocessableEntity *Error = NewError(422, fmt.Errorf("Unprocessable Entity"))
