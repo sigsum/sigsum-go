@@ -152,30 +152,15 @@ func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (c
 
 // See https://github.com/C2SP/C2SP/blob/main/tlog-witness.md for
 // specification.
-func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint) ([]checkpoint.SignatureLine, error) {
+func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
-	var signatures []checkpoint.SignatureLine
+	var signatures []checkpoint.CosignatureLine
 	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf,
 		func(body io.Reader) error {
-			reader := ascii.NewLineReader(body)
-			for {
-				line, err := reader.GetLine()
-				if err == io.EOF {
-					return nil
-				}
-				if err != nil {
-					return err
-				}
-				signature, err := checkpoint.ParseSignatureLine(line)
-				if err != nil {
-					return err
-				}
-				// Ignore lines with sizes that don't match cosignatures
-				if len(signature.Prefix) == 8 {
-					signatures = append(signatures, signature)
-				}
-			}
+			var err error
+			signatures, err = checkpoint.CosignatureLinesFromASCII(body)
+			return err
 		},
 		func(rsp *http.Response) error {
 			if rsp.StatusCode == http.StatusConflict {

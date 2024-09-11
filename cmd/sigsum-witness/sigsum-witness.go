@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
@@ -48,14 +47,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	cpLog := checkpoint.NewLog(&logPub)
 	state := state{fileName: settings.stateFile}
-	if err := state.Load(&pub, &logPub); err != nil {
+	if err := state.Load(&pub, &cpLog); err != nil {
 		log.Fatal(err)
 	}
 	witness := witness{
 		signer:  signer,
 		keyHash: crypto.HashBytes(pub[:]),
 		logPub:  logPub,
+		logKeyHash: crypto.HashBytes(logPub[:]),
 		state:   &state,
 	}
 
@@ -151,7 +152,7 @@ func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (cryp
 	}
 	cs, err := s.state.Update(&req.TreeHead, req.OldSize, &req.Proof, &s.keyHash,
 		func() (types.Cosignature, error) {
-			return req.TreeHead.Cosign(s.signer, &s.logKeyHash, uint64(time.Now().Unix()))
+			return req.TreeHead.Cosign(s.signer, s.log.Origin, uint64(time.Now().Unix()))
 		})
 	if err != nil {
 		return crypto.Hash{}, types.Cosignature{}, err
@@ -169,19 +170,13 @@ func (s *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) (
 	}
 	cs, err := s.state.Update(&sth, req.OldSize, &req.Proof,
 		func() (types.Cosignature, error) {
-			return sth.Cosign(s.signer, &s.logKeyHash, uint64(time.Now().Unix()))
+			return sth.Cosign(s.signer, s.log.Origin, uint64(time.Now().Unix()))
 		})
 	if err != nil {
 		return nil, err
 	}
-	// TODO: XXX Begs for suitable library helpers.
-	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", cs.KeyHash)
 	publicKey := s.signer.Public()
-	keyId := checkpoint.NewWitnessKeyId(keyName, &publicKey)
-	prefix := [8]byte{}
-	binary.BigEndian.PutUint64(prefix[:], cs.Timestamp)
-	return []checkpoint.SignatureLine{checkpoint.SignatureLine{
-		KeyName: keyName, KeyId: keyId, Prefix: prefix[:], Signature: cs.Signature}}, nil
+	return []checkpoint.SignatureLine{checkpoint.FromCosignature(&cs, &publicKey)}, nil
 }
 
 type state struct {
@@ -192,7 +187,7 @@ type state struct {
 	th types.TreeHead
 }
 
-func (s *state) Load(pub, logPub *crypto.PublicKey) error {
+func (s *state) Load(pub *crypto.PublicKey, log *checkpoint.Log) error {
 	f, err := os.Open(s.fileName)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -210,7 +205,7 @@ func (s *state) Load(pub, logPub *crypto.PublicKey) error {
 	if err := cth.FromASCII(f); err != nil {
 		return err
 	}
-	if !cth.Verify(logPub) {
+	if !cth.Verify(&log.PublicKey) {
 		return fmt.Errorf("Invalid log signature on stored tree head")
 	}
 	logKeyHash := crypto.HashBytes(logPub[:])
