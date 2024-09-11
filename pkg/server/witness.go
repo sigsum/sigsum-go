@@ -24,7 +24,7 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 				return
 			}
 			if _, err = fmt.Fprintf(w, "size=%d", size); err != nil {
-				reportError(w, r.URL, err)
+				logError(r.URL, err)
 			}
 		}))
 	server.register(types.EndpointAddTreeHead, http.MethodPost,
@@ -40,7 +40,7 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 				return
 			}
 			if err := cs.ToASCII(w); err != nil {
-				reportError(w, r.URL, err)
+				logError(r.URL, err)
 			}
 		}))
 

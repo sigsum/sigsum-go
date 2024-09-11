@@ -130,6 +130,13 @@ func reportErrorCode(w http.ResponseWriter, url *url.URL, statusCode int, err er
 	http.Error(w, err.Error(), statusCode)
 }
 
+// Note that it's not useful to report errors that occur when writing
+// the response: It's too late to change the status code, and the
+// likely reason for the error is that the client has disconnected.
 func reportError(w http.ResponseWriter, url *url.URL, err error) {
 	reportErrorCode(w, url, api.ErrorStatusCode(err), err)
+}
+
+func logError(url *url.URL, err error) {
+	log.Debug("%q: request failed: %v", url.Path, err)
 }

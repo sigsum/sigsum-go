@@ -36,7 +36,7 @@ func newGetLeavesServer(config *Config, getLeaves func(context.Context, requests
 				return
 			}
 			if err := types.LeavesToASCII(w, leaves); err != nil {
-				reportError(w, r.URL, err)
+				logError(r.URL, err)
 			}
 		}))
 	return server
@@ -62,7 +62,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				return
 			}
 			if err = cth.ToASCII(w); err != nil {
-				reportError(w, r.URL, err)
+				logError(r.URL, err)
 			}
 		}))
 	server.register(types.EndpointGetInclusionProof, http.MethodGet,
@@ -86,7 +86,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				return
 			}
 			if err := proof.ToASCII(w); err != nil {
-				reportError(w, r.URL, err)
+				logError(r.URL, err)
 			}
 		}))
 	server.register(types.EndpointGetConsistencyProof, http.MethodGet,
@@ -113,7 +113,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				return
 			}
 			if err := proof.ToASCII(w); err != nil {
-				reportError(w, r.URL, err)
+				logError(r.URL, err)
 			}
 		}))
 	server.register(types.EndpointAddLeaf, http.MethodPost,
