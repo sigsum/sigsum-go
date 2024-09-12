@@ -1,10 +1,10 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 
 	"sigsum.org/sigsum-go/pkg/api"
+	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -23,7 +23,7 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 				reportError(w, r.URL, err)
 				return
 			}
-			if _, err = fmt.Fprintf(w, "size=%d", size); err != nil {
+			if err = ascii.WriteInt(w, "size", size); err != nil {
 				logError(r.URL, err)
 			}
 		}))

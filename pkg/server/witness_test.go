@@ -47,7 +47,7 @@ func TestGetTreeSize(t *testing.T) {
 			if table.status != 200 {
 				return
 			}
-			if got, want := body, fmt.Sprintf("size=%d", table.size); got != want {
+			if got, want := body, fmt.Sprintf("size=%d\n", table.size); got != want {
 				t.Errorf("Unexpected size for %q, got %q, want %q", table.url, got, want)
 			}
 		}()
