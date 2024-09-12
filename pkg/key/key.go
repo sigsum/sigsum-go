@@ -3,6 +3,7 @@ package key
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -57,25 +58,28 @@ func ReadPublicKeyFile(fileName string) (crypto.PublicKey, error) {
 	return key, nil
 }
 
-func ReadPublicKeyListFile(fileName string) ([]crypto.PublicKey, error) {
-	f, err := os.Open(fileName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
-	}
-	var keys []crypto.PublicKey
+func parsePublicKeysFile(f io.Reader, fileName string) (map[crypto.Hash]crypto.PublicKey, error) {
+	keys := make(map[crypto.Hash]crypto.PublicKey)
 	scanner := bufio.NewScanner(f)
 	var n int
 	for scanner.Scan() {
 		n++
 		line := scanner.Text()
+		// Mirror openssh implementation. Skip lines that
+		// start with '#', or are completely empty. All other
+		// lines must be valid key lines.
 		if strings.HasPrefix(line, "#") || line == "" {
 			continue
 		}
-		k, err := ParsePublicKey(line)
+		key, err := ParsePublicKey(line)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse public key on line %d of file %q: %v", n, fileName, err)
 		}
-		keys = append(keys, k)
+		keyHash := crypto.HashBytes(key[:])
+		if _, has := keys[keyHash]; has {
+			return nil, fmt.Errorf("duplicate public key on line %d of file %q", n, fileName)
+		}
+		keys[keyHash] = key
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("failed to read public keys file %q: %v", fileName, err)
@@ -84,6 +88,15 @@ func ReadPublicKeyListFile(fileName string) ([]crypto.PublicKey, error) {
 		return nil, fmt.Errorf("no public keys found in file %q", fileName)
 	}
 	return keys, nil
+}
+
+func ReadPublicKeysFile(fileName string) (map[crypto.Hash]crypto.PublicKey, error) {
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
+	}
+	defer f.Close()
+	return parsePublicKeysFile(f, fileName)
 }
 
 func ReadPrivateKeyFile(fileName string) (crypto.Signer, error) {

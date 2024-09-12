@@ -81,7 +81,8 @@ node_hash=15cdc42440689a6f7599e09f61a4d638420cb58662f5994def1624ea4d923879
 	if err := proof.FromASCII(bytes.NewBufferString(proofASCII)); err != nil {
 		t.Fatal(err)
 	}
-	if err := proof.VerifyNoCosignatures(&msg, &submitKey, &logKey); err != nil {
+	if err := proof.VerifyNoCosignatures(&msg, map[crypto.Hash]crypto.PublicKey{
+		crypto.HashBytes(submitKey[:]): submitKey}, &logKey); err != nil {
 		t.Error(err)
 	}
 	// TODO: Test invalidating proof in different ways.
@@ -118,7 +119,8 @@ node_hash=a5c3752be610d605ce5c64ee2e28ee5b94a1cc0a68742f18f24c9b5c82d07298
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := proof.Verify(&msg, &submitKey, policy); err != nil {
+	if err := proof.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
+		crypto.HashBytes(submitKey[:]): submitKey}, policy); err != nil {
 		t.Error(err)
 	}
 	// TODO: Test invalidating proof in different ways.
