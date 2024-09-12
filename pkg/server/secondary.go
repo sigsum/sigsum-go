@@ -17,7 +17,7 @@ func NewSecondary(config *Config, secondary api.Secondary) http.Handler {
 				return
 			}
 			if err := sth.ToASCII(w); err != nil {
-				reportError(w, r.URL, err)
+				logError(r.URL, err)
 			}
 		}))
 	return server
