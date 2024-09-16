@@ -156,6 +156,20 @@ func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
 	var signatures []checkpoint.CosignatureLine
+
+	readIntBody := func(r io.Reader) (uint64, error) {
+		p := ascii.NewLineReader(r)
+		line, err := p.GetLine()
+		if err != nil {
+			return 0, err
+		}
+		res, err := ascii.IntFromDecimal(line)
+		if err != nil {
+			return 0, err
+		}
+		return res, p.GetEOF()
+	}
+
 	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf,
 		func(body io.Reader) error {
 			var err error
@@ -167,17 +181,9 @@ func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint
 				if got := rsp.Header.Get("content-type"); got != checkpoint.ContentTypeTlogSize {
 					return api.ErrConflict.WithError(fmt.Errorf("unexpected content type for Conflict response: %q", got))
 				}
-				data, err := io.ReadAll(rsp.Body)
+				oldSize, err := readIntBody(rsp.Body)
 				if err != nil {
-					return err
-				}
-				data, found := cutSuffix(data, []byte{'\n'})
-				if !found {
-					return api.ErrConflict.WithError(fmt.Errorf("invalid response, no end of line: %q", data))
-				}
-				oldSize, err := ascii.IntFromDecimal(string(data))
-				if err != nil {
-					return api.ErrConflict.WithError(fmt.Errorf("invalid response %q: %s", data, err))
+					return api.ErrConflict.WithError(fmt.Errorf("invalid conflict response data: %s", err))
 				}
 				return api.ErrConflict.WithOldSize(oldSize)
 			}

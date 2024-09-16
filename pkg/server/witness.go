@@ -59,7 +59,7 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 					w.Header().Set("content-type", checkpoint.ContentTypeTlogSize)
 					w.WriteHeader(http.StatusConflict)
 
-					if _,err := fmt.Fprintf(w, "%d\n", oldSize); err != nil {
+					if _, err := fmt.Fprintf(w, "%d\n", oldSize); err != nil {
 						logError(r.URL, err)
 					}
 					return
