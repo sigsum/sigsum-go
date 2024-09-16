@@ -64,7 +64,7 @@ func (s *Settings) parse(args []string) {
 
 	help := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input is already hashed")
-	set.FlagLong(&s.submitKey, "key", 'k', "Submitter's public key", "file").Mandatory()
+	set.FlagLong(&s.submitKey, "key", 'k', "Submitter public key(s) ", "file").Mandatory()
 	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file").Mandatory()
 	set.FlagLong(&help, "help", 0, "Display help")
 	err := set.Getopt(args, nil)
