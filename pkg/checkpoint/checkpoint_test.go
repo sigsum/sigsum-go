@@ -14,8 +14,8 @@ import (
 var testOrigin = "example.org/log"
 
 var testTreeHead = types.TreeHead{
-	Size:     10,
-	RootHash: crypto.Hash{28, 14, 71}, // Base64 "HA5H"
+		Size:     10,
+		RootHash: crypto.Hash{28, 14, 71}, // Base64 "HA5H"
 }
 
 var testSignedTreeHead = types.SignedTreeHead{
