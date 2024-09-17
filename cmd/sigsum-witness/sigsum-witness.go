@@ -55,6 +55,7 @@ func main() {
 		signer:  signer,
 		keyHash: crypto.HashBytes(pub[:]),
 		logPub:  logPub,
+		origin:  types.SigsumCheckpointOrigin(&logPub),
 		state:   &state,
 	}
 
@@ -129,7 +130,7 @@ type witness struct {
 	signer  crypto.Signer
 	keyHash crypto.Hash
 	logPub  crypto.PublicKey
-	logKeyHash crypto.Hash
+	origin     string
 	state   *state
 }
 
@@ -150,7 +151,7 @@ func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (cryp
 	}
 	cs, err := s.state.Update(&req.TreeHead, req.OldSize, &req.Proof, &s.keyHash,
 		func() (types.Cosignature, error) {
-			return req.TreeHead.Cosign(s.signer, &logKeyHash, uint64(time.Now().Unix()))
+			return req.TreeHead.CosignOrigin(s.signer, s.origin, uint64(time.Now().Unix()))
 		})
 	if err != nil {
 		return crypto.Hash{}, types.Cosignature{}, err
@@ -159,16 +160,16 @@ func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (cryp
 }
 
 func (s *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error) {
-	if req.Checkpoint.Origin != s.log.Origin {
+	if req.Checkpoint.Origin != s.origin {
 		return nil, api.ErrNotFound
 	}
-	sth, err := s.log.FromCheckpoint(&req.Checkpoint)
-	if err != nil {
+
+	if err := req.Checkpoint.Verify(&s.logPub); err != nil {
 		return nil, api.ErrForbidden.WithError(err)
 	}
-	cs, err := s.state.Update(&sth, req.OldSize, &req.Proof,
+	cs, err := s.state.Update(&req.Checkpoint.SignedTreeHead, req.OldSize, &req.Proof, &s.keyHash,
 		func() (types.Cosignature, error) {
-			return sth.Cosign(s.signer, s.log.Origin, uint64(time.Now().Unix()))
+			return req.Checkpoint.TreeHead.CosignOrigin(s.signer, s.origin, uint64(time.Now().Unix()))
 		})
 	if err != nil {
 		return nil, err
@@ -176,14 +177,13 @@ func (s *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) (
 	publicKey := s.signer.Public()
 
 	// Arbitrary name. TODO: Specify somewhere?
-	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", cs.KeyHash)
+	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", s.keyHash)
 
 	return []checkpoint.CosignatureLine{
 		checkpoint.CosignatureLine{
 			KeyName:   keyName,
 			KeyId:     checkpoint.NewWitnessKeyId(keyName, &publicKey),
-			Timestamp: cs.Timestamp,
-			Signature: cs.Signature,
+			Cosignature: cs,
 		}}, nil
 }
 
