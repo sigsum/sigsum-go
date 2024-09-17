@@ -130,7 +130,7 @@ type witness struct {
 	signer  crypto.Signer
 	keyHash crypto.Hash
 	logPub  crypto.PublicKey
-	origin     string
+	origin  string
 	state   *state
 }
 
@@ -181,8 +181,8 @@ func (s *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) (
 
 	return []checkpoint.CosignatureLine{
 		checkpoint.CosignatureLine{
-			KeyName:   keyName,
-			KeyId:     checkpoint.NewWitnessKeyId(keyName, &publicKey),
+			KeyName:     keyName,
+			KeyId:       checkpoint.NewWitnessKeyId(keyName, &publicKey),
 			Cosignature: cs,
 		}}, nil
 }

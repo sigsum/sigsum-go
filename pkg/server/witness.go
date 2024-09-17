@@ -53,6 +53,7 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
 				return
 			}
+
 			signatures, err := witness.AddCheckpoint(r.Context(), req)
 			if err != nil {
 				if oldSize, ok := api.ErrorConflictOldSize(err); ok {

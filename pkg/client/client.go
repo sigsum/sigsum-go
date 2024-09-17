@@ -14,20 +14,12 @@ import (
 
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/checkpoint"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
 )
-
-// bytes.CutSuffix added in go-1.20.
-func cutSuffix(b, suffix []byte) ([]byte, bool) {
-	if bytes.HasSuffix(b, suffix) {
-		return b[:len(b)-len(suffix)], true
-	}
-	return b, false
-}
 
 type Config struct {
 	UserAgent string
@@ -170,7 +162,7 @@ func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint
 		return res, p.GetEOF()
 	}
 
-	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf,
+	if err := cli.post(ctx, types.EndpointAddCheckpoint.Path(cli.config.URL), nil, &buf,
 		func(body io.Reader) error {
 			var err error
 			signatures, err = checkpoint.CosignatureLinesFromASCII(body)

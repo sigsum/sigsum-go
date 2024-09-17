@@ -37,6 +37,7 @@ func queryServerHook(t *testing.T, server http.Handler, method, url, body string
 	if err != nil {
 		t.Fatalf("reading http response for %q failed: %v", url, err)
 	}
+	// TODO: Return response content-type.
 	return result, string(respBody)
 }
 
