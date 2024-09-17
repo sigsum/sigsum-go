@@ -1,6 +1,6 @@
 package main
 
-// Program to generate a witness add-checkpoint request, from a
+// Program to generate a witness add-tree request, from a
 // deterministically built tree.
 import (
 	"encoding/binary"
@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 
-	"sigsum.org/sigsum-go/pkg/checkpoint"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/merkle"
@@ -63,23 +62,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if _, err := fmt.Printf("old %d\n", oldSize); err != nil {
+	if _, err := fmt.Printf("key_hash=%x\n", crypto.HashBytes(pub[:])); err != nil {
 		log.Fatal(err)
 	}
-	if err := (&types.ConsistencyProof{proof}).ToBase64(os.Stdout); err != nil {
+	if err := sth.ToASCII(os.Stdout); err != nil {
 		log.Fatal(err)
 	}
-	if _, err := fmt.Printf("\n"); err != nil {
+	if _, err := fmt.Printf("old_size=%d\n", oldSize); err != nil {
 		log.Fatal(err)
 	}
-
-	origin := types.SigsumCheckpointOrigin(&pub)
-
-	if err := (&checkpoint.Checkpoint{
-		SignedTreeHead: sth,
-		Origin:   origin,
-		KeyId:    checkpoint.NewLogKeyId(origin, &pub),
-	}).ToASCII(os.Stdout); err != nil {
-		log.Fatal(err)
+	if len(proof) > 0 {
+		if err := (&types.ConsistencyProof{proof}).ToASCII(os.Stdout); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
