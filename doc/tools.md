@@ -52,6 +52,12 @@ is 32 octets in the format defined by [RFC
 
 The `sigsum-key` tool can be used to convert between these two forms.
 
+The `sigsum-verify` tool accepts a file specifying multiple public
+keys. This file should contain at least one key line in the same single
+line format. Lines that are completely empty or start with the `#`
+character are ignored (same convention as for OpenSSH's
+`.authorized_keys` file).
+
 ### Private keys
 
 Private keys are stored as unencrypted OpenSSH private key files
@@ -381,13 +387,13 @@ input data. If the `--raw-hash` options is provided, the input is used
 as is, without hashing, and in this case, it must be either exactly 32
 octets, or a hex string representing 32 octets.
 
-The submitter's public key (`-k` option) and a policy file (`-p`
+The submitter public key(s) (`-k` option) and a policy file (`-p`
 option) must be provided, and the name of the proof file is the only
 non-option argument.
 
 The proof is considered valid if
 
-1. the submitter's signature on the message is valid,
+1. the message is signed by one of the provided submitter keys,
 2. the tree head is signed by one of the logs listed in the
    policy,
 3. there are enough cosignatures to satisfy the policy's quorum
