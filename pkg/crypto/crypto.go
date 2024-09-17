@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -127,6 +128,23 @@ func SignerFromHex(s string) (*Ed25519Signer, error) {
 		return nil, err
 	}
 	return NewEd25519Signer(&secret), nil
+}
+
+func decodeBase64(out []byte, s string) error {
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return err
+	}
+	if len(b) != len(out) {
+		return fmt.Errorf("unexpected length of base data, expected %d, got %d", len(out), len(b))
+	}
+	copy(out, b)
+	return nil
+}
+
+func HashFromBase64(s string) (h Hash, err error) {
+	err = decodeBase64(h[:], s)
+	return
 }
 
 func AttachNamespace(namespace string, msg []byte) []byte {
