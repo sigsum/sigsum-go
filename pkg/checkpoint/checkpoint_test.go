@@ -2,6 +2,7 @@ package checkpoint
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
@@ -35,7 +36,7 @@ const validCheckpointASCII = `sigsum.org/v1/tree/e796172b92befd62d9dc67e41c2f5bc
 10
 HA5HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 
-— sigsum.org/v1/tree/e796172b92befd62d9dc67e41c2f5bc9d3100a3023b20b1ca40288dd1c679e69 pOZUn0n8F8olcerUF1FFdv235A/5as/coWrpLrtE7ovMeP5whgwouYExowG/lTznxu6OUGjjt5yJQ6bXtTcf718MqAQ=
+— sigsum.org/v1/tree/e796172b92befd62d9dc67e41c2f5bc9d3100a3023b20b1ca40288dd1c679e69 gJ2ho0n8F8olcerUF1FFdv235A/5as/coWrpLrtE7ovMeP5whgwouYExowG/lTznxu6OUGjjt5yJQ6bXtTcf718MqAQ=
 `
 
 func TestCheckpointToASCII(t *testing.T) {
@@ -55,6 +56,29 @@ func TestCheckpointFromASCII(t *testing.T) {
 	}
 	if cp != testCheckpoint {
 		t.Errorf("FromASCII failed, got:\n%v,\nwanted:\n%v", cp, testCheckpoint)
+	}
+}
+
+func TestCheckpointSigned(t *testing.T) {
+	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	pub := signer.Public()
+	origin := fmt.Sprintf("%s%x", types.CheckpointNamePrefix, crypto.HashBytes(pub[:]))
+	cp := Checkpoint{
+		Origin: origin,
+		KeyId:  NewLogKeyId(origin, &pub),
+	}
+	var err error
+	cp.TreeHead, err = testTreeHead.TreeHead.Sign(signer)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	buf := bytes.Buffer{}
+	if err := cp.ToASCII(&buf); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := buf.String(), validCheckpointASCII; got != want {
+		t.Errorf("got checkpoint:\n%swant:\n%s", got, want)
 	}
 }
 

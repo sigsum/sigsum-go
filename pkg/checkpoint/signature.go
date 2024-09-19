@@ -11,7 +11,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
-// See https://github.com/C2SP/C2SP/blob/main/signed-note.md
+// See https://github.com/C2SP/C2SP/blob/signed-note/v1.0.0-rc.1/signed-note.md
 type signatureType byte
 
 const (
@@ -24,7 +24,7 @@ var ErrUnwantedSignature = errors.New("unwanted signature")
 type KeyId [4]byte
 
 func makeKeyId(keyName string, sigType signatureType, publicKey *crypto.PublicKey) (res KeyId) {
-	hash := crypto.HashBytes(bytes.Join([][]byte{[]byte(keyName), []byte{byte(sigType)}, publicKey[:]}, nil))
+	hash := crypto.HashBytes(bytes.Join([][]byte{[]byte(keyName), []byte{0xA, byte(sigType)}, publicKey[:]}, nil))
 	copy(res[:], hash[:4])
 	return
 }

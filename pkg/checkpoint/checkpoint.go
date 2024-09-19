@@ -17,6 +17,8 @@ import (
 )
 
 const (
+	// An implementatino of the signed note spec MUST support at
+	// least 16 signature lines.
 	signatureLimit = 16
 
 	ContentTypeTlogSize = "text/x.tlog.size"
@@ -79,11 +81,11 @@ func (cp *Checkpoint) FromASCII(pr *ascii.ParagraphReader) error {
 	found := false
 	for {
 		line, err := reader.GetLine()
-		if err != nil {
-			if err != io.EOF {
-				return err
-			}
+		if err == io.EOF {
 			break
+		}
+		if err != nil {
+			return err
 		}
 		lineCount++
 		if lineCount > signatureLimit {
