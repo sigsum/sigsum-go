@@ -12,10 +12,18 @@ make-all:
 make-check:
   stage: test
   script: make check
+  artifacts:
+    when: always
+    paths:
+    - ./tests/test.*
 
 make-check-386:
   stage: test
   script: GOARCH=386 make check
+  artifacts:
+    when: always
+    paths:
+    - ./tests/test.*
 
 # Succeeds if no changes are suggested by gofmt -d .
 gofmt:
