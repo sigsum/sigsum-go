@@ -40,10 +40,12 @@ func (lr *LineReader) GetLine() (string, error) {
 	return "", io.EOF
 }
 
+// Returns nil if there's no more data available.
 func (lr *LineReader) GetEOF() error {
 	if lr.scanner.Scan() {
-		return fmt.Errorf("garbage at end of data: %q",
+		return fmt.Errorf("garbage line at end of data: %q",
 			lr.scanner.Text())
 	}
+	// Returns nil at EOF.
 	return lr.scanner.Err()
 }
