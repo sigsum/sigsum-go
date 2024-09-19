@@ -7,24 +7,27 @@ import (
 )
 
 // Partial success from AddLeaf, caller should retry.
-var ErrAccepted error = NewError(http.StatusAccepted, fmt.Errorf("Accepted")) // 202
+var ErrAccepted *Error = NewError(http.StatusAccepted, fmt.Errorf("Accepted")) // 202
 
-// E.g., GetInclusionProof fails because leaf isn't included.
-var ErrNotFound error = NewError(http.StatusNotFound, fmt.Errorf("Not Found")) // 404
-
-// Failure of witness AddTreeHead, caller should retry with correct
-// tree size.
-var ErrConflict error = NewError(http.StatusConflict, fmt.Errorf("Conflict"))
-
-// Failure of witness AddTreeHead, invalid consistency proof.
-var ErrUnprocessableEntity error = NewError(422, fmt.Errorf("Unprocessable Entity"))
+// E.g., out of range request parameters.
+var ErrBadRequest *Error = NewError(http.StatusBadRequest, fmt.Errorf("Bad Request")) // 400
 
 // Unauthorized, typically because signature is invalid, or public key
 // not recognized.
-var ErrForbidden error = NewError(http.StatusForbidden, fmt.Errorf("Forbidden")) // 403
+var ErrForbidden *Error = NewError(http.StatusForbidden, fmt.Errorf("Forbidden")) // 403
+
+// E.g., GetInclusionProof fails because leaf isn't included.
+var ErrNotFound *Error = NewError(http.StatusNotFound, fmt.Errorf("Not Found")) // 404
+
+// Failure of witness AddTreeHead, caller should retry with correct
+// tree size.
+var ErrConflict *Error = NewError(http.StatusConflict, fmt.Errorf("Conflict")) // 409
+
+// Failure of witness AddTreeHead, invalid consistency proof.
+var ErrUnprocessableEntity *Error = NewError(422, fmt.Errorf("Unprocessable Entity"))
 
 // Error due to exceeded rate limit.
-var ErrTooManyRequests error = NewError(http.StatusTooManyRequests, fmt.Errorf("Too Many Requests")) // 429
+var ErrTooManyRequests *Error = NewError(http.StatusTooManyRequests, fmt.Errorf("Too Many Requests")) // 429
 
 // An error with an associated HTTP status code.
 type Error struct {
@@ -42,6 +45,12 @@ func (e *Error) Error() string {
 
 func (e *Error) Unwrap() error {
 	return e.err
+}
+
+// Return a new error, with same status code, but the supplied
+// underlying error.
+func (e *Error) WithError(err error) *Error {
+	return &Error{statusCode: e.statusCode, err: err}
 }
 
 // An error is considered matching if the status code is the same.
