@@ -1,7 +1,7 @@
 // The checkpoint package implements the subset of the "checkpoint"
-// specification needed for interaction wit hSigsum logs and
+// specification needed for interaction with Sigsum logs and
 // witnesses.
-// https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md.
+// https://github.com/C2SP/C2SP/blob/tlog-checkpoint/v1.0.0-rc.1/tlog-checkpoint.md
 
 package checkpoint
 
