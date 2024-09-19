@@ -1,7 +1,27 @@
 // The checkpoint package implements the subset of the "checkpoint"
-// specification needed for interaction with Sigsum logs and
+// specification needed for interaction between a Sigsum log and its
 // witnesses.
 // https://github.com/C2SP/C2SP/blob/tlog-checkpoint/v1.0.0-rc.1/tlog-checkpoint.md
+//
+// This package aims to let a Sigsum log interact successfully with
+// any witness conforming to the checkpoint spec. However, the current
+// implementation enforces some additional requirements on logs (which
+// are always satisfied by Sigsum logs):
+//
+// * The log’s key name on its signature line MUST match the origin
+//   line. (In contrast to the spec, where this is a SHOULD).
+//
+// * There must be a single signature line with the origin as key
+//   name, or rather, a single line where (i) the key name equals the
+//   origin and (ii) the signature size is appropriate for an Ed25519
+//   signature.
+//
+// Hence, a witness based on this package, in its current state, will
+// not support logs where the origin line differs from the log's key
+// name (e.g., the go checksum database, with an origin line "go.sum
+// database tree" which isn't a syntactically valid key name), or
+// logs that sign their checkpoints using multiple Ed25519 signatures,
+// e.g., for key rotation.
 
 package checkpoint
 
