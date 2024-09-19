@@ -51,7 +51,7 @@ func parseNoteSignature(line string, blobSize int) (string, []byte, error) {
 	}
 	blob, err := base64.StdEncoding.DecodeString(fields[2])
 	if err != nil {
-		return "", nil, fmt.Errorf("invalid base signature on line %q: %v", line, err)
+		return "", nil, err
 	}
 	if len(blob) != blobSize {
 		return "", nil, ErrUnwantedSignature
@@ -59,12 +59,22 @@ func parseNoteSignature(line string, blobSize int) (string, []byte, error) {
 	return fields[1], blob, nil
 }
 
-func parseSignatureLine(line, origin string) (KeyId, crypto.Signature, error) {
+func WriteEd25519Signature(w io.Writer, origin string, keyId KeyId, signature *crypto.Signature) error {
+	return writeNoteSignature(w,
+		origin, bytes.Join([][]byte{keyId[:], signature[:]}, nil))
+}
+
+// Input is a single signature line, with no trailing newline
+// character. If the line carries the right keyName and has a size
+// consistent with an Ed25519 signature line, returns the keyId and
+// signature. If line is syntactically valid but doesn't match these
+// requirements, ErrUnwantedSignature is returned.
+func ParseEd25519SignatureLine(line, keyName string) (KeyId, crypto.Signature, error) {
 	name, blob, err := parseNoteSignature(line, 4+crypto.SignatureSize)
 	if err != nil {
 		return KeyId{}, crypto.Signature{}, err
 	}
-	if name != origin {
+	if name != keyName {
 		return KeyId{}, crypto.Signature{}, ErrUnwantedSignature
 	}
 	var keyId KeyId

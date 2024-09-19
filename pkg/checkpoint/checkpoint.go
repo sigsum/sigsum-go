@@ -6,7 +6,6 @@
 package checkpoint
 
 import (
-	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -38,8 +37,7 @@ func (cp *Checkpoint) ToASCII(w io.Writer) error {
 		cp.Origin, cp.TreeHead.Size, base64.StdEncoding.EncodeToString(cp.TreeHead.RootHash[:])); err != nil {
 		return err
 	}
-	return writeNoteSignature(w,
-		cp.Origin, bytes.Join([][]byte{cp.KeyId[:], cp.TreeHead.Signature[:]}, nil))
+	return WriteEd25519Signature(w, cp.Origin, cp.KeyId, &cp.TreeHead.Signature)
 }
 
 func (cp *Checkpoint) FromASCII(r io.Reader) error {
@@ -89,7 +87,7 @@ func (cp *Checkpoint) FromASCII(r io.Reader) error {
 		if signatureCount > signatureLimit {
 			return fmt.Errorf("invalid checkpoint, too many signatures")
 		}
-		keyId, signature, err := parseSignatureLine(line, cp.Origin)
+		keyId, signature, err := ParseEd25519SignatureLine(line, cp.Origin)
 		if err != nil {
 			if err != ErrUnwantedSignature {
 				fmt.Errorf("invalid signature line %d: %s", signatureCount, err)
