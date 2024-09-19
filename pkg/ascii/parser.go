@@ -2,8 +2,6 @@
 package ascii
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"strconv"
@@ -21,46 +19,24 @@ func IntFromDecimal(s string) (uint64, error) {
 }
 
 type Parser struct {
-	scanner *bufio.Scanner
+	reader LineReader
 }
 
 func NewParser(input io.Reader) Parser {
-	p := Parser{bufio.NewScanner(input)}
-	// This is like bufio.ScanLines but it doesn't strip CRs
-	// and fails on final unterminated lines.
-	p.scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if i := bytes.IndexByte(data, '\n'); i >= 0 {
-			return i + 1, data[0:i], nil
-		}
-		if atEOF {
-			if len(data) > 0 {
-				return 0, nil, io.ErrUnexpectedEOF
-			}
-			return 0, nil, io.EOF
-		}
-		return 0, nil, nil
-	})
-	return p
+	return Parser{NewLineReader(input)}
 }
 
 func (p *Parser) GetEOF() error {
-	if p.scanner.Scan() {
-		return fmt.Errorf("garbage at end of message: %q",
-			p.scanner.Text())
-	}
-	return p.scanner.Err()
+	return p.reader.GetEOF()
 }
 
 // next scans the next line, expecting it to contain a key/value pair separated
 // by =, where the key is name. It returns the value.
 func (p *Parser) next(name string) (string, error) {
-	if !p.scanner.Scan() {
-		if err := p.scanner.Err(); err != nil {
-			return "", err
-		}
-		return "", io.EOF
+	line, err := p.reader.GetLine()
+	if err != nil {
+		return "", err
 	}
-	line := p.scanner.Text()
 	key, value, ok := strings.Cut(line, "=")
 	if !ok {
 		return "", fmt.Errorf("invalid input line: %q", line)
