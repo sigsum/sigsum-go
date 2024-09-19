@@ -15,6 +15,7 @@ import (
 	"github.com/dchest/safefile"
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/log"
@@ -271,9 +272,9 @@ func (s *Settings) parse(args []string) {
 
 	set := getopt.New()
 	set.SetParameters("[input files]")
-	set.SetUsage(func() { fmt.Print(usage) })
 
 	help := false
+	versionFlag := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input is already hashed")
 	set.FlagLong(&s.keyFile, "signing-key", 'k', "Key for signing the leaf", "file")
 	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file")
@@ -285,12 +286,18 @@ func (s *Settings) parse(args []string) {
 	set.FlagLong(&s.tokenKeyFile, "token-signing-key", 0, "Key for signing Sigsum-Token: header", "file")
 	set.FlagLong(&s.timeout, "timeout", 0, "Per-log submission timeout. Zero means library default, currently 45s", "duration")
 	set.FlagLong(&help, "help", 0, "Display help")
+	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
 	set.Parse(args)
 	if help {
 		set.PrintUsage(os.Stdout)
 		fmt.Print(usage)
 		os.Exit(0)
 	}
+	if versionFlag {
+		version.DisplayVersion("sigsum-submit")
+		os.Exit(0)
+	}
+
 	s.inputFiles = set.Args()
 	if len(s.inputFiles) > 1 && len(s.outputFile) > 0 {
 		log.Fatal("The -o option is invalid with more than one input file.")

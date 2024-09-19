@@ -9,6 +9,7 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/policy"
@@ -63,15 +64,22 @@ func (s *Settings) parse(args []string) {
 	set.SetParameters("proof < input")
 
 	help := false
+	versionFlag := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input is already hashed")
 	set.FlagLong(&s.submitKey, "key", 'k', "Submitter public key(s) ", "file").Mandatory()
 	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file").Mandatory()
 	set.FlagLong(&help, "help", 0, "Display help")
+	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
 	err := set.Getopt(args, nil)
-	// Check help first; if seen, ignore errors about missing mandatory arguments.
+	// Check --help and --version first; if seen, ignore errors
+	// about missing mandatory arguments.
 	if help {
 		set.PrintUsage(os.Stdout)
 		fmt.Print(usage)
+		os.Exit(0)
+	}
+	if versionFlag {
+		version.DisplayVersion("sigsum-verify")
 		os.Exit(0)
 	}
 	if err != nil {
