@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -51,7 +50,7 @@ func TestCheckpointToASCII(t *testing.T) {
 
 func TestCheckpointFromASCII(t *testing.T) {
 	var cp Checkpoint
-	if err := cp.FromASCII(ascii.NewParagraphReader(bytes.NewBufferString(testCheckpointASCII))); err != nil {
+	if err := cp.FromASCII(bytes.NewBufferString(testCheckpointASCII)); err != nil {
 		t.Fatal(err)
 	}
 	if cp != testCheckpoint {
@@ -88,7 +87,7 @@ func TestCheckpointVerify(t *testing.T) {
 	pub := signer.Public()
 
 	var validCheckpoint Checkpoint
-	if err := validCheckpoint.FromASCII(ascii.NewParagraphReader(bytes.NewBufferString(validCheckpointASCII))); err != nil {
+	if err := validCheckpoint.FromASCII(bytes.NewBufferString(validCheckpointASCII)); err != nil {
 		t.Fatal(err)
 	}
 	if err := validCheckpoint.Verify(&pub); err != nil {

@@ -42,8 +42,8 @@ func (cp *Checkpoint) ToASCII(w io.Writer) error {
 		cp.Origin, bytes.Join([][]byte{cp.KeyId[:], cp.TreeHead.Signature[:]}, nil))
 }
 
-func (cp *Checkpoint) FromASCII(pr *ascii.ParagraphReader) error {
-	reader := ascii.NewLineReader(pr)
+func (cp *Checkpoint) FromASCII(r io.Reader) error {
+	reader := ascii.NewLineReader(r)
 
 	origin, err := reader.GetLine()
 	if err != nil {
@@ -69,15 +69,13 @@ func (cp *Checkpoint) FromASCII(pr *ascii.ParagraphReader) error {
 	if err != nil {
 		return fmt.Errorf("invalid checkpoint, bad root hash %q: %v", hashLine, err)
 	}
-	if err := reader.GetEOF(); err != nil {
-		return err
-	}
-	if err := pr.NextParagraph(); err != nil {
-		return err
-	}
-	lineCount := 0
-	reader = ascii.NewLineReader(pr)
 
+	if line, err := reader.GetLine(); err != nil {
+		return err
+	} else if line != "" {
+		return fmt.Errorf("invalid checkpoint, root hash not followed by an empty line")
+	}
+	signatureCount := 0
 	found := false
 	for {
 		line, err := reader.GetLine()
@@ -87,33 +85,27 @@ func (cp *Checkpoint) FromASCII(pr *ascii.ParagraphReader) error {
 		if err != nil {
 			return err
 		}
-		lineCount++
-		if lineCount > signatureLimit {
+		signatureCount++
+		if signatureCount > signatureLimit {
 			return fmt.Errorf("invalid checkpoint, too many signatures")
 		}
 		keyId, signature, err := parseSignatureLine(line, cp.Origin)
 		if err != nil {
 			if err != ErrUnwantedSignature {
-				fmt.Errorf("invalid signature line %d: %s", lineCount, err)
+				fmt.Errorf("invalid signature line %d: %s", signatureCount, err)
 				return err
 			}
 			continue
 		}
 		if found {
-			return fmt.Errorf("duplicate log signature on line %d: %s", lineCount, err)
+			return fmt.Errorf("duplicate log signature on line %d: %s", signatureCount, err)
 		}
 		cp.KeyId = keyId
 		cp.TreeHead.Signature = signature
 		found = true
 	}
 	if !found {
-		return fmt.Errorf("invalid checkpoint, %d signature lines, but no log signature", lineCount)
-	}
-
-	if err := pr.NextParagraph(); err == nil {
-		return fmt.Errorf("invalid checkpoint: trailing garbage after signatures")
-	} else if err != io.EOF {
-		return err
+		return fmt.Errorf("invalid checkpoint, %d signature lines, but no log signature", signatureCount)
 	}
 	return nil
 }
