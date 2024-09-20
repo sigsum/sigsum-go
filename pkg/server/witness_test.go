@@ -130,7 +130,6 @@ func TestAddTreeHead(t *testing.T) {
 }
 
 func TestAddCheckpoint(t *testing.T) {
-	t.Skip("TODO: XXX Need post-rebase fixes")
 	req := requests.AddCheckpoint{
 		OldSize: 3,
 		Proof:   types.ConsistencyProof{Path: []crypto.Hash{crypto.Hash{10, 11, 12}}},

@@ -95,7 +95,6 @@ func TestAddCheckpointToASCII(t *testing.T) {
 }
 
 func TestAddCheckpointFromASCII(t *testing.T) {
-	t.Skip("TODO: XXX Need post-rebase fixes")
 	var req AddCheckpoint
 	if err := req.FromASCII(bytes.NewBufferString(testAddCheckpointASCII)); err != nil {
 		t.Errorf("FromASCII failed: %v", err)
