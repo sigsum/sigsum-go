@@ -77,8 +77,8 @@ func main() {
 
 	if err := (&checkpoint.Checkpoint{
 		SignedTreeHead: sth,
-		Origin:   origin,
-		KeyId:    checkpoint.NewLogKeyId(origin, &pub),
+		Origin:         origin,
+		KeyId:          checkpoint.NewLogKeyId(origin, &pub),
 	}).ToASCII(os.Stdout); err != nil {
 		log.Fatal(err)
 	}

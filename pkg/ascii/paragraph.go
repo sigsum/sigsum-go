@@ -120,10 +120,7 @@ func (pr *ParagraphReader) NextParagraph() error {
 type errReader struct {
 	err error
 }
-<<<<<<< HEAD
 
-=======
->>>>>>> 319c3a9 (Add ParagraphReader.PlainReader + post-rebase fixes)
 func (r errReader) Read(buf []byte) (int, error) {
 	return 0, r.err
 }

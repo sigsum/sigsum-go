@@ -99,11 +99,7 @@ func TestParagraphReaderPlainReader(t *testing.T) {
 // A reader that returns the data followed by the given error.
 type bufErrReader struct {
 	data []byte
-<<<<<<< HEAD
 	err  error
-=======
-	err error
->>>>>>> 319c3a9 (Add ParagraphReader.PlainReader + post-rebase fixes)
 }
 
 func (r *bufErrReader) Read(buf []byte) (int, error) {
@@ -140,7 +136,3 @@ func TestParagraphReaderPlainReaderWithError(t *testing.T) {
 		t.Fatalf("got: %q, want: %q", got, want)
 	}
 }
-<<<<<<< HEAD
-=======
-	
->>>>>>> 319c3a9 (Add ParagraphReader.PlainReader + post-rebase fixes)
