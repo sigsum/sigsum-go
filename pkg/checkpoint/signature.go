@@ -37,8 +37,9 @@ func NewWitnessKeyId(keyName string, publicKey *crypto.PublicKey) (res KeyId) {
 	return makeKeyId(keyName, sigTypeCosignature, publicKey)
 }
 
-func writeNoteSignature(w io.Writer, keyName string, sig []byte) error {
-	_, err := fmt.Fprintf(w, "\u2014 %s %s\n", keyName, base64.StdEncoding.EncodeToString(sig))
+func writeNoteSignature(w io.Writer, keyName string, keyId KeyId, signature []byte) error {
+	_, err := fmt.Fprintf(w, "\u2014 %s %s\n", keyName,
+		base64.StdEncoding.EncodeToString(bytes.Join([][]byte{keyId[:], signature[:]}, nil)))
 	return err
 }
 
@@ -60,8 +61,7 @@ func parseNoteSignature(line string, blobSize int) (string, []byte, error) {
 }
 
 func WriteEd25519Signature(w io.Writer, origin string, keyId KeyId, signature *crypto.Signature) error {
-	return writeNoteSignature(w,
-		origin, bytes.Join([][]byte{keyId[:], signature[:]}, nil))
+	return writeNoteSignature(w, origin, keyId, signature[:])
 }
 
 // Input is a single signature line, with no trailing newline

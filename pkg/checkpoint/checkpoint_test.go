@@ -3,6 +3,7 @@ package checkpoint
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -11,17 +12,19 @@ import (
 
 var testOrigin = "example.org/log"
 
-var testTreeHead = types.SignedTreeHead{
-	TreeHead: types.TreeHead{
-		Size:     10,
-		RootHash: crypto.Hash{28, 14, 71}, // Base64 "HA5H"
-	},
+var testTreeHead = types.TreeHead{
+	Size:     10,
+	RootHash: crypto.Hash{28, 14, 71}, // Base64 "HA5H"
+}
+
+var testSignedTreeHead = types.SignedTreeHead{
+	TreeHead:  testTreeHead,
 	Signature: crypto.Signature{65, 5}, // Base64 "...EEF"
 }
 var testCheckpoint = Checkpoint{
-	Origin:   testOrigin,
-	TreeHead: testTreeHead,
-	KeyId:    [4]byte{12, 64, 3, 4}, // Base64 "DEADB..."
+	Origin:         testOrigin,
+	SignedTreeHead: testSignedTreeHead,
+	KeyId:          [4]byte{12, 64, 3, 4}, // Base64 "DEADB..."
 }
 
 var testCheckpointASCII = `example.org/log
@@ -67,7 +70,7 @@ func TestCheckpointSigned(t *testing.T) {
 		KeyId:  NewLogKeyId(origin, &pub),
 	}
 	var err error
-	cp.TreeHead, err = testTreeHead.TreeHead.Sign(signer)
+	cp.SignedTreeHead, err = testTreeHead.Sign(signer)
 
 	if err != nil {
 		t.Fatal(err)
@@ -115,6 +118,56 @@ func TestCheckpointVerify(t *testing.T) {
 		cp.TreeHead.RootHash[3] ^= 1
 	})
 	testInvalid("bad signature", func(cp *Checkpoint) {
-		cp.TreeHead.Signature[4] ^= 1
+		cp.Signature[4] ^= 1
 	})
+}
+
+func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
+	// Key used to sign above checkpoint.
+	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	pub := signer.Public()
+
+	paragraphs := strings.Split(validCheckpointASCII, "\n\n")
+	if len(paragraphs) != 2 {
+		t.Fatal("internal test error")
+	}
+	body := paragraphs[0]
+	sigs := strings.Split(paragraphs[1], "\n")
+	if len(sigs) != 2 || sigs[1] != "" {
+		t.Fatalf("internal test error, sigs: %v", sigs)
+	}
+	validSig := sigs[0]
+	// Ed25519 size
+	exampleSig := "— example.org/log2 DEADBEEFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+	alienSig := "— example.org/log DEAD"
+	badSig := "— example.org/log DEADB"
+
+	for _, table := range []struct {
+		sigs []string
+		fail bool
+	}{
+		{sigs: []string{validSig}},
+		{sigs: []string{validSig, alienSig}},
+		{sigs: []string{validSig, alienSig}},
+		{sigs: []string{exampleSig, validSig, alienSig}},
+		{sigs: []string{exampleSig, validSig, alienSig, badSig}, fail: true},
+	} {
+		ascii := fmt.Sprintf("%s\n\n%s\n", body, strings.Join(table.sigs, "\n"))
+		var cp Checkpoint
+		err := cp.FromASCII(bytes.NewBufferString(ascii))
+		if table.fail {
+			if err == nil {
+				t.Errorf("invalid checkpoint was accepted")
+			}
+			continue
+		}
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		if err := cp.Verify(&pub); err != nil {
+			t.Error(err)
+		}
+	}
 }
