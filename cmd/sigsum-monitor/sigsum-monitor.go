@@ -10,6 +10,7 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/log"
@@ -82,6 +83,7 @@ func (s *Settings) parse(args []string) {
 	set.SetParameters("submit-keys")
 
 	help := false
+	versionFlag := false
 	s.diagnostics = "info"
 	s.interval = 10 * time.Minute
 
@@ -89,12 +91,19 @@ func (s *Settings) parse(args []string) {
 	set.FlagLong(&s.interval, "interval", 0, "Monitoring interval")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
 	set.FlagLong(&help, "help", 0, "Display help")
+	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
 	err := set.Getopt(args, nil)
-	// Check help first; if seen, ignore errors about missing mandatory arguments.
+	// Check --help and --version first; if seen, ignore errors
+	// about missing mandatory arguments.
 	if help {
 		set.PrintUsage(os.Stdout)
 		os.Exit(0)
 	}
+	if versionFlag {
+		version.DisplayVersion("sigsum-monitor")
+		os.Exit(0)
+	}
+
 	if err != nil {
 		fmt.Printf("err: %v\n", err)
 		set.PrintUsage(os.Stderr)

@@ -15,6 +15,7 @@ import (
 	"github.com/dchest/safefile"
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
@@ -91,18 +92,24 @@ func (s *Settings) parse(args []string) {
 	set.SetUsage(func() { fmt.Print(usage) })
 
 	help := false
-
+	versionFlag := false
 	set.FlagLong(&s.keyFile, "signing-key", 'k', "Witness private key", "file").Mandatory()
 	set.FlagLong(&s.logKey, "log-key", 0, "Log public key", "file").Mandatory()
 	// TODO: Better name?
 	set.FlagLong(&s.stateFile, "state-file", 0, "Name of state file", "file").Mandatory()
 	set.FlagLong(&s.prefix, "url-prefix", 0, "Prefix preceding the endpoint names", "string")
 	set.FlagLong(&help, "help", 0, "Display help")
+	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
 	err := set.Getopt(args, nil)
-	// Check help first; if seen, ignore errors about missing mandatory arguments.
+	// Check --help and --version first; if seen, ignore errors
+	// about missing mandatory arguments.
 	if help {
 		set.PrintUsage(os.Stdout)
 		fmt.Print(usage)
+		os.Exit(0)
+	}
+	if versionFlag {
+		version.DisplayVersion("sigsum-witness")
 		os.Exit(0)
 	}
 	if err != nil {

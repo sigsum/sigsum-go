@@ -10,6 +10,7 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/submit-token"
@@ -41,6 +42,9 @@ func main() {
     Display this help. All the below sub commands also accept the --help
     option, to display help for that sub command.
 
+  sigsum-token version | --version | -v
+    Display software version.
+
   sigsum-token create [options]
     Create a token for submissions to the the given log, essentially
     a signature on the log's public key.
@@ -62,6 +66,9 @@ func main() {
 		log.Fatal(usage)
 	case "help", "--help":
 		fmt.Print(usage)
+		os.Exit(0)
+	case "version", "--version", "-v":
+		version.DisplayVersion("sigsum-token")
 		os.Exit(0)
 	case "create":
 		var settings createSettings

@@ -11,6 +11,7 @@ import (
 	"github.com/pborman/getopt/v2"
 
 	"sigsum.org/sigsum-go/internal/ssh"
+	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 )
@@ -42,6 +43,9 @@ func main() {
   sigsum-key help | --help
     Display this help. All the below sub commands also accept the --help
     option, to display help for that sub command.
+
+  sigsum-key version | --version | -v
+    Display software version.
 
   sigsum-key gen -o file
     Generate a new key pair. Private key is stored in the given
@@ -77,6 +81,9 @@ func main() {
 		log.Fatal(usage)
 	case "help", "--help":
 		fmt.Print(usage)
+		os.Exit(0)
+	case "version", "--version", "-v":
+		version.DisplayVersion("sigsum-key")
 		os.Exit(0)
 	case "gen":
 		var settings GenSettings

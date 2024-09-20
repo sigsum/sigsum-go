@@ -1,0 +1,26 @@
+#! /bin/sh
+
+set -e
+
+# Collect version messages from all tools, and verify that it is
+# written to stdout (not stderr), and that exit code is success.
+
+exec > test.version
+
+die() {
+    echo "$@" >&2
+    exit 1
+}
+
+test_one() {
+    echo "=== $@ ==="
+    if "$@" 2> test.stderr ; then true; else die "Exit code $? from: $@"; fi
+    if [ -s test.stderr ] ; then die "Stderr output from: $@" ; fi
+}
+
+test_one ./bin/sigsum-key --version
+test_one ./bin/sigsum-token --version
+test_one ./bin/sigsum-submit --version
+test_one ./bin/sigsum-verify --version
+test_one ./bin/sigsum-witness --version
+test_one ./bin/sigsum-monitor --version
