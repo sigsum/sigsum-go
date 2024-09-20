@@ -1,12 +1,17 @@
 package types
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
+)
+
+const (
+	proofSizeLimit = 63
 )
 
 type InclusionProof struct {
@@ -20,8 +25,7 @@ type ConsistencyProof struct {
 
 func hashesToASCII(w io.Writer, hashes []crypto.Hash) error {
 	for _, hash := range hashes {
-		err := ascii.WriteHash(w, "node_hash", &hash)
-		if err != nil {
+		if err := ascii.WriteHash(w, "node_hash", &hash); err != nil {
 			return err
 		}
 	}
@@ -42,6 +46,9 @@ func hashesFromASCII(p *ascii.Parser) ([]crypto.Hash, error) {
 		}
 		if err != nil {
 			return nil, err
+		}
+		if len(hashes) >= proofSizeLimit {
+			return nil, fmt.Errorf("too many node hashes")
 		}
 		hashes = append(hashes, hash)
 	}
@@ -83,6 +90,36 @@ func (pr *ConsistencyProof) Parse(p *ascii.Parser) error {
 func (pr *ConsistencyProof) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
 	return pr.Parse(&p)
+}
+
+func (pr *ConsistencyProof) ToBase64(w io.Writer) error {
+	for _, hash := range pr.Path {
+		if _, err := fmt.Fprintln(w, base64.StdEncoding.EncodeToString(hash[:])); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (pr *ConsistencyProof) FromBase64(r ascii.LineReader) error {
+	pr.Path = nil
+	for {
+		line, err := r.GetLine()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if len(pr.Path) >= proofSizeLimit {
+			return fmt.Errorf("too many entries for consistency proof")
+		}
+		hash, err := crypto.HashFromBase64(line)
+		if err != nil {
+			return err
+		}
+		pr.Path = append(pr.Path, hash)
+	}
 }
 
 func (pr *ConsistencyProof) Verify(oldTree, newTree *TreeHead) error {

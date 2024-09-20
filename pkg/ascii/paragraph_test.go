@@ -2,6 +2,7 @@ package ascii
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 )
@@ -58,5 +59,80 @@ func TestParagraphReader(t *testing.T) {
 			t.Errorf("Unexpected result at end of data %q: got %v, want EOF",
 				table.in, nextErr)
 		}
+	}
+}
+
+type shortReader struct {
+	reader io.Reader
+	size   int
+}
+
+func (r *shortReader) Read(buf []byte) (int, error) {
+	if len(buf) > r.size {
+		buf = buf[:r.size]
+	}
+	return r.reader.Read(buf)
+}
+
+func TestParagraphReaderPlainReader(t *testing.T) {
+	input := "aaaaaaa\n\nbbbbb\n\nbbb\n"
+	pr := NewParagraphReader(&shortReader{bytes.NewBufferString(input), 10})
+	data, err := io.ReadAll(pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(data), "aaaaaaa\n"; got != want {
+		t.Fatalf("got: %q, want: %q", got, want)
+	}
+	if got, want := string(pr.buf), "b"; got != want {
+		t.Fatalf("ParagraphReader under test is not in expected state, buf: %v, want: %v", got, want)
+	}
+	data, err = io.ReadAll(pr.PlainReader())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(data), "bbbbb\n\nbbb\n"; got != want {
+		t.Fatalf("got: %q, want: %q", got, want)
+	}
+}
+
+// A reader that returns the data followed by the given error.
+type bufErrReader struct {
+	data []byte
+	err  error
+}
+
+func (r *bufErrReader) Read(buf []byte) (int, error) {
+	if len(buf) < len(r.data) {
+		copy(buf, r.data)
+		r.data = r.data[len(buf):]
+		return len(buf), nil
+	}
+	n := len(r.data)
+	copy(buf, r.data)
+	r.data = nil
+	return n, r.err
+}
+
+func TestParagraphReaderPlainReaderWithError(t *testing.T) {
+	input := "aaaaaaa\n\nbbbbb\n\nbbb\n"
+	expErr := errors.New("test error")
+	pr := NewParagraphReader(&bufErrReader{[]byte(input), expErr})
+	data, err := io.ReadAll(pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(data), "aaaaaaa\n"; got != want {
+		t.Fatalf("got: %q, want: %q", got, want)
+	}
+	if pr.err == nil {
+		t.Fatalf("ParagraphReader under test is not in expected state, no error encountered")
+	}
+	data, err = io.ReadAll(pr.PlainReader())
+	if err != expErr {
+		t.Fatalf("expected test error, got: %v", err)
+	}
+	if got, want := string(data), "bbbbb\n\nbbb\n"; got != want {
+		t.Fatalf("got: %q, want: %q", got, want)
 	}
 }

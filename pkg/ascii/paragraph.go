@@ -117,6 +117,23 @@ func (pr *ParagraphReader) NextParagraph() error {
 	return fmt.Errorf("not at end of paragraph")
 }
 
+type errReader struct {
+	err error
+}
+
+func (r errReader) Read(buf []byte) (int, error) {
+	return 0, r.err
+}
+
+// Returns a plain reader for the rest of the data, with no special
+// handling of paragraph separators.
+func (pr *ParagraphReader) PlainReader() io.Reader {
+	if pr.err != nil {
+		return io.MultiReader(bytes.NewBuffer(pr.buf), errReader{pr.err})
+	}
+	return io.MultiReader(bytes.NewBuffer(pr.buf), pr.r)
+}
+
 func NewParagraphReader(r io.Reader) *ParagraphReader {
 	return &ParagraphReader{r: r}
 }
