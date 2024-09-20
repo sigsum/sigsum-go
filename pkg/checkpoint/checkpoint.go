@@ -70,7 +70,6 @@ func (cp *Checkpoint) FromASCII(r io.Reader) error {
 		return err
 	}
 
-	// TODO: Validate syntax, e.g., no spaces?
 	cp.Origin = origin
 
 	sizeLine, err := reader.GetLine()
