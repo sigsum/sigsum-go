@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 
+	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -95,6 +97,66 @@ func TestConsistencyProofFromASCII(t *testing.T) {
 		if got, want := &proof, table.want; !reflect.DeepEqual(got, want) {
 			t.Errorf("got consistency proof\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
+	}
+}
+
+func TestConsistencyProofToBase64(t *testing.T) {
+	expBase64 := []string{
+		"BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+		"CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+		"DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+		"EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+		"FAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+	}
+	writerToString := func(f func(w io.Writer) error) string {
+		buf := bytes.Buffer{}
+		if err := f(&buf); err != nil {
+			t.Fatal(err)
+		}
+		return buf.String()
+	}
+	var pr ConsistencyProof
+	if got, want := writerToString(pr.ToBase64), ""; got != want {
+		t.Errorf("failed for size 0, got:\n%q\nwant\n%q", got, want)
+	}
+	for i := 1; i <= 5; i++ {
+		pr.Path = append(pr.Path, crypto.Hash{byte(i << 2)})
+		want := strings.Join(expBase64[:i], "\n") + "\n"
+		if got := writerToString(pr.ToBase64); got != want {
+			t.Errorf("failed for size %d, got:\n%q\nwant\n%q", i, got, want)
+		}
+	}
+}
+
+func TestConsistencyProofFromBase64(t *testing.T) {
+	makeInput := func(size int) io.Reader {
+		buf := bytes.Buffer{}
+		for i := 0; i < size; i++ {
+			fmt.Fprintf(&buf, "%cAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n", 'A'+(i%26))
+		}
+		return &buf
+	}
+	makePath := func(size int) []crypto.Hash {
+		var path []crypto.Hash
+		for i := 0; i < size; i++ {
+			path = append(path, crypto.Hash{byte((i % 26) << 2)})
+		}
+		return path
+	}
+	for i := 0; i <= 63; i++ {
+		var pr ConsistencyProof
+		if err := pr.FromBase64(ascii.NewLineReader(makeInput(i))); err != nil {
+			t.Errorf("failed for size %d: %v", i, err)
+			continue
+		}
+		if got, want := pr.Path, makePath(i); !reflect.DeepEqual(pr.Path, want) {
+			t.Errorf("bad result for size %d, got: %v, want: %v", i, got, want)
+		}
+	}
+	var pr ConsistencyProof
+	err := pr.FromBase64(ascii.NewLineReader(makeInput(64)))
+	if err == nil || !strings.Contains(err.Error(), "too many entries") {
+		t.Errorf("too large proof (size 64) not rejected, got err: %v", err)
 	}
 }
 
