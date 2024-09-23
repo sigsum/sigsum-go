@@ -2,6 +2,7 @@ package checkpoint
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"testing"
@@ -169,5 +170,74 @@ func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 		if err := cp.Verify(&pub); err != nil {
 			t.Error(err)
 		}
+	}
+}
+
+func TestGoSumDBCheckpoint(t *testing.T) {
+	const (
+		// Retrieved from https://sum.golang.org/latest, 2024-09-23
+		dbCheckpoint = `go.sum database tree
+30055305
+mXfgRcJ0bG0j3CPdKwgGWtUzBUbX67saZGRmFuJGGsM=
+
+— sum.golang.org Az3grpgEild5qw7+5dtV13Kf1C2Xurm8q4fhdxvcsDHnqNTaxL2AFjBY+2TyGKevucFcAAlWFJJYle3EJlDCrQ+y3A8=
+`
+
+		// Checksum db key, from
+		// https://github.com/golang/go/blob/master/src/cmd/go/internal/modfetch/key.go.
+		// Should be parsed as <name>+<hash>+<keydata> according to
+		// https://pkg.go.dev/golang.org/x/mod/sumdb/note
+		noteKey = "sum.golang.org+033de0ae+Ac4zctda0e5eza+HJyk9SxEdh+s3Ux18htTTAD8OuAn8"
+	)
+	paragraphSep := strings.Index(dbCheckpoint, "\n\n")
+	if paragraphSep < 0 {
+		t.Fatal("failed to split checkpoint")
+	}
+	dbCheckpointBody := dbCheckpoint[:paragraphSep+1]
+
+	fields := strings.SplitN(noteKey, "+", 3)
+	if len(fields) != 3 {
+		t.Fatalf("failed to split key")
+	}
+
+	keyName := fields[0]
+
+	blob, err := base64.StdEncoding.DecodeString(fields[2])
+	if err != nil {
+		t.Fatal(err)
+	}
+	// First byte appears to be a key type.
+	if got, want := blob[0], byte(sigTypeEd25519); got != want {
+		t.Fatalf("unexpected key type: got %d, want %d", got, want)
+	}
+
+	blob = blob[1:]
+	if got, want := len(blob), crypto.PublicKeySize; got != want {
+		t.Fatalf("unexpected key blob length: got %d, want %d", got, want)
+	}
+	var pub crypto.PublicKey
+	copy(pub[:], blob)
+
+	// Process checkpoint
+	var cp Checkpoint
+	if err := cp.fromASCIIWithKeyName(bytes.NewBufferString(dbCheckpoint), keyName); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := cp.Origin, "go.sum database tree"; got != want {
+		t.Errorf("unexpected origin: got %s, want: %s", got, want)
+	}
+	if got, want := cp.KeyId, NewLogKeyId(keyName, &pub); got != want {
+		t.Errorf("unexpected keyId: got %x, want: %x", got, want)
+	}
+	if got, want := fields[1], fmt.Sprintf("%x", cp.KeyId); got != want {
+		t.Errorf("unexpected keyId in noteKey string: got %x, want: %x", got, want)
+	}
+
+	checkpointASCII := cp.TreeHead.FormatCheckpoint(cp.Origin)
+	if got, want := checkpointASCII, dbCheckpointBody; got != want {
+		t.Errorf("formatting roundtrip failed: got:\n%q\nwant:\n%q", got, want)
+	}
+	if !crypto.Verify(&pub, []byte(checkpointASCII), &cp.Signature) {
+		t.Errorf("verifying checkpoint signature failed")
 	}
 }

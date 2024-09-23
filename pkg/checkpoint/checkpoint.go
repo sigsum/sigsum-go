@@ -28,7 +28,6 @@
 package checkpoint
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
 
@@ -55,14 +54,16 @@ type Checkpoint struct {
 }
 
 func (cp *Checkpoint) ToASCII(w io.Writer) error {
-	if _, err := fmt.Fprintf(w, "%s\n%d\n%s\n\n",
-		cp.Origin, cp.TreeHead.Size, base64.StdEncoding.EncodeToString(cp.TreeHead.RootHash[:])); err != nil {
+	if _, err := fmt.Fprintf(w, "%s\n", cp.TreeHead.FormatCheckpoint(cp.Origin)); err != nil {
 		return err
 	}
 	return WriteEd25519Signature(w, cp.Origin, cp.KeyId, &cp.Signature)
 }
 
-func (cp *Checkpoint) FromASCII(r io.Reader) error {
+// The keyName identifies the signature line of interest. If keyName
+// is the empty string, use the checkpoint's origin. Intended for
+// interop tests with non-Sigsum checkpoints.
+func (cp *Checkpoint) fromASCIIWithKeyName(r io.Reader, keyName string) error {
 	reader := ascii.NewLineReader(r)
 
 	origin, err := reader.GetLine()
@@ -94,6 +95,10 @@ func (cp *Checkpoint) FromASCII(r io.Reader) error {
 	} else if line != "" {
 		return fmt.Errorf("invalid checkpoint, root hash not followed by an empty line")
 	}
+
+	if keyName == "" {
+		keyName = cp.Origin
+	}
 	signatureCount := 0
 	found := false
 	for {
@@ -108,7 +113,7 @@ func (cp *Checkpoint) FromASCII(r io.Reader) error {
 		if signatureCount > signatureLimit {
 			return fmt.Errorf("invalid checkpoint, too many signatures")
 		}
-		keyId, signature, err := ParseEd25519SignatureLine(line, cp.Origin)
+		keyId, signature, err := ParseEd25519SignatureLine(line, keyName)
 		if err != nil {
 			if err != ErrUnwantedSignature {
 				fmt.Errorf("invalid signature line %d: %s", signatureCount, err)
@@ -127,6 +132,10 @@ func (cp *Checkpoint) FromASCII(r io.Reader) error {
 		return fmt.Errorf("invalid checkpoint, %d signature lines, but no log signature", signatureCount)
 	}
 	return nil
+}
+
+func (cp *Checkpoint) FromASCII(r io.Reader) error {
+	return cp.fromASCIIWithKeyName(r, "")
 }
 
 func (cp *Checkpoint) Verify(publicKey *crypto.PublicKey) error {

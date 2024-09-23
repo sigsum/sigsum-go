@@ -42,15 +42,16 @@ func NewEmptyTreeHead() TreeHead {
 	return TreeHead{Size: 0, RootHash: merkle.HashEmptyTree()}
 }
 
-func (th *TreeHead) formatCheckpoint(prefix string, keyHash *crypto.Hash) string {
-	return fmt.Sprintf("%s%x\n%d\n%s\n",
-		prefix,
-		*keyHash, th.Size,
+// Produces the checkpoint body, i.e., the data to be signed when
+// represented as a "signed note".
+func (th *TreeHead) FormatCheckpoint(origin string) string {
+	return fmt.Sprintf("%s\n%d\n%s\n",
+		origin, th.Size,
 		base64.StdEncoding.EncodeToString(th.RootHash[:]))
 }
 
 func (th *TreeHead) toCheckpoint(keyHash *crypto.Hash) string {
-	return th.formatCheckpoint(CheckpointNamePrefix, keyHash)
+	return th.FormatCheckpoint(fmt.Sprintf("%s%x", CheckpointNamePrefix, *keyHash))
 }
 
 func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
@@ -148,7 +149,7 @@ func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
 func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 	// Prefix used temporarily, for version v0.1.15 and v0.2.0.
 	keyHash := crypto.HashBytes(key[:])
-	if crypto.Verify(key, []byte(sth.formatCheckpoint("sigsum.org/v1/", &keyHash)), &sth.Signature) {
+	if crypto.Verify(key, []byte(sth.FormatCheckpoint(fmt.Sprintf("sigsum.org/v1/%x", &keyHash))), &sth.Signature) {
 		return true
 	}
 	b := make([]byte, 40)
