@@ -34,12 +34,12 @@ func NewWitness(config *Config, witness api.Witness) http.Handler {
 				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
 				return
 			}
-			cs, err := witness.AddTreeHead(r.Context(), req)
+			keyHash, cs, err := witness.AddTreeHead(r.Context(), req)
 			if err != nil {
 				reportError(w, r.URL, err)
 				return
 			}
-			if err := cs.ToASCII(w); err != nil {
+			if err := cs.ToASCII(w, &keyHash); err != nil {
 				logError(r.URL, err)
 			}
 		}))

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"sort"
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
@@ -28,14 +29,13 @@ type SignedTreeHead struct {
 }
 
 type Cosignature struct {
-	KeyHash   crypto.Hash
 	Timestamp uint64
 	Signature crypto.Signature
 }
 
 type CosignedTreeHead struct {
 	SignedTreeHead
-	Cosignatures []Cosignature
+	Cosignatures map[crypto.Hash]Cosignature
 }
 
 func NewEmptyTreeHead() TreeHead {
@@ -80,9 +80,7 @@ func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timest
 	if err != nil {
 		return Cosignature{}, fmt.Errorf("failed co-signing tree head: %w", err)
 	}
-	pub := signer.Public()
 	return Cosignature{
-		KeyHash:   crypto.HashBytes(pub[:]),
 		Timestamp: timestamp,
 		Signature: signature,
 	}, nil
@@ -160,64 +158,97 @@ func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 }
 
 func (cs *Cosignature) Verify(key *crypto.PublicKey, logKeyHash *crypto.Hash, th *TreeHead) bool {
-	return cs.KeyHash == crypto.HashBytes(key[:]) &&
-		crypto.Verify(key, []byte(th.toCosignedData(logKeyHash, cs.Timestamp)), &cs.Signature)
+	return crypto.Verify(key, []byte(th.toCosignedData(logKeyHash, cs.Timestamp)), &cs.Signature)
 }
 
-func (cs *Cosignature) ToASCII(w io.Writer) error {
-	return ascii.WriteLine(w, "cosignature", cs.KeyHash[:], cs.Timestamp, cs.Signature[:])
+func (cs *Cosignature) ToASCII(w io.Writer, keyHash *crypto.Hash) error {
+	return ascii.WriteLine(w, "cosignature", keyHash[:], cs.Timestamp, cs.Signature[:])
 }
 
-func (cs *Cosignature) Parse(p *ascii.Parser) error {
+func (cs *Cosignature) Parse(p *ascii.Parser) (crypto.Hash, error) {
 	v, err := p.GetValues("cosignature", 3)
 	if err != nil {
-		return err
+		return crypto.Hash{}, err
 	}
-	cs.KeyHash, err = crypto.HashFromHex(v[0])
+	keyHash, err := crypto.HashFromHex(v[0])
 	if err != nil {
-		return err
+		return crypto.Hash{}, err
 	}
 	cs.Timestamp, err = ascii.IntFromDecimal(v[1])
 	if err != nil {
-		return err
+		return crypto.Hash{}, err
 	}
 	cs.Signature, err = crypto.SignatureFromHex(v[2])
-	return err
+	if err != nil {
+		return crypto.Hash{}, err
+	}
+	return keyHash, nil
 }
 
-func (cs *Cosignature) FromASCII(r io.Reader) error {
+func (cs *Cosignature) FromASCII(r io.Reader) (crypto.Hash, error) {
 	p := ascii.NewParser(r)
-	err := cs.Parse(&p)
+	keyHash, err := cs.Parse(&p)
 	if err != nil {
-		return err
+		return crypto.Hash{}, err
 	}
-	return p.GetEOF()
+	return keyHash, p.GetEOF()
+}
+
+type keyHashData struct {
+	data []crypto.Hash
+}
+
+func (d keyHashData) Len() int {
+	return len(d.data)
+}
+
+func (d keyHashData) Less(i, j int) bool {
+	for k := 0; k < crypto.HashSize; k++ {
+		if d.data[i][k] < d.data[j][k] {
+			return true
+		}
+	}
+	return false
+}
+
+func (d keyHashData) Swap(i, j int) {
+	d.data[i], d.data[j] = d.data[j], d.data[i]
 }
 
 func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
 	if err := cth.SignedTreeHead.ToASCII(w); err != nil {
 		return err
 	}
-	for _, cs := range cth.Cosignatures {
-		if err := cs.ToASCII(w); err != nil {
+	// Produce response in deterministically sorted order.
+	keys := make([]crypto.Hash, 0, len(cth.Cosignatures))
+	for key, _ := range cth.Cosignatures {
+		keys = append(keys, key)
+	}
+	sort.Sort(keyHashData{keys})
+	for _, key := range keys {
+		cs := cth.Cosignatures[key]
+		if err := cs.ToASCII(w, &key); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func ParseCosignatures(p *ascii.Parser) ([]Cosignature, error) {
-	var cosignatures []Cosignature
+func ParseCosignatures(p *ascii.Parser) (map[crypto.Hash]Cosignature, error) {
+	cosignatures := make(map[crypto.Hash]Cosignature)
 	for {
 		var cs Cosignature
-		err := cs.Parse(p)
+		keyHash, err := cs.Parse(p)
 		if err == io.EOF {
 			return cosignatures, nil
 		}
 		if err != nil {
 			return nil, err
 		}
-		cosignatures = append(cosignatures, cs)
+		if _, ok := cosignatures[keyHash]; ok {
+			return nil, fmt.Errorf("duplicate cosignature keyhash")
+		}
+		cosignatures[keyHash] = cs
 	}
 }
 

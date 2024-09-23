@@ -179,7 +179,8 @@ func TestSignedTreeHeadVerifyVersion0(t *testing.T) {
 func TestCosignatureToASCII(t *testing.T) {
 	desc := "valid"
 	buf := bytes.Buffer{}
-	if err := validCosignature(t).ToASCII(&buf); err != nil {
+	cs := validCosignature(t)
+	if err := cs.ToASCII(&buf, validKeyHash(t)); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
 	if got, want := buf.String(), validCosignatureASCII(t); got != want {
@@ -206,7 +207,7 @@ func TestCosignatureFromASCII(t *testing.T) {
 		},
 	} {
 		var req Cosignature
-		err := req.FromASCII(table.serialized)
+		keyHash, err := req.FromASCII(table.serialized)
 		if got, want := err != nil, table.wantErr; got != want {
 			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 		}
@@ -216,13 +217,15 @@ func TestCosignatureFromASCII(t *testing.T) {
 		if got, want := req, *table.want; got != want {
 			t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
+		if got, want := keyHash, *validKeyHash(t); got != want {
+			t.Errorf("wrong key hash: got %x, want %x", got, want)
+		}
 	}
 }
 
 func TestCosignAndVerify(t *testing.T) {
 	th := *validTreeHead(t)
 	pub, signer := newKeyPair(t)
-	keyHash := crypto.HashBytes(pub[:])
 	logKeyHash := *newHashBufferInc(t)
 
 	cosignature, err := th.Cosign(signer, &logKeyHash, testCosignTimestamp)
@@ -233,10 +236,6 @@ func TestCosignAndVerify(t *testing.T) {
 	if cosignature.Timestamp != testCosignTimestamp {
 		t.Errorf("unexpected cosignature timestamp, wanted %d, got %d",
 			testCosignTimestamp, cosignature.Timestamp)
-	}
-	if cosignature.KeyHash != keyHash {
-		t.Errorf("unexpected cosignature keyhash, wanted %x, got %x",
-			keyHash, cosignature.KeyHash)
 	}
 	if !cosignature.Verify(&pub, &logKeyHash, &th) {
 		t.Errorf("failed verifying a valid cosignature")
@@ -253,11 +252,6 @@ func TestCosignAndVerify(t *testing.T) {
 			mCs := cosignature
 			mCs.Timestamp++
 			return "bad timestamp", th, mCs, logKeyHash
-		},
-		func() (string, TreeHead, Cosignature, crypto.Hash) {
-			mCs := cosignature
-			mCs.KeyHash[2]++
-			return "bad cs key hash", th, mCs, logKeyHash
 		},
 		func() (string, TreeHead, Cosignature, crypto.Hash) {
 			mKh := logKeyHash
@@ -377,8 +371,12 @@ func validCosignature(t *testing.T) *Cosignature {
 	return &Cosignature{
 		Signature: *newSigBufferInc(t),
 		Timestamp: 1,
-		KeyHash:   *newHashBufferInc(t),
 	}
+}
+
+func validKeyHash(t *testing.T) *crypto.Hash {
+	t.Helper()
+	return newHashBufferInc(t)
 }
 
 func validCosignatureASCII(t *testing.T) string {
@@ -397,10 +395,9 @@ func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
 			},
 			Signature: *newSigBufferInc(t),
 		},
-		Cosignatures: []Cosignature{
-			Cosignature{},
-			Cosignature{
-				KeyHash:   *newHashBufferInc(t),
+		Cosignatures: map[crypto.Hash]Cosignature{
+			crypto.Hash{}: Cosignature{},
+			*newHashBufferInc(t): Cosignature{
 				Timestamp: 1,
 				Signature: *newSigBufferInc(t),
 			},
