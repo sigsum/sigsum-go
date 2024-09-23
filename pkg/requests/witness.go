@@ -125,9 +125,14 @@ func (req *AddCheckpoint) FromASCII(r io.Reader) error {
 		return fmt.Errorf("invalid request, old_size(%d) > size(%d)",
 			req.OldSize, req.Checkpoint.TreeHead.Size)
 	}
-	// TODO: Check proof size? at least for cases where it's
-	// expected to be empty (old size zero or old size == new
-	// size).
+	// Check for empty/non-empty consistency proof.
+	if req.OldSize == req.Checkpoint.TreeHead.Size || req.OldSize == 0 {
+		if len(req.Proof.Path) > 0 {
+			return fmt.Errorf("invalid add-checkpoint request, expected empty consistency proof")
+		}
+	} else if len(req.Proof.Path) == 0 {
+		return fmt.Errorf("invalid add-checkpoint request, consistency proof missing")
+	}
 	return nil
 }
 
