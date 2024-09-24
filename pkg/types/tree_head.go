@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"sort"
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/ascii"
@@ -194,39 +193,13 @@ func (cs *Cosignature) FromASCII(r io.Reader) (crypto.Hash, error) {
 	return keyHash, p.GetEOF()
 }
 
-type keyHashData struct {
-	data []crypto.Hash
-}
-
-func (d keyHashData) Len() int {
-	return len(d.data)
-}
-
-func (d keyHashData) Less(i, j int) bool {
-	for k := 0; k < crypto.HashSize; k++ {
-		if d.data[i][k] < d.data[j][k] {
-			return true
-		}
-	}
-	return false
-}
-
-func (d keyHashData) Swap(i, j int) {
-	d.data[i], d.data[j] = d.data[j], d.data[i]
-}
-
 func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
 	if err := cth.SignedTreeHead.ToASCII(w); err != nil {
 		return err
 	}
-	// Produce response in deterministically sorted order.
-	keys := make([]crypto.Hash, 0, len(cth.Cosignatures))
-	for key, _ := range cth.Cosignatures {
-		keys = append(keys, key)
-	}
-	sort.Sort(keyHashData{keys})
-	for _, key := range keys {
-		cs := cth.Cosignatures[key]
+	// Note that this produces the cosignature lines in a
+	// non-deterministic order.
+	for key, cs := range cth.Cosignatures {
 		if err := cs.ToASCII(w, &key); err != nil {
 			return err
 		}

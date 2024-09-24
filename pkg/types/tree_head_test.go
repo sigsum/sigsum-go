@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
+	"strings"
 	"testing"
 
 	"sigsum.org/sigsum-go/internal/mocks/signer"
@@ -275,10 +277,15 @@ func TestCosignAndVerify(t *testing.T) {
 func TestCosignedTreeHeadToASCII(t *testing.T) {
 	desc := "valid"
 	buf := bytes.Buffer{}
+	canonicalize := func(text string) string {
+		lines := strings.Split(text, "\n")
+		sort.Strings(lines[3 : len(lines)-1])
+		return strings.Join(lines, "\n")
+	}
 	if err := validCosignedTreeHead(t).ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
-	if got, want := buf.String(), validCosignedTreeHeadASCII(t); got != want {
+	if got, want := canonicalize(buf.String()), validCosignedTreeHeadASCII(t); got != want {
 		t.Errorf("got cosigned tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
