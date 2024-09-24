@@ -1,4 +1,4 @@
-image: docker.io/library/golang:1.19
+image: docker.io/library/golang:1.22
 
 stages:
 - build
