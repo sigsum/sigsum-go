@@ -11,14 +11,6 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
-// strings.CutPrefix added in go-1.20.
-func cutPrefix(s, prefix string) (string, bool) {
-	if strings.HasPrefix(s, prefix) {
-		return s[len(prefix):], true
-	}
-	return s, false
-}
-
 type AddTreeHead struct {
 	KeyHash  crypto.Hash
 	TreeHead types.SignedTreeHead
@@ -100,7 +92,7 @@ func (req *AddCheckpoint) FromASCII(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	s, found := cutPrefix(s, "old ")
+	s, found := strings.CutPrefix(s, "old ")
 	if !found {
 		return fmt.Errorf("invalid add-checkpoint request, invalid old line: %q", s)
 	}
