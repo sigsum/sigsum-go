@@ -49,8 +49,12 @@ func (th *TreeHead) FormatCheckpoint(origin string) string {
 		base64.StdEncoding.EncodeToString(th.RootHash[:]))
 }
 
+func sigsumCheckpointOrigin(keyHash *crypto.Hash) string {
+	return fmt.Sprintf("%s%x", CheckpointNamePrefix, *keyHash)
+}
+
 func (th *TreeHead) toCheckpoint(keyHash *crypto.Hash) string {
-	return th.FormatCheckpoint(fmt.Sprintf("%s%x", CheckpointNamePrefix, *keyHash))
+	return th.FormatCheckpoint(sigsumCheckpointOrigin(keyHash))
 }
 
 func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
@@ -68,14 +72,14 @@ func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
 }
 
 // TODO: Should the Cosign method be attached to SignedTreeHead instead?
-func (th *TreeHead) toCosignedData(logKeyHash *crypto.Hash, timestamp uint64) string {
+func (th *TreeHead) toCosignedData(origin string, timestamp uint64) string {
 	return fmt.Sprintf("%s\ntime %d\n%s",
 		CosignatureNamespace, timestamp,
-		th.toCheckpoint(logKeyHash))
+		th.FormatCheckpoint(origin))
 }
 
-func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
-	signature, err := signer.Sign([]byte(th.toCosignedData(logKeyHash, timestamp)))
+func (th *TreeHead) CosignOrigin(signer crypto.Signer, origin string, timestamp uint64) (Cosignature, error) {
+	signature, err := signer.Sign([]byte(th.toCosignedData(origin, timestamp)))
 	if err != nil {
 		return Cosignature{}, fmt.Errorf("failed co-signing tree head: %w", err)
 	}
@@ -83,6 +87,10 @@ func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timest
 		Timestamp: timestamp,
 		Signature: signature,
 	}, nil
+}
+
+func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
+	return th.CosignOrigin(signer, sigsumCheckpointOrigin(logKeyHash), timestamp)
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
@@ -156,8 +164,12 @@ func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 		&sth.Signature)
 }
 
+func (cs *Cosignature) VerifyOrigin(key *crypto.PublicKey, origin string, th *TreeHead) bool {
+	return crypto.Verify(key, []byte(th.toCosignedData(origin, cs.Timestamp)), &cs.Signature)
+}
+
 func (cs *Cosignature) Verify(key *crypto.PublicKey, logKeyHash *crypto.Hash, th *TreeHead) bool {
-	return crypto.Verify(key, []byte(th.toCosignedData(logKeyHash, cs.Timestamp)), &cs.Signature)
+	return cs.VerifyOrigin(key, sigsumCheckpointOrigin(logKeyHash), th)
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer, keyHash *crypto.Hash) error {

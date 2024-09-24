@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	// An implementatino of the signed note spec MUST support at
+	// An implementation of the signed note spec MUST support at
 	// least 16 signature lines.
 	signatureLimit = 16
 
@@ -146,4 +146,29 @@ func (cp *Checkpoint) Verify(publicKey *crypto.PublicKey) error {
 		return fmt.Errorf("invalid checkpoint signature")
 	}
 	return nil
+}
+
+func (cp *Checkpoint) Cosign(signer crypto.Signer, timestamp uint64) (types.Cosignature, error) {
+	return cp.TreeHead.CosignOrigin(signer, cp.Origin, timestamp)
+}
+
+func (cp *Checkpoint) VerifyCosignature(publicKey *crypto.PublicKey, cosignature *types.Cosignature) bool {
+	return cosignature.VerifyOrigin(publicKey, cp.Origin, &cp.SignedTreeHead.TreeHead)
+}
+
+// Returns a verified cosignature identified by public key. The key
+// name on the signature line is ignored, except that it is used to
+// construct the key id.
+func (cp *Checkpoint) VerifyCosignatureByKey(signatures []CosignatureLine, publicKey *crypto.PublicKey) (types.Cosignature, error) {
+	for _, signature := range signatures {
+		if keyId := NewWitnessKeyId(signature.KeyName, publicKey); signature.KeyId != keyId {
+			continue
+		}
+		if !cp.VerifyCosignature(publicKey, &signature.Cosignature) {
+			return types.Cosignature{}, fmt.Errorf("cosignature not valid")
+		}
+
+		return signature.Cosignature, nil
+	}
+	return types.Cosignature{}, fmt.Errorf("no cosignature for given key")
 }

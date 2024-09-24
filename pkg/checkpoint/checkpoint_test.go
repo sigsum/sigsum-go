@@ -173,6 +173,69 @@ func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 	}
 }
 
+func TestCheckpointCosignVerify(t *testing.T) {
+	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	pub := signer.Public()
+	timestamp := uint64(1234)
+	cosignature, err := testCheckpoint.Cosign(signer, timestamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := cosignature.Timestamp, timestamp; got != want {
+		t.Errorf("unexpected cosignature timestamp: got %d, want %d", got, want)
+	}
+	if !testCheckpoint.VerifyCosignature(&pub, &cosignature) {
+		t.Errorf("verifying cosignature failed")
+	}
+
+	keyName := "example.org/witness"
+	cls := CosignatureLine{
+		KeyName:     keyName,
+		KeyId:       NewWitnessKeyId(keyName, &pub),
+		Cosignature: cosignature,
+	}
+	var buf bytes.Buffer
+	if err := cls.ToASCII(&buf); err != nil {
+		t.Fatal(err)
+	}
+	t.Log(buf.String())
+}
+
+func TestCheckpointVerifyCosignatureByKey(t *testing.T) {
+	// Second line was produced by the test above. First line has
+	// a different keyid, third line has a different keyname,
+	// fourth line a different signature size.
+	input := `
+— example.org/witness yX8uUAAAAAAAAATSftMzceM8zssdZ9jin9SjwIxzx9iADMf63VqirX2hafol9RsqNqbofIz0LVRqHXI2kpEBSki5RTXFtxz1vo9+Cg==
+— example.org/witness ys8uUAAAAAAAAATSftMzceM8zssdZ9jin9SjwIxzx9iADMf63VqirX2hafol9RsqNqbofIz0LVRqHXI2kpEBSki5RTXFtxz1vo9+Cg==
+— example.org/witness-2 ys8uUAAAAAAAAATSftMzceM8zssdZ9jin9SjwIxzx9iADMf63VqirX2hafol9RsqNqbofIz0LVRqHXI2kpEBSki5RTXFtxz1vo9+Cg==
+— example.org/witness ys8uUAAAAAAAAATSftMzceM8zssdZ9jin9SjwIxzx9iADMf63VqirX2hafol9RsqNqbofIz0LVRqHXI2kpEBSki5RTXFtxz1vo9+CgXX
+`[1:]
+	cosignatures, err := CosignatureLinesFromASCII(bytes.NewBufferString(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := len(cosignatures), 3; got != want {
+		t.Errorf("unexpected number of cosignatures: got %d, want: %d", got, want)
+	}
+	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	pub := signer.Public()
+	cosignature, err := testCheckpoint.VerifyCosignatureByKey(cosignatures, &pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := cosignature.Timestamp, uint64(1234); got != want {
+		t.Errorf("unexpected cosignature timestamp: got %d, want %d", got, want)
+	}
+
+	// Try invalidating the cosignature.
+	cosignatures[1].Timestamp++
+	_, err = testCheckpoint.VerifyCosignatureByKey(cosignatures, &pub)
+	if err == nil {
+		t.Errorf("bad cosignature not rejected")
+	}
+}
+
 func TestGoSumDBCheckpoint(t *testing.T) {
 	const (
 		// Retrieved from https://sum.golang.org/latest, 2024-09-23
