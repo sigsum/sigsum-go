@@ -49,3 +49,14 @@ func (lr *LineReader) GetEOF() error {
 	// Returns nil at EOF.
 	return lr.scanner.Err()
 }
+
+func (lr *LineReader) GetEmptyLine() error {
+	line, err := lr.GetLine()
+	if err != nil {
+		return err
+	}
+	if line != "" {
+		return fmt.Errorf("garbage data where line should be empty: %q", line)
+	}
+	return nil
+}
