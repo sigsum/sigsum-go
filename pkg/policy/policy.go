@@ -36,10 +36,10 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 	}
 	verified := make(map[crypto.Hash]struct{})
 	failed := 0
-	for _, cs := range cth.Cosignatures {
-		if witness, ok := p.witnesses[cs.KeyHash]; ok {
+	for keyHash, cs := range cth.Cosignatures {
+		if witness, ok := p.witnesses[keyHash]; ok {
 			if cs.Verify(&witness.PublicKey, logKeyHash, &cth.TreeHead) {
-				verified[cs.KeyHash] = struct{}{}
+				verified[keyHash] = struct{}{}
 			} else {
 				failed++
 			}

@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	crypto "sigsum.org/sigsum-go/pkg/crypto"
 	requests "sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	types "sigsum.org/sigsum-go/pkg/types"
@@ -174,12 +175,13 @@ func (m *MockWitness) EXPECT() *MockWitnessMockRecorder {
 }
 
 // AddTreeHead mocks base method.
-func (m *MockWitness) AddTreeHead(arg0 context.Context, arg1 requests.AddTreeHead) (types.Cosignature, error) {
+func (m *MockWitness) AddTreeHead(arg0 context.Context, arg1 requests.AddTreeHead) (crypto.Hash, types.Cosignature, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddTreeHead", arg0, arg1)
-	ret0, _ := ret[0].(types.Cosignature)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(crypto.Hash)
+	ret1, _ := ret[1].(types.Cosignature)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // AddTreeHead indicates an expected call of AddTreeHead.

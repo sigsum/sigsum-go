@@ -51,9 +51,10 @@ func main() {
 		log.Fatal(err)
 	}
 	witness := witness{
-		signer: signer,
-		logPub: logPub,
-		state:  &state,
+		signer:  signer,
+		keyHash: crypto.HashBytes(pub[:]),
+		logPub:  logPub,
+		state:   &state,
 	}
 
 	httpServer := http.Server{
@@ -124,9 +125,10 @@ func (s *Settings) parse(args []string) {
 }
 
 type witness struct {
-	signer crypto.Signer
-	logPub crypto.PublicKey
-	state  *state
+	signer  crypto.Signer
+	keyHash crypto.Hash
+	logPub  crypto.PublicKey
+	state   *state
 }
 
 func (s *witness) GetTreeSize(_ context.Context, req requests.GetTreeSize) (uint64, error) {
@@ -136,18 +138,22 @@ func (s *witness) GetTreeSize(_ context.Context, req requests.GetTreeSize) (uint
 	return s.state.GetSize(), nil
 }
 
-func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (types.Cosignature, error) {
+func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (crypto.Hash, types.Cosignature, error) {
 	logKeyHash := crypto.HashBytes(s.logPub[:])
 	if req.KeyHash != logKeyHash {
-		return types.Cosignature{}, api.ErrNotFound
+		return crypto.Hash{}, types.Cosignature{}, api.ErrNotFound
 	}
 	if !req.TreeHead.Verify(&s.logPub) {
-		return types.Cosignature{}, api.ErrForbidden
+		return crypto.Hash{}, types.Cosignature{}, api.ErrForbidden
 	}
-	return s.state.Update(&req.TreeHead, req.OldSize, &req.Proof,
+	cs, err := s.state.Update(&req.TreeHead, req.OldSize, &req.Proof, &s.keyHash,
 		func() (types.Cosignature, error) {
 			return req.TreeHead.Cosign(s.signer, &logKeyHash, uint64(time.Now().Unix()))
 		})
+	if err != nil {
+		return crypto.Hash{}, types.Cosignature{}, err
+	}
+	return s.keyHash, cs, nil
 }
 
 type state struct {
@@ -179,19 +185,16 @@ func (s *state) Load(pub, logPub *crypto.PublicKey) error {
 	if !cth.Verify(logPub) {
 		return fmt.Errorf("Invalid log signature on stored tree head")
 	}
-	keyHash := crypto.HashBytes(pub[:])
 	logKeyHash := crypto.HashBytes(logPub[:])
-	for _, cs := range cth.Cosignatures {
-		if cs.KeyHash != keyHash {
-			continue
-		}
-		if cs.Verify(pub, &logKeyHash, &cth.TreeHead) {
-			s.th = cth.SignedTreeHead.TreeHead
-			return nil
-		}
+	cs, ok := cth.Cosignatures[crypto.HashBytes(pub[:])]
+	if !ok {
+		fmt.Errorf("No matching cosignature on stored tree head")
+	}
+	if !cs.Verify(pub, &logKeyHash, &cth.TreeHead) {
 		return fmt.Errorf("Invalid cosignature on stored tree head")
 	}
-	return fmt.Errorf("No matching cosignature on stored tree head")
+	s.th = cth.SignedTreeHead.TreeHead
+	return nil
 }
 
 func (s *state) GetSize() uint64 {
@@ -220,7 +223,7 @@ func (s *state) Store(cth *types.CosignedTreeHead) error {
 }
 
 // On success, returns stored cosignature. On failure, returns HTTP status code and error.
-func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, proof *types.ConsistencyProof,
+func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, proof *types.ConsistencyProof, keyHash *crypto.Hash,
 	cosign func() (types.Cosignature, error)) (types.Cosignature, error) {
 
 	s.m.Lock()
@@ -240,7 +243,7 @@ func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, proof *types.C
 	}
 	cth := types.CosignedTreeHead{
 		SignedTreeHead: *sth,
-		Cosignatures:   []types.Cosignature{cs},
+		Cosignatures:   map[crypto.Hash]types.Cosignature{*keyHash: cs},
 	}
 	if err := s.Store(&cth); err != nil {
 		return types.Cosignature{}, err

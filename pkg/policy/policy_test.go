@@ -97,12 +97,13 @@ func TestWitnessPolicy(t *testing.T) {
 		{"all cosignatures, one invalid", []int{0, 1, 2, 3, 4}, 2, true},
 		{"three cosignatures, but one invalid", []int{0, 2, 3, 4}, 2, false},
 	} {
-		var present []types.Cosignature
+		present := make(map[crypto.Hash]types.Cosignature)
 		for _, i := range s.w {
-			present = append(present, cosignatures[i])
+			cs := cosignatures[i]
 			if i == s.invalidate {
-				present[len(present)-1].Signature[3] ^= 1
+				cs.Signature[3] ^= 1
 			}
+			present[witnessHashes[i]] = cs
 		}
 		err := p.VerifyCosignedTreeHead(&logHash,
 			&types.CosignedTreeHead{SignedTreeHead: sth, Cosignatures: present})

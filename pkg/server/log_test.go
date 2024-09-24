@@ -26,9 +26,8 @@ func TestGetTreeHead(t *testing.T) {
 			},
 			Signature: crypto.Signature{2},
 		},
-		Cosignatures: []types.Cosignature{
-			types.Cosignature{
-				KeyHash:   crypto.Hash{3},
+		Cosignatures: map[crypto.Hash]types.Cosignature{
+			crypto.Hash{3}: types.Cosignature{
 				Timestamp: 17,
 				Signature: crypto.Signature{4},
 			},

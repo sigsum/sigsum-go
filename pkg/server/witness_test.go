@@ -73,8 +73,8 @@ func TestAddTreeHead(t *testing.T) {
 		OldSize: 3,
 		Proof:   types.ConsistencyProof{Path: []crypto.Hash{crypto.Hash{10, 11, 12}}},
 	}
+	keyHash := crypto.Hash{13, 14, 15}
 	cs := types.Cosignature{
-		KeyHash:   crypto.Hash{13, 14, 15},
 		Timestamp: 11111,
 		Signature: crypto.Signature{16, 17, 18},
 	}
@@ -106,7 +106,7 @@ func TestAddTreeHead(t *testing.T) {
 			if table.hook != nil {
 				table.hook(&req)
 			} else if table.status != 404 {
-				witness.EXPECT().AddTreeHead(gomock.Any(), req).Return(cs, table.err)
+				witness.EXPECT().AddTreeHead(gomock.Any(), req).Return(keyHash, cs, table.err)
 			}
 			result, body := queryServer(t, server, http.MethodPost, table.url, writeFuncToString(t, req.ToASCII))
 
@@ -116,7 +116,12 @@ func TestAddTreeHead(t *testing.T) {
 			if table.status != 200 {
 				return
 			}
-			if got, want := body, writeFuncToString(t, cs.ToASCII); got != want {
+
+			var buf bytes.Buffer
+			if err := cs.ToASCII(&buf, &keyHash); err != nil {
+				t.Fatal(err)
+			}
+			if got, want := body, buf.String(); got != want {
 				t.Errorf("Unexpected response for %q, got %q, want %q", table.url, got, want)
 			}
 		}(req)

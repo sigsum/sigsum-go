@@ -14,6 +14,7 @@ import (
 
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/ascii"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -123,14 +124,20 @@ func (cli *Client) GetTreeSize(ctx context.Context, req requests.GetTreeSize) (u
 	return size, nil
 }
 
-func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (types.Cosignature, error) {
+func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (crypto.Hash, types.Cosignature, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
+	var keyHash crypto.Hash
 	var cs types.Cosignature
-	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf, cs.FromASCII); err != nil {
-		return types.Cosignature{}, err
+	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf,
+		func(r io.Reader) error {
+			var err error
+			keyHash, err = cs.FromASCII(r)
+			return err
+		}); err != nil {
+		return crypto.Hash{}, types.Cosignature{}, err
 	}
-	return cs, nil
+	return keyHash, cs, nil
 }
 
 func (cli *Client) get(ctx context.Context, url string,
