@@ -85,10 +85,9 @@ type AddCheckpoint struct {
 }
 
 func (req *AddCheckpoint) FromASCII(r io.Reader) error {
-	pr := ascii.NewParagraphReader(r)
-	reader := ascii.NewLineReader(pr)
+	p := ascii.NewLineReader(r)
 
-	s, err := reader.GetLine()
+	s, err := p.GetLine()
 	if err != nil {
 		return err
 	}
@@ -102,17 +101,16 @@ func (req *AddCheckpoint) FromASCII(r io.Reader) error {
 	}
 
 	// Parse proof lines.
-	if err := req.Proof.FromBase64(reader); err != nil {
+	if emptyLine, err := req.Proof.ParseBase64(&p); err != nil {
 		return err
-	}
-
-	if err := pr.NextParagraph(); err != nil {
+	} else if !emptyLine {
 		return fmt.Errorf("invalid add-checkpoint request: %v", err)
 	}
 
-	if err := req.Checkpoint.FromASCII(pr.PlainReader()); err != nil {
+	if err := req.Checkpoint.Parse(&p); err != nil {
 		return err
 	}
+
 	if req.OldSize > req.Checkpoint.TreeHead.Size {
 		return fmt.Errorf("invalid request, old_size(%d) > size(%d)",
 			req.OldSize, req.Checkpoint.TreeHead.Size)

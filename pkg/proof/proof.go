@@ -86,8 +86,7 @@ func decodeShortChecksum(s string) (out ShortChecksum, err error) {
 	return
 }
 
-func (sp *SigsumProof) FromASCII(f io.Reader) error {
-	r := ascii.NewParagraphReader(f)
+func (sp *SigsumProof) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
 	version, err := p.GetInt("version")
 	if err != nil {
@@ -104,36 +103,28 @@ func (sp *SigsumProof) FromASCII(f io.Reader) error {
 	if err := sp.Leaf.Parse(p); err != nil {
 		return err
 	}
-	if err := p.GetEOF(); err != nil {
+	if err := p.GetEmptyLine(); err != nil {
 		return err
 	}
 
-	if err := r.NextParagraph(); err != nil {
-		return fmt.Errorf("missing tree head part: %v", err)
-	}
-	if err := sp.TreeHead.FromASCII(r); err != nil {
+	emptyLine, err := sp.TreeHead.Parse(&p)
+	if err != nil {
 		return err
 	}
 	if sp.TreeHead.Size == 0 {
 		return fmt.Errorf("invalid tree: empty")
 	}
 	if sp.TreeHead.Size == 1 {
+		if emptyLine {
+			return ascii.ErrEmptyLine
+		}
 		sp.Inclusion = types.InclusionProof{}
-	} else {
-		if err := r.NextParagraph(); err != nil {
-			return fmt.Errorf("missing inclusion proof part: %v", err)
-		}
-		if err := sp.Inclusion.FromASCII(r); err != nil {
-			return err
-		}
+		return nil
 	}
-	if err := r.NextParagraph(); err != io.EOF {
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf("too many parts")
+	if !emptyLine {
+		return fmt.Errorf("missing inclusion proof part: %v", err)
 	}
-	return nil
+	return sp.Inclusion.Parse(p)
 }
 
 func (sp *SigsumProof) ToASCII(w io.Writer) error {

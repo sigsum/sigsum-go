@@ -128,7 +128,7 @@ func TestConsistencyProofToBase64(t *testing.T) {
 	}
 }
 
-func TestConsistencyProofFromBase64(t *testing.T) {
+func TestConsistencyProofParseBase64(t *testing.T) {
 	makeInput := func(size int) io.Reader {
 		buf := bytes.Buffer{}
 		for i := 0; i < size; i++ {
@@ -145,16 +145,22 @@ func TestConsistencyProofFromBase64(t *testing.T) {
 	}
 	for i := 0; i <= 63; i++ {
 		var pr ConsistencyProof
-		if err := pr.FromBase64(ascii.NewLineReader(makeInput(i))); err != nil {
+		p := ascii.NewLineReader(makeInput(i))
+		emptyLine, err := pr.ParseBase64(&p)
+		if err != nil {
 			t.Errorf("failed for size %d: %v", i, err)
 			continue
 		}
 		if got, want := pr.Path, makePath(i); !reflect.DeepEqual(pr.Path, want) {
 			t.Errorf("bad result for size %d, got: %v, want: %v", i, got, want)
 		}
+		if emptyLine {
+			t.Errorf("unexpectedly got emptyLine = true")
+		}
 	}
 	var pr ConsistencyProof
-	err := pr.FromBase64(ascii.NewLineReader(makeInput(64)))
+	p := ascii.NewLineReader(makeInput(64))
+	_, err := pr.ParseBase64(&p)
 	if err == nil || !strings.Contains(err.Error(), "too many entries") {
 		t.Errorf("too large proof (size 64) not rejected, got err: %v", err)
 	}

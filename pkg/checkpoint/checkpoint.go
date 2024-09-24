@@ -63,17 +63,15 @@ func (cp *Checkpoint) ToASCII(w io.Writer) error {
 // The keyName identifies the signature line of interest. If keyName
 // is the empty string, use the checkpoint's origin. Intended for
 // interop tests with non-Sigsum checkpoints.
-func (cp *Checkpoint) fromASCIIWithKeyName(r io.Reader, keyName string) error {
-	reader := ascii.NewLineReader(r)
-
-	origin, err := reader.GetLine()
+func (cp *Checkpoint) parseWithKeyName(p *ascii.LineReader, keyName string) error {
+	origin, err := p.GetLine()
 	if err != nil {
 		return err
 	}
 
 	cp.Origin = origin
 
-	sizeLine, err := reader.GetLine()
+	sizeLine, err := p.GetLine()
 	if err != nil {
 		return err
 	}
@@ -81,7 +79,7 @@ func (cp *Checkpoint) fromASCIIWithKeyName(r io.Reader, keyName string) error {
 	if err != nil {
 		return err
 	}
-	hashLine, err := reader.GetLine()
+	hashLine, err := p.GetLine()
 	if err != nil {
 		return err
 	}
@@ -90,9 +88,7 @@ func (cp *Checkpoint) fromASCIIWithKeyName(r io.Reader, keyName string) error {
 		return fmt.Errorf("invalid checkpoint, bad root hash %q: %v", hashLine, err)
 	}
 
-	if line, err := reader.GetLine(); err != nil {
-		return err
-	} else if line != "" {
+	if err := p.GetEmptyLine(); err != nil {
 		return fmt.Errorf("invalid checkpoint, root hash not followed by an empty line")
 	}
 
@@ -102,7 +98,7 @@ func (cp *Checkpoint) fromASCIIWithKeyName(r io.Reader, keyName string) error {
 	signatureCount := 0
 	found := false
 	for {
-		line, err := reader.GetLine()
+		line, err := p.GetLine()
 		if err == io.EOF {
 			break
 		}
@@ -134,8 +130,18 @@ func (cp *Checkpoint) fromASCIIWithKeyName(r io.Reader, keyName string) error {
 	return nil
 }
 
+func (cp *Checkpoint) fromASCIIWithKeyName(r io.Reader, keyName string) error {
+	p := ascii.NewLineReader(r)
+	return cp.parseWithKeyName(&p, keyName)
+}
+
+func (cp *Checkpoint) Parse(p *ascii.LineReader) error {
+	return cp.parseWithKeyName(p, "")
+}
+
 func (cp *Checkpoint) FromASCII(r io.Reader) error {
-	return cp.fromASCIIWithKeyName(r, "")
+	p := ascii.NewLineReader(r)
+	return cp.Parse(&p)
 }
 
 func (cp *Checkpoint) Verify(publicKey *crypto.PublicKey) error {
