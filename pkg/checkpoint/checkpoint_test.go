@@ -173,6 +173,22 @@ func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 	}
 }
 
+func TestCheckpointCosignVerify(t *testing.T) {
+	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	pub := signer.Public()
+	timestamp := uint64(1234)
+	cosignature, err := testCheckpoint.Cosign(signer, timestamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := cosignature.Timestamp, timestamp; got != want {
+		t.Errorf("unexpected cosignature timestamp: got %d, want %d", got, want)
+	}
+	if !testCheckpoint.VerifyCosignature(&pub, &cosignature) {
+		t.Errorf("verifying cosignature failed")
+	}
+}
+
 func TestGoSumDBCheckpoint(t *testing.T) {
 	const (
 		// Retrieved from https://sum.golang.org/latest, 2024-09-23

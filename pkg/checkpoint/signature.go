@@ -44,20 +44,22 @@ func writeNoteSignature(w io.Writer, keyName string, keyId KeyId, signature []by
 }
 
 // Input is a single signature line, with no trailing newline
-// character. Returns keyname and base64-decoded signature blob.
-func parseNoteSignature(line string, blobSize int) (string, []byte, error) {
+// character. Returns key name, key id and base64-decoded signature blob.
+func parseNoteSignature(line string, signatureSize int) (string, KeyId, []byte, error) {
 	fields := strings.Split(line, " ")
 	if len(fields) != 3 || fields[0] != "\u2014" {
-		return "", nil, fmt.Errorf("invalid signature line %q", line)
+		return "", KeyId{}, nil, fmt.Errorf("invalid signature line %q", line)
 	}
 	blob, err := base64.StdEncoding.DecodeString(fields[2])
 	if err != nil {
-		return "", nil, err
+		return "", KeyId{}, nil, err
 	}
-	if len(blob) != blobSize {
-		return "", nil, ErrUnwantedSignature
+	if len(blob) != 4+signatureSize {
+		return "", KeyId{}, nil, ErrUnwantedSignature
 	}
-	return fields[1], blob, nil
+	var keyId KeyId
+	copy(keyId[:], blob[:4])
+	return fields[1], keyId, blob[4:], nil
 }
 
 func WriteEd25519Signature(w io.Writer, origin string, keyId KeyId, signature *crypto.Signature) error {
@@ -70,17 +72,15 @@ func WriteEd25519Signature(w io.Writer, origin string, keyId KeyId, signature *c
 // signature. If line is syntactically valid but doesn't match these
 // requirements, ErrUnwantedSignature is returned.
 func ParseEd25519SignatureLine(line, keyName string) (KeyId, crypto.Signature, error) {
-	name, blob, err := parseNoteSignature(line, 4+crypto.SignatureSize)
+	name, keyId, blob, err := parseNoteSignature(line, crypto.SignatureSize)
 	if err != nil {
 		return KeyId{}, crypto.Signature{}, err
 	}
 	if name != keyName {
 		return KeyId{}, crypto.Signature{}, ErrUnwantedSignature
 	}
-	var keyId KeyId
 	var signature crypto.Signature
-	copy(keyId[:], blob[:4])
-	copy(signature[:], blob[4:])
+	copy(signature[:], blob)
 
 	return keyId, signature, nil
 }
