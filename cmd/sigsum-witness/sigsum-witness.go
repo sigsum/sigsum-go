@@ -121,27 +121,27 @@ func (s *Settings) parse(args []string) {
 }
 
 type witness struct {
-	signer    crypto.Signer
-	keyHash   crypto.Hash
-	keyName   string
-	keyId checkpoint.KeyId
-	logPub    crypto.PublicKey
-	origin string
-	state     *state
+	signer  crypto.Signer
+	keyHash crypto.Hash
+	keyName string
+	keyId   checkpoint.KeyId
+	logPub  crypto.PublicKey
+	origin  string
+	state   *state
 }
 
 func newWitness(signer crypto.Signer, pub *crypto.PublicKey, logPub *crypto.PublicKey, state *state) witness {
 	keyHash := crypto.HashBytes(pub[:])
-		// Arbitrary name. TODO: Specify somewhere?
+	// Arbitrary name. TODO: Specify somewhere?
 	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", keyHash)
 	return witness{
-		signer: signer,
+		signer:  signer,
 		keyHash: keyHash,
-		keyName:   keyName,
-		keyId: checkpoint.NewWitnessKeyId(keyName, pub),
-		logPub:    *logPub,
-		origin: types.SigsumCheckpointOrigin(logPub),
-		state:     state,
+		keyName: keyName,
+		keyId:   checkpoint.NewWitnessKeyId(keyName, pub),
+		logPub:  *logPub,
+		origin:  types.SigsumCheckpointOrigin(logPub),
+		state:   state,
 	}
 }
 
@@ -188,8 +188,8 @@ func (w *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) (
 	}
 	return []checkpoint.CosignatureLine{
 		checkpoint.CosignatureLine{
-			KeyName:   w.keyName,
-			KeyId:     w.keyId,
+			KeyName:     w.keyName,
+			KeyId:       w.keyId,
 			Cosignature: cs,
 		},
 	}, nil

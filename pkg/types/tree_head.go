@@ -76,6 +76,7 @@ func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
 	}, nil
 }
 
+// TODO: Should the Cosign method be attached to SignedTreeHead instead?
 func (th *TreeHead) toCosignedData(origin string, timestamp uint64) string {
 	return fmt.Sprintf("%s\ntime %d\n%s",
 		CosignatureNamespace, timestamp,
@@ -85,7 +86,7 @@ func (th *TreeHead) toCosignedData(origin string, timestamp uint64) string {
 func (th *TreeHead) CosignOrigin(signer crypto.Signer, origin string, timestamp uint64) (Cosignature, error) {
 	signature, err := signer.Sign([]byte(th.toCosignedData(origin, timestamp)))
 	if err != nil {
-		return Cosignature{}, err
+		return Cosignature{}, fmt.Errorf("failed co-signing tree head: %w", err)
 	}
 	return Cosignature{
 		Timestamp: timestamp,

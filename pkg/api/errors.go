@@ -21,7 +21,7 @@ var ErrNotFound *Error = NewError(http.StatusNotFound, fmt.Errorf("Not Found")) 
 
 // Failure of witness AddCheckpoint, caller should retry with correct
 // tree size.
-var ErrConflict *Error = NewError(http.StatusConflict, fmt.Errorf("Conflict"))
+var ErrConflict *Error = NewError(http.StatusConflict, fmt.Errorf("Conflict")) // 409
 
 // Failure of witness AddTreeHead, invalid consistency proof.
 var ErrUnprocessableEntity *Error = NewError(422, fmt.Errorf("Unprocessable Entity"))
