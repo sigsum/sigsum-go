@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	checkpoint "sigsum.org/sigsum-go/pkg/checkpoint"
 	crypto "sigsum.org/sigsum-go/pkg/crypto"
 	requests "sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
@@ -172,6 +173,21 @@ func NewMockWitness(ctrl *gomock.Controller) *MockWitness {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWitness) EXPECT() *MockWitnessMockRecorder {
 	return m.recorder
+}
+
+// AddCheckpoint mocks base method.
+func (m *MockWitness) AddCheckpoint(arg0 context.Context, arg1 requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddCheckpoint", arg0, arg1)
+	ret0, _ := ret[0].([]checkpoint.CosignatureLine)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddCheckpoint indicates an expected call of AddCheckpoint.
+func (mr *MockWitnessMockRecorder) AddCheckpoint(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCheckpoint", reflect.TypeOf((*MockWitness)(nil).AddCheckpoint), arg0, arg1)
 }
 
 // AddTreeHead mocks base method.

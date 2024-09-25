@@ -19,7 +19,7 @@ var ErrForbidden *Error = NewError(http.StatusForbidden, fmt.Errorf("Forbidden")
 // E.g., GetInclusionProof fails because leaf isn't included.
 var ErrNotFound *Error = NewError(http.StatusNotFound, fmt.Errorf("Not Found")) // 404
 
-// Failure of witness AddTreeHead, caller should retry with correct
+// Failure of witness AddCheckpoint, caller should retry with correct
 // tree size.
 var ErrConflict *Error = NewError(http.StatusConflict, fmt.Errorf("Conflict")) // 409
 
@@ -53,6 +53,21 @@ func (e *Error) WithError(err error) *Error {
 	return &Error{statusCode: e.statusCode, err: err}
 }
 
+type errorWithOldSize struct {
+	oldSize uint64
+}
+
+func (e *errorWithOldSize) Error() string {
+	return fmt.Sprintf("old size must be %d", e.oldSize)
+}
+
+func (e *Error) WithOldSize(oldSize uint64) *Error {
+	if e.statusCode != http.StatusConflict {
+		panic("only Conflict (409) errors can have an associated old size")
+	}
+	return e.WithError(&errorWithOldSize{oldSize})
+}
+
 // An error is considered matching if the status code is the same.
 // Example usage:
 //
@@ -66,9 +81,15 @@ func (e *Error) Is(err error) bool {
 
 func NewError(statusCode int, err error) *Error {
 	// TODO: Allow err == nil, and return nil for that case?
-	if statusCode == 0 || statusCode == http.StatusOK || err == nil {
+	if statusCode == http.StatusOK || err == nil {
 		panic(fmt.Sprintf("Invalid call to NewError, status = %d, err = %v",
 			statusCode, err))
+	}
+	if statusCode == 0 {
+		return &Error{
+			statusCode: http.StatusInternalServerError,
+			err:        fmt.Errorf("invalid status code 0 for error: %s", err),
+		}
 	}
 	return &Error{statusCode: statusCode, err: err}
 }
@@ -79,4 +100,17 @@ func ErrorStatusCode(err error) int {
 		return apiError.StatusCode()
 	}
 	return http.StatusInternalServerError
+}
+
+// An error associated with an old size must be a Conflict error with
+// the wrapped error being an errorWithOldSize.
+func ErrorConflictOldSize(err error) (uint64, bool) {
+	var apiError *Error
+	if errors.As(err, &apiError) && apiError.statusCode == http.StatusConflict {
+		var oldSizeError *errorWithOldSize
+		if errors.As(apiError.err, &oldSizeError) {
+			return oldSizeError.oldSize, true
+		}
+	}
+	return 0, false
 }

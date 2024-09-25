@@ -4,6 +4,7 @@ package api
 import (
 	"context"
 
+	"sigsum.org/sigsum-go/pkg/checkpoint"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/submit-token"
@@ -27,6 +28,7 @@ type Log interface {
 type Witness interface {
 	GetTreeSize(context.Context, requests.GetTreeSize) (uint64, error)
 	AddTreeHead(context.Context, requests.AddTreeHead) (crypto.Hash, types.Cosignature, error)
+	AddCheckpoint(context.Context, requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error)
 }
 
 // Interface for the secondary node's api.
