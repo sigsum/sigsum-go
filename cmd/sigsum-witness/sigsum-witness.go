@@ -1,3 +1,6 @@
+// A witness implementation capable of cosigning a single Sigsum log,
+// identified by that log's public key, and corresponding
+// "sigsum.org/..." origin line.
 package main
 
 import (
@@ -17,6 +20,7 @@ import (
 
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/api"
+	"sigsum.org/sigsum-go/pkg/checkpoint"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/requests"
@@ -50,12 +54,7 @@ func main() {
 	if err := state.Load(&pub, &logPub); err != nil {
 		log.Fatal(err)
 	}
-	witness := witness{
-		signer:  signer,
-		keyHash: crypto.HashBytes(pub[:]),
-		logPub:  logPub,
-		state:   &state,
-	}
+	witness := newWitness(signer, &pub, &logPub, &state)
 
 	httpServer := http.Server{
 		Addr:    settings.hostAndPort,
@@ -127,8 +126,26 @@ func (s *Settings) parse(args []string) {
 type witness struct {
 	signer  crypto.Signer
 	keyHash crypto.Hash
+	keyName string
+	keyId   checkpoint.KeyId
 	logPub  crypto.PublicKey
+	origin  string
 	state   *state
+}
+
+func newWitness(signer crypto.Signer, pub *crypto.PublicKey, logPub *crypto.PublicKey, state *state) witness {
+	keyHash := crypto.HashBytes(pub[:])
+	// Arbitrary name. TODO: Specify somewhere?
+	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", keyHash)
+	return witness{
+		signer:  signer,
+		keyHash: keyHash,
+		keyName: keyName,
+		keyId:   checkpoint.NewWitnessKeyId(keyName, pub),
+		logPub:  *logPub,
+		origin:  types.SigsumCheckpointOrigin(logPub),
+		state:   state,
+	}
 }
 
 func (s *witness) GetTreeSize(_ context.Context, req requests.GetTreeSize) (uint64, error) {
@@ -154,6 +171,31 @@ func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (cryp
 		return crypto.Hash{}, types.Cosignature{}, err
 	}
 	return s.keyHash, cs, nil
+}
+
+func (w *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error) {
+	if req.Checkpoint.Origin != w.origin {
+		return nil, api.ErrNotFound
+	}
+
+	if err := req.Checkpoint.Verify(&w.logPub); err != nil {
+		return nil, api.ErrForbidden.WithError(err)
+	}
+	cs, err := w.state.Update(&req.Checkpoint.SignedTreeHead, req.OldSize, &req.Proof, &w.keyHash,
+		func() (types.Cosignature, error) {
+			return req.Checkpoint.Cosign(w.signer, uint64(time.Now().Unix()))
+		})
+
+	if err != nil {
+		return nil, err
+	}
+	return []checkpoint.CosignatureLine{
+		checkpoint.CosignatureLine{
+			KeyName:     w.keyName,
+			KeyId:       w.keyId,
+			Cosignature: cs,
+		},
+	}, nil
 }
 
 type state struct {
@@ -230,7 +272,7 @@ func (s *state) Update(sth *types.SignedTreeHead, oldSize uint64, proof *types.C
 	defer s.m.Unlock()
 
 	if s.th.Size != oldSize {
-		return types.Cosignature{}, api.ErrConflict
+		return types.Cosignature{}, api.ErrConflict.WithOldSize(s.th.Size)
 	}
 
 	if err := proof.Verify(&s.th, &sth.TreeHead); err != nil {

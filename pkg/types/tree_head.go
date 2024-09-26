@@ -49,12 +49,17 @@ func (th *TreeHead) FormatCheckpoint(origin string) string {
 		base64.StdEncoding.EncodeToString(th.RootHash[:]))
 }
 
-func sigsumCheckpointOrigin(keyHash *crypto.Hash) string {
+func sigsumCheckpointOriginFromHash(keyHash *crypto.Hash) string {
 	return fmt.Sprintf("%s%x", CheckpointNamePrefix, *keyHash)
 }
 
+func SigsumCheckpointOrigin(publicKey *crypto.PublicKey) string {
+	keyHash := crypto.HashBytes(publicKey[:])
+	return sigsumCheckpointOriginFromHash(&keyHash)
+}
+
 func (th *TreeHead) toCheckpoint(keyHash *crypto.Hash) string {
-	return th.FormatCheckpoint(sigsumCheckpointOrigin(keyHash))
+	return th.FormatCheckpoint(sigsumCheckpointOriginFromHash(keyHash))
 }
 
 func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
@@ -90,7 +95,7 @@ func (th *TreeHead) CosignOrigin(signer crypto.Signer, origin string, timestamp 
 }
 
 func (th *TreeHead) Cosign(signer crypto.Signer, logKeyHash *crypto.Hash, timestamp uint64) (Cosignature, error) {
-	return th.CosignOrigin(signer, sigsumCheckpointOrigin(logKeyHash), timestamp)
+	return th.CosignOrigin(signer, sigsumCheckpointOriginFromHash(logKeyHash), timestamp)
 }
 
 func (th *TreeHead) ToASCII(w io.Writer) error {
@@ -151,6 +156,7 @@ func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
 	return crypto.Verify(key, []byte(sth.toCheckpoint(&keyHash)), &sth.Signature)
 }
 
+// Deprecated: This backwards compatibility function should be deleted.
 func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 	// Prefix used temporarily, for version v0.1.15 and v0.2.0.
 	keyHash := crypto.HashBytes(key[:])
@@ -169,7 +175,7 @@ func (cs *Cosignature) VerifyOrigin(key *crypto.PublicKey, origin string, th *Tr
 }
 
 func (cs *Cosignature) Verify(key *crypto.PublicKey, logKeyHash *crypto.Hash, th *TreeHead) bool {
-	return cs.VerifyOrigin(key, sigsumCheckpointOrigin(logKeyHash), th)
+	return cs.VerifyOrigin(key, sigsumCheckpointOriginFromHash(logKeyHash), th)
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer, keyHash *crypto.Hash) error {
