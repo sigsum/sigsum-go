@@ -30,6 +30,7 @@ type Settings struct {
 	stateFile   string
 	prefix      string
 	hostAndPort string
+	force       bool
 }
 
 func main() {
@@ -47,7 +48,7 @@ func main() {
 		log.Fatal(err)
 	}
 	state := state{fileName: settings.stateFile}
-	if err := state.Load(&pub, &logPub); err != nil {
+	if err := state.Load(&pub, &logPub, settings.force); err != nil {
 		log.Fatal(err)
 	}
 	witness := witness{
@@ -99,6 +100,8 @@ func (s *Settings) parse(args []string) {
 	// TODO: Better name?
 	set.FlagLong(&s.stateFile, "state-file", 0, "Name of state file", "file").Mandatory()
 	set.FlagLong(&s.prefix, "url-prefix", 0, "Prefix preceding the endpoint names", "string")
+	set.FlagLong(&s.force, "force", 0, "Load state even if cosignature is missing")
+
 	set.FlagLong(&help, "help", 0, "Display help")
 	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
 	err := set.Getopt(args, nil)
@@ -164,12 +167,13 @@ type state struct {
 	th types.TreeHead
 }
 
-func (s *state) Load(pub, logPub *crypto.PublicKey) error {
+func (s *state) Load(pub, logPub *crypto.PublicKey, force bool) error {
 	f, err := os.Open(s.fileName)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
+		log.Printf("State file %q does not exist, starting from an empty tree", s.fileName)
 		s.th = types.TreeHead{
 			Size:     0,
 			RootHash: crypto.HashBytes([]byte{}),
@@ -187,11 +191,14 @@ func (s *state) Load(pub, logPub *crypto.PublicKey) error {
 	}
 	logKeyHash := crypto.HashBytes(logPub[:])
 	cs, ok := cth.Cosignatures[crypto.HashBytes(pub[:])]
-	if !ok {
-		fmt.Errorf("No matching cosignature on stored tree head")
-	}
-	if !cs.Verify(pub, &logKeyHash, &cth.TreeHead) {
-		return fmt.Errorf("Invalid cosignature on stored tree head")
+	if ok {
+		if !cs.Verify(pub, &logKeyHash, &cth.TreeHead) {
+			return fmt.Errorf("Invalid cosignature on stored tree head")
+		}
+	} else if force {
+		log.Printf("Loading state despite missing cosignature (due to --force)")
+	} else {
+		return fmt.Errorf("No matching cosignature on stored tree head")
 	}
 	s.th = cth.SignedTreeHead.TreeHead
 	return nil
