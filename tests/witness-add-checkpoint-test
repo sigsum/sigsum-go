@@ -22,15 +22,15 @@ trap cleanup EXIT
 sleep 1
 
 die() {
-    echo 2>&1 $@
+    echo 2>&1 "$@"
     exit 1
 }
 
 # test_one old_size new_size code [old size response]
 test_one() {
-    go run ./mk-add-checkpoint-request $1 $2 < test.log.key \
+    go run ./mk-add-checkpoint-request "$1" "$2" < test.log.key \
 	| curl -s -w '%{content_type}\n%{http_code}\n' --data-binary @- http://localhost:7777/add-checkpoint > test.rsp
-    [ "$(tail -n1 test.rsp)" = $3 ] || die "Unexpected exit code for range $1, $2"
+    [ "$(tail -n1 test.rsp)" = "$3" ] || die "Unexpected exit code for range $1, $2"
     if [ "$3" = 200 ] ; then
 	grep -E '^— sigsum.org/v1/witness/[0-9a-f]{64} [A-Za-z0-9/+]{102}==$' test.rsp >/dev/null \
 	    || die "cosignature line missing in response"
@@ -49,5 +49,3 @@ test_one 1 2 409 2 # bad old size
 test_one 2 4 200
 test_one 4 4 200
 test_one 4 5 200
-
-# TODO: Add tests with invalid signature or proof?

@@ -85,12 +85,6 @@ func NewError(statusCode int, err error) *Error {
 		panic(fmt.Sprintf("Invalid call to NewError, status = %d, err = %v",
 			statusCode, err))
 	}
-	if statusCode == 0 {
-		return &Error{
-			statusCode: http.StatusInternalServerError,
-			err:        fmt.Errorf("invalid status code 0 for error: %s", err),
-		}
-	}
 	return &Error{statusCode: statusCode, err: err}
 }
 

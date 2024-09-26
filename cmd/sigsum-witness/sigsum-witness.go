@@ -1,3 +1,6 @@
+// A witness implementation capable of cosigning a single Sigsum log,
+// identified by that log's public key, and corresponding
+// "sigsum.org/..." origin line.
 package main
 
 import (

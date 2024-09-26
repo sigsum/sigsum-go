@@ -142,25 +142,32 @@ func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (c
 	return keyHash, cs, nil
 }
 
+func processConflictResponse(rsp *http.Response) error {
+	if got := rsp.Header.Get("content-type"); got != checkpoint.ContentTypeTlogSize {
+		return api.ErrConflict.WithError(
+			fmt.Errorf("unexpected content type for Conflict response: %q", got))
+	}
+	p := ascii.NewLineReader(rsp.Body)
+	line, err := p.GetLine()
+	if err != nil {
+		return api.ErrConflict.WithError(err)
+	}
+	oldSize, err := ascii.IntFromDecimal(line)
+	if err != nil {
+		return api.ErrConflict.WithError(err)
+	}
+	if err := p.GetEOF(); err != nil {
+		return api.ErrConflict.WithError(err)
+	}
+	return api.ErrConflict.WithOldSize(oldSize)
+}
+
 // See https://github.com/C2SP/C2SP/blob/main/tlog-witness.md for
 // specification.
 func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error) {
 	buf := bytes.Buffer{}
 	req.ToASCII(&buf)
 	var signatures []checkpoint.CosignatureLine
-
-	readIntBody := func(r io.Reader) (uint64, error) {
-		p := ascii.NewLineReader(r)
-		line, err := p.GetLine()
-		if err != nil {
-			return 0, err
-		}
-		res, err := ascii.IntFromDecimal(line)
-		if err != nil {
-			return 0, err
-		}
-		return res, p.GetEOF()
-	}
 
 	if err := cli.post(ctx, types.EndpointAddCheckpoint.Path(cli.config.URL), nil, &buf,
 		func(body io.Reader) error {
@@ -169,17 +176,10 @@ func (cli *Client) AddCheckpoint(ctx context.Context, req requests.AddCheckpoint
 			return err
 		},
 		func(rsp *http.Response) error {
-			if rsp.StatusCode == http.StatusConflict {
-				if got := rsp.Header.Get("content-type"); got != checkpoint.ContentTypeTlogSize {
-					return api.ErrConflict.WithError(fmt.Errorf("unexpected content type for Conflict response: %q", got))
-				}
-				oldSize, err := readIntBody(rsp.Body)
-				if err != nil {
-					return api.ErrConflict.WithError(fmt.Errorf("invalid conflict response data: %s", err))
-				}
-				return api.ErrConflict.WithOldSize(oldSize)
+			if rsp.StatusCode != http.StatusConflict {
+				return responseErrorHandling(rsp)
 			}
-			return responseErrorHandling(rsp)
+			return processConflictResponse(rsp)
 		}); err != nil {
 		return nil, err
 	}
