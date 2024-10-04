@@ -153,15 +153,10 @@ func (w *batchWorker) run(ctx context.Context, done chan<- func(),
 
 				latestSize = th.Size
 				for i, item := range pendingItems {
-					var inclusionProof types.InclusionProof
-					var err error
-					if th.Size > 1 {
-						// TODO: Make GetInclusionProof handle any tree size (and talk to the server only for size > 1).
-						inclusionProof, err = w.cli.GetInclusionProof(item.ctx, requests.InclusionProof{
-							Size:     th.Size,
-							LeafHash: item.leafHash,
-						})
-					}
+					inclusionProof, err := w.cli.GetInclusionProof(item.ctx, requests.InclusionProof{
+						Size:     th.Size,
+						LeafHash: item.leafHash,
+					})
 					if err != nil {
 						if errors.Is(err, api.ErrNotFound) {
 							continue
