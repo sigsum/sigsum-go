@@ -18,10 +18,10 @@ type CosignatureLine struct {
 }
 
 func (csl *CosignatureLine) ToASCII(w io.Writer) error {
-	prefix := [8]byte{}
-	binary.BigEndian.PutUint64(prefix[:], csl.Timestamp)
+	timestamp := [8]byte{}
+	binary.BigEndian.PutUint64(timestamp[:], csl.Timestamp)
 	return writeNoteSignature(w,
-		csl.KeyName, csl.KeyId, bytes.Join([][]byte{prefix[:], csl.Signature[:]}, nil))
+		csl.KeyName, csl.KeyId, bytes.Join([][]byte{timestamp[:], csl.Signature[:]}, nil))
 }
 
 func CosignatureLinesFromASCII(r io.Reader) ([]CosignatureLine, error) {
