@@ -165,7 +165,7 @@ func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (cryp
 	}
 	cs, err := s.state.Update(&req.TreeHead, req.OldSize, &req.Proof, &s.keyHash,
 		func() (types.Cosignature, error) {
-			return req.TreeHead.Cosign(s.signer, &logKeyHash, uint64(time.Now().Unix()))
+			return req.TreeHead.Cosign(s.signer, s.origin, uint64(time.Now().Unix()))
 		})
 	if err != nil {
 		return crypto.Hash{}, types.Cosignature{}, err
@@ -227,12 +227,12 @@ func (s *state) Load(pub, logPub *crypto.PublicKey) error {
 	if !cth.Verify(logPub) {
 		return fmt.Errorf("Invalid log signature on stored tree head")
 	}
-	logKeyHash := crypto.HashBytes(logPub[:])
+
 	cs, ok := cth.Cosignatures[crypto.HashBytes(pub[:])]
 	if !ok {
 		fmt.Errorf("No matching cosignature on stored tree head")
 	}
-	if !cs.Verify(pub, &logKeyHash, &cth.TreeHead) {
+	if !cs.Verify(pub, types.SigsumCheckpointOrigin(logPub), &cth.TreeHead) {
 		return fmt.Errorf("Invalid cosignature on stored tree head")
 	}
 	s.th = cth.SignedTreeHead.TreeHead
