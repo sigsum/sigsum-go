@@ -34,11 +34,12 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 	if !cth.Verify(&log.PublicKey) {
 		return fmt.Errorf("invalid log signature")
 	}
+	origin := types.SigsumCheckpointOrigin(&log.PublicKey)
 	verified := make(map[crypto.Hash]struct{})
 	failed := 0
 	for keyHash, cs := range cth.Cosignatures {
 		if witness, ok := p.witnesses[keyHash]; ok {
-			if cs.Verify(&witness.PublicKey, logKeyHash, &cth.TreeHead) {
+			if cs.Verify(&witness.PublicKey, origin, &cth.TreeHead) {
 				verified[keyHash] = struct{}{}
 			} else {
 				failed++
