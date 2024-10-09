@@ -55,10 +55,10 @@ func main() {
 
 func (s *Settings) parse(args []string) {
 	const usage = `
-    Verifies a sigsum proof, as produced by sigsum-submit. The proof
-    file is passed on the command line. The message being verified is
-    the hash of the data on stdin (or if --raw-hash is given, input is
-    the hash value, either exactly 32 octets, or a hex string).
+Verifies a sigsum proof, as produced by sigsum-submit. The proof
+file is passed on the command line. The message being verified is
+the hash of the data on stdin (or if --raw-hash is given, input is
+the hash value, either exactly 32 octets, or a hex string).
 `
 	set := getopt.New()
 	set.SetParameters("proof < input")

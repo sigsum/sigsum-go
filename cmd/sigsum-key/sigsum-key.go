@@ -40,36 +40,36 @@ type ExportSettings struct {
 func main() {
 	const usage = `sigsum-key sub commands:
 
-  sigsum-key help | --help
-    Display this help. All the below sub commands also accept the --help
-    option, to display help for that sub command.
+sigsum-key help | --help
+  Display this help. All the below sub commands also accept the --help
+  option, to display help for that sub command.
 
-  sigsum-key version | --version | -v
-    Display software version.
+sigsum-key version | --version | -v
+  Display software version.
 
-  sigsum-key gen -o file
-    Generate a new key pair. Private key is stored in the given
-    file, in OpenSSH private key format. Corresponding public key
-    file gets a ".pub" suffix, and is written in OpenSSH public
-    key format.
+sigsum-key gen -o file
+  Generate a new key pair. Private key is stored in the given
+  file, in OpenSSH private key format. Corresponding public key
+  file gets a ".pub" suffix, and is written in OpenSSH public
+  key format.
 
-  sigsum-key verify [options] < msg
-    Verify a signature. For option details, see sigsum-key verify --help.
+sigsum-key verify [options] < msg
+  Verify a signature. For option details, see sigsum-key verify --help.
 
-  sigsum-key sign [options] < msg
-    Create a signature. For option details, see sigsum-key sign --help.
+sigsum-key sign [options] < msg
+  Create a signature. For option details, see sigsum-key sign --help.
 
-  sigsum-key hash [-k file] [-o output]
-    Reads public key from file (by default, stdin) and writes key hash
-    to output (by default, stdout).
+sigsum-key hash [-k file] [-o output]
+  Reads public key from file (by default, stdin) and writes key hash
+  to output (by default, stdout).
 
-  sigsum-key hex [-k file] [-o output]
-    Reads public key from file (by default, stdin) and writes hex key
-    to output (by default, stdout).
+sigsum-key hex [-k file] [-o output]
+  Reads public key from file (by default, stdin) and writes hex key
+  to output (by default, stdout).
 
-  sigsum-key hex-to-pub [-k file] [-o output]
-    Reads hex public key from file (by default, stdin) and writes
-    OpenSSH format public key to output (by default, stdout).
+sigsum-key hex-to-pub [-k file] [-o output]
+  Reads hex public key from file (by default, stdin) and writes
+  OpenSSH format public key to output (by default, stdout).
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
