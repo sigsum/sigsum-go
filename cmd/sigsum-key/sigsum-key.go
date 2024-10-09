@@ -67,6 +67,19 @@ sigsum-key to-hex [-k file] [-o output]
   Reads public key from file (by default, stdin) and writes hex key
   to output (by default, stdout).
 
+sigsum-key to-origin [-k file] [-o output]
+  Reads public key from file (by default, stdin) and writes a
+  checkpoint origin line for a Sigsum log to output (by default,
+  stdout).
+
+sigsum-key to-note-verifier [-n name] [-k file] [-o output]
+  Reads public key from file (by default, stdin) and writes a signed
+  note verifier line. By defaults, uses the corresponding log origin
+  as the key name. TODO: Support the cosignature key type?
+
+sigsum-key from-note-verifier [-o output] [file]
+  Extracts the public key from a note verifier line.
+
 sigsum-key from-hex [-k file] [-o output]
   Reads hex public key from file (by default, stdin) and writes
   OpenSSH format public key to output (by default, stdout).
