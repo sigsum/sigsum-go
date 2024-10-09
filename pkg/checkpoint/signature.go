@@ -12,29 +12,29 @@ import (
 )
 
 // See https://github.com/C2SP/C2SP/blob/signed-note/v1.0.0-rc.1/signed-note.md
-type signatureType byte
+type SignatureType byte
 
 const (
-	sigTypeEd25519     signatureType = 0x01
-	sigTypeCosignature signatureType = 0x04
+	SigTypeEd25519     SignatureType = 0x01
+	SigTypeCosignature SignatureType = 0x04
 )
 
 var ErrUnwantedSignature = errors.New("unwanted signature")
 
 type KeyId [4]byte
 
-func makeKeyId(keyName string, sigType signatureType, publicKey *crypto.PublicKey) (res KeyId) {
+func NewKeyId(keyName string, sigType SignatureType, publicKey *crypto.PublicKey) (res KeyId) {
 	hash := crypto.HashBytes(bytes.Join([][]byte{[]byte(keyName), []byte{0xA, byte(sigType)}, publicKey[:]}, nil))
 	copy(res[:], hash[:4])
 	return
 }
 
 func NewLogKeyId(keyName string, publicKey *crypto.PublicKey) (res KeyId) {
-	return makeKeyId(keyName, sigTypeEd25519, publicKey)
+	return NewKeyId(keyName, SigTypeEd25519, publicKey)
 }
 
 func NewWitnessKeyId(keyName string, publicKey *crypto.PublicKey) (res KeyId) {
-	return makeKeyId(keyName, sigTypeCosignature, publicKey)
+	return NewKeyId(keyName, SigTypeCosignature, publicKey)
 }
 
 func writeNoteSignature(w io.Writer, keyName string, keyId KeyId, signature []byte) error {
