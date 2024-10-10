@@ -213,60 +213,60 @@ func main() {
 
 func (s *Settings) parse(args []string) {
 	const usage = `
-    Create and/or submit add-leaf request(s).
+Create and/or submit add-leaf request(s).
 
-    If no input files are listed on the command line, a single request
-    is processed, reading from standard input, and writing to standard
-    output (or file specified with the -o option). See further below
-    for processing of multiple files.
+If no input files are listed on the command line, a single request
+is processed, reading from standard input, and writing to standard
+output (or file specified with the -o option). See further below
+for processing of multiple files.
 
-    If a signing key (-k option) is specified, a new request is
-    created by signing the the SHA256 hash of the input (or, if
-    --raw-hash is given, input is the hash value, either exactly 32
-    octets, or a hex string). The key file uses openssh format, it
-    must be either an unencrypted private key, or a public key, in
-    which case the corresponding private key is accessed via
-    ssh-agent.
+If a signing key (-k option) is specified, a new request is
+created by signing the the SHA256 hash of the input (or, if
+--raw-hash is given, input is the hash value, either exactly 32
+octets, or a hex string). The key file uses openssh format, it
+must be either an unencrypted private key, or a public key, in
+which case the corresponding private key is accessed via
+ssh-agent.
 
-    If no signing key is provided, input should instead be the body of
-    an add-leaf request, which is parsed and verified.
+If no signing key is provided, input should instead be the body of
+an add-leaf request, which is parsed and verified.
 
-    If a Sigsum policy (-p option) is provided, the request is
-    submitted to the log specified by the policy, and a Sigsum proof
-    is collected and output. If there are multiple logs in
-    the policy, they are tried in randomized order.
+If a Sigsum policy (-p option) is provided, the request is
+submitted to the log specified by the policy, and a Sigsum proof
+is collected and output. If there are multiple logs in
+the policy, they are tried in randomized order.
 
-    With -k but without -p, the add-leaf request itself is output.
-    With no -k and no -p, the request syntax and signature of the
-    input request are verified, but there is no output.
+With -k but without -p, the add-leaf request itself is output.
+With no -k and no -p, the request syntax and signature of the
+input request are verified, but there is no output.
 
-    The --leaf-hash option can be used to output the hash of the
-    resulting leaf, instead of submitting it.
+The --leaf-hash option can be used to output the hash of the
+resulting leaf, instead of submitting it.
 
-    If input files are provided on the command line, each file
-    corresponds to one request, and result is written to a
-    corresponding output file, based on these rules:
+If input files are provided on the command line, each file
+corresponds to one request, and result is written to a
+corresponding output file, based on these rules:
 
-    1. If there's exactly one input file, and the -o option is used,
-       output is written to that file. Any existing file is overwritten.
+1. If there's exactly one input file, and the -o option is used,
+   output is written to that file. Any existing file is overwritten.
 
-    2. For a request output, the suffix ".req" is added to the input
-       file name.
+2. For a request output, the suffix ".req" is added to the input
+   file name.
 
-    3. For a proof output, if the input is a request, any ".req"
-       suffix on the input file name is stripped. Then the suffix
-       ".proof" is added.
+3. For a proof output, if the input is a request, any ".req"
+   suffix on the input file name is stripped. Then the suffix
+   ".proof" is added.
 
-    4. If the --output-dir option is provided, any directory part of
-       the input file name is stripped, and the output is written as a
-       file in the specified output directory.
+4. If the --output-dir option is provided, any directory part of
+   the input file name is stripped, and the output is written as a
+   file in the specified output directory.
 
-    If a corresponding .proof file already exists, that proof is read
-    and verified. If the proof is valid, the input file is skipped. If
-    the proof is not valid, sigsum-submit exits with an error.
+If a corresponding .proof file already exists, that proof is read
+and verified. If the proof is valid, the input file is skipped. If
+the proof is not valid, sigsum-submit exits with an error.
 
-    If a corresponding .req output file already exists, it is
-    overwritten (TODO: Figure out if that is the proper behavior).
+If a corresponding .req output file already exists, it is
+overwritten (TODO: Figure out if that is the proper behavior).
 `
 	s.diagnostics = "info"
 

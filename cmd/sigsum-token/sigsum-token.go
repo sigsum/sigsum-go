@@ -38,23 +38,23 @@ type verifySettings struct {
 func main() {
 	const usage = `sigsum-token sub commands:
 
-  sigsum-token help | --help
-    Display this help. All the below sub commands also accept the --help
-    option, to display help for that sub command.
+sigsum-token help | --help
+  Display this help. All the below sub commands also accept the --help
+  option, to display help for that sub command.
 
-  sigsum-token version | --version | -v
-    Display software version.
+sigsum-token version | --version | -v
+  Display software version.
 
-  sigsum-token create [options]
-    Create a token for submissions to the the given log, essentially
-    a signature on the log's public key.
+sigsum-token create [options]
+  Create a token for submissions to the the given log, essentially
+  a signature on the log's public key.
 
-  sigsum-token record [options]
-    Format a public key as a TXT record in zone file format.
+sigsum-token record [options]
+  Format a public key as a TXT record in zone file format.
 
-  sigsum-token verify [options] < token
-    Verifies a submit token. The input on stdin is either a raw hex
-    token or a HTTP header.
+sigsum-token verify [options] < token
+  Verifies a submit token. The input on stdin is either a raw hex
+  token or a HTTP header.
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
