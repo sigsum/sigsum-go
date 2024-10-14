@@ -13,9 +13,9 @@ die() {
 }
 
 test_one() {
-    echo "=== $@ ==="
-    if "$@" 2> test.stderr ; then true; else die "Exit code $? from: $@"; fi
-    if [ -s test.stderr ] ; then die "Stderr output from: $@" ; fi
+    echo "=== $* ==="
+    if "$@" 2> test.stderr ; then true; else die "Exit code $? from: $*"; fi
+    if [ -s test.stderr ] ; then die "Stderr output from: $*" ; fi
 }
 
 test_one ./bin/sigsum-key --help

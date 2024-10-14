@@ -11,4 +11,4 @@ ssh-add test.key 2>/dev/null
 rm test.key
 
 go run ./use-agent < test.key.pub
-<<EOF
+EOF
