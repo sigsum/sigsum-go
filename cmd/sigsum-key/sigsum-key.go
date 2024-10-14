@@ -12,6 +12,7 @@ import (
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/internal/version"
+	"sigsum.org/sigsum-go/pkg/checkpoint"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -36,6 +37,18 @@ type SignSettings struct {
 type ExportSettings struct {
 	keyFile    string
 	outputFile string
+}
+
+type ImportSettings struct {
+	inputFile  string
+	outputFile string
+}
+
+type VerifierExportSettings struct {
+	keyFile    string
+	outputFile string
+	name       string
+	keyType    checkpoint.SignatureType
 }
 
 func main() {
@@ -84,6 +97,9 @@ sigsum-key from-note-verifier [-o output] [file]
 sigsum-key from-hex [-k file] [-o output]
   Reads hex public key from file (by default, stdin) and writes
   OpenSSH format public key to output (by default, stdout).
+
+sigsum-key from-note-verifier [-o output] [file]
+  Extracts the public key from a note verifier line.
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -157,17 +173,34 @@ sigsum-key from-hex [-k file] [-o output]
 		})
 	case "to-origin":
 		var settings ExportSettings
-		settings.parse(os.Args)
+		settings.parse(os.Args, false)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
 			log.Fatal(err)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
-			_, err := fmt.Fprintf(f, "%x\n", types.SigsumCheckpointOrigin(&publicKey))
+			_, err := fmt.Fprintln(f, types.SigsumCheckpointOrigin(&publicKey))
 			return err
 		})
 	case "to-note-verifier":
-		log.Fatalf("Not implemented")
+		var settings VerifierExportSettings
+		settings.parse(os.Args)
+		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
+		if err != nil {
+			log.Fatalf("invalid key: %v", err)
+		}
+		name := settings.name
+		if name == "" {
+			if settings.keyType != checkpoint.SigTypeEd25519 {
+				log.Fatal("Key name (-n) option is required for non-ed25519 keys")
+			}
+			name = types.SigsumCheckpointOrigin(&publicKey)
+		}
+		nv := checkpoint.NewNoteVerifier(name, settings.keyType, &publicKey)
+		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
+			_, err := fmt.Fprintln(f, nv.String())
+			return err
+		})
 	case "from-hex":
 		var settings ExportSettings
 		settings.parse(os.Args, true)
@@ -177,6 +210,21 @@ sigsum-key from-hex [-k file] [-o output]
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
 			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&pub))
+			return err
+		})
+	case "from-note-verifier":
+		var settings ImportSettings
+		settings.parse(os.Args)
+		var nv checkpoint.NoteVerifier
+		if err := nv.FromString(strings.TrimSpace(readInput(settings.inputFile))); err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Key name %q, key type: 0x%02x", nv.Name, nv.Type)
+		if want := checkpoint.NewKeyId(nv.Name, nv.Type, &nv.PublicKey); nv.KeyId != want {
+			log.Printf("Verifier Key id %x is inconsistent with name and public key, expected %x", nv.KeyId, want)
+		}
+		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
+			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&nv.PublicKey))
 			return err
 		})
 	}
@@ -190,7 +238,7 @@ func newOptionSet(args []string, params string) *getopt.Set {
 }
 
 // Also adds and processes the help option.
-func parseNoArgs(set *getopt.Set, args []string) {
+func parseArgs(set *getopt.Set, args []string, maxArgs int) {
 	help := false
 	set.FlagLong(&help, "help", 0, "Display help")
 	err := set.Getopt(args[1:], nil)
@@ -205,9 +253,13 @@ func parseNoArgs(set *getopt.Set, args []string) {
 		set.PrintUsage(log.Writer())
 		os.Exit(1)
 	}
-	if set.NArgs() > 0 {
+	if set.NArgs() > maxArgs {
 		log.Fatal("Too many arguments.")
 	}
+}
+
+func parseNoArgs(set *getopt.Set, args []string) {
+	parseArgs(set, args, 0)
 }
 
 func (s *GenSettings) parse(args []string) {
@@ -247,6 +299,33 @@ func (s *ExportSettings) parse(args []string, hex bool) {
 	}
 	set.Flag(&s.outputFile, 'o', "Output", "file")
 	parseNoArgs(set, args)
+}
+
+func (s *VerifierExportSettings) parse(args []string) {
+	set := newOptionSet(args, "")
+	keyType := ""
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
+	set.Flag(&s.outputFile, 'o', "Output", "file")
+	set.Flag(&s.name, 'n', "Key name", "name")
+	set.Flag(&keyType, 't', "Signature type ('ed25519' or 'cosignature')", "type")
+	parseNoArgs(set, args)
+	switch keyType {
+	default:
+		log.Fatalf("Unknown signature type %q, must be 'ed25519' or 'cosignature'", keyType)
+	case "", "ed25519":
+		s.keyType = checkpoint.SigTypeEd25519
+	case "cosignature":
+		s.keyType = checkpoint.SigTypeCosignature
+	}
+}
+
+func (s *ImportSettings) parse(args []string) {
+	set := newOptionSet(args, "[file]")
+	set.Flag(&s.outputFile, 'o', "Output", "file")
+	parseArgs(set, args, 1)
+	if set.NArgs() == 1 {
+		s.inputFile = set.Args()[0]
+	}
 }
 
 // If outputFile is non-empty: open file, pass to f, and automatically
