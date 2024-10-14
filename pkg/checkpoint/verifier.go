@@ -23,7 +23,9 @@ func (nv *NoteVerifier) String() string {
 }
 
 // A note verifier should be parsed as <name>+<hash>+<keydata>
-// according to https://pkg.go.dev/golang.org/x/mod/sumdb/note
+// according to https://pkg.go.dev/golang.org/x/mod/sumdb/note. Note
+// that this functions uses the hash as is as the KeyId, no checks
+// that it is consistent with the key name and key data.
 func (nv *NoteVerifier) FromString(in string) error {
 	fields := strings.SplitN(in, "+", 3)
 	if len(fields) != 3 {
