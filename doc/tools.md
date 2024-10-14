@@ -111,12 +111,12 @@ As explained above, OpenSSH format is the main representation for
 public Sigsum keys, when stored in key files. Such a public key can be
 converted to a raw form using
 ```
-sigsum-key hex -k KEY-FILE
+sigsum-key to-hex -k KEY-FILE
 ```
 The hex representation is used in the Sigsum policy file, and in
 messages on the wire. For the opposite conversion, use
 ```
-sigsum-key hex-to-pub -k HEX-FILE
+sigsum-key from-hex HEX-FILE
 ```
 
 Occasionally, also the key hash is needed; it is used in certain
@@ -124,12 +124,13 @@ messages on the wire, and in the Sigsum log server's [rate
 limit](https://git.glasklar.is/sigsum/core/log-go/-/blob/main/doc/rate-limit.md)
 configuration. The key hash can be computed using
 ```
-sigsum-key hash -k KEY-FILE
+sigsum-key to-hash -k KEY-FILE
 ```
 
 These three conversion tools read standard input and write to standard
-output by default. It's optional to specify an input file, with `-k`,
-or output file, with `-o`.
+output by default. It's optional to specify an input file (with `-k`
+option for inputs that are in OpenSSH public key format), or output
+file, with `-o`.
 
 ## Sign and verify operations
 

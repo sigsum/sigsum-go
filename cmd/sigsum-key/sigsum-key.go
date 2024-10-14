@@ -124,10 +124,6 @@ sigsum-key from-hex [-o output] [file]
 		}
 		writeSignatureFile(settings.outputFile, &signature)
 
-		// TODO: Change all subcommands hash, hex, hex-to-pub
-		// to take an optional filename arguments for input
-		// and output, and by default read stdin and write to
-		// stdout.
 	case "to-hash":
 		var settings ExportSettings
 		settings.parse(os.Args)
