@@ -14,6 +14,7 @@ import (
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 type GenSettings struct {
@@ -72,10 +73,10 @@ sigsum-key to-origin [-k file] [-o output]
   checkpoint origin line for a Sigsum log to output (by default,
   stdout).
 
-sigsum-key to-note-verifier [-n name] [-k file] [-o output]
+sigsum-key to-note-verifier [-n name] [-k file] [-t type] [-o output]
   Reads public key from file (by default, stdin) and writes a signed
   note verifier line. By defaults, uses the corresponding log origin
-  as the key name. TODO: Support the cosignature key type?
+  as the key name.
 
 sigsum-key from-note-verifier [-o output] [file]
   Extracts the public key from a note verifier line.
@@ -154,6 +155,19 @@ sigsum-key from-hex [-k file] [-o output]
 			_, err := fmt.Fprintf(f, "%x\n", publicKey[:])
 			return err
 		})
+	case "to-origin":
+		var settings ExportSettings
+		settings.parse(os.Args)
+		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
+		if err != nil {
+			log.Fatal(err)
+		}
+		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
+			_, err := fmt.Fprintf(f, "%x\n", types.SigsumCheckpointOrigin(&publicKey))
+			return err
+		})
+	case "to-note-verifier":
+		log.Fatalf("Not implemented")
 	case "from-hex":
 		var settings ExportSettings
 		settings.parse(os.Args, true)
