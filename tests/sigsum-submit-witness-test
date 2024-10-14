@@ -38,12 +38,12 @@ sleep 2
 for x in $(seq 5); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
-    printf "%31s\n" foo-$x \
-	| ./bin/sigsum-submit --diagnostics=warning --raw-hash -o test.$x.proof -k test.submit.key --policy test.policy
+    printf "%31s\n" "foo-$x" \
+	| ./bin/sigsum-submit --diagnostics=warning --raw-hash -o "test.$x.proof" -k test.submit.key --policy test.policy
 done
 
 for x in $(seq 5); do
     echo >&2 "verify $x"
-    printf "%31s\n" foo-$x \
+    printf "%31s\n" "foo-$x" \
 	| ./bin/sigsum-verify --raw-hash --key test.submit.key.pub --policy test.policy "test.$x.proof"
 done

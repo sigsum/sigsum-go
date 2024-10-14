@@ -40,7 +40,7 @@ die() {
 }
 
 search_output() {
-    for f in $(seq 10) ; do
+    for _ in $(seq 10) ; do
 	if grep -- "$1" test.monitor.out >/dev/null ; then
 	    return 0
 	fi
@@ -52,5 +52,5 @@ for x in $(seq 5); do
     echo >&2 "submit $x"
     echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-key test.token.key -o /dev/null -k test.submit.key --policy test.policy
     echo >&2 "waiting on monitor $x"
-    search_output $(echo "msg $x" | go run ./sha256-n/sha256-n.go 2) || die "Monitor not finding leaf $x"
+    search_output "$(echo "msg $x" | go run ./sha256-n/sha256-n.go 2)" || die "Monitor not finding leaf $x"
 done

@@ -13,7 +13,7 @@ echo ${HEXKEY} | ./bin/sigsum-key hex-to-pub > test.key.pub
    exit 1
 )
 
-[ $(./bin/sigsum-key hex -k test.key.pub) = ${HEXKEY} ] || (
+[ "$(./bin/sigsum-key hex -k test.key.pub)" = "${HEXKEY}" ] || (
    echo >&2 "sigsum-key hex failed"
    exit 1
 )

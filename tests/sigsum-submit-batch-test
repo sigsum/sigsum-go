@@ -29,7 +29,7 @@ echo "log $(./bin/sigsum-key hex -k test.log.key.pub) http://localhost:6965" > t
 echo "quorum none" >> test.policy
 
 for x in $(seq 5); do
-    echo foo-$x > test.$x.msg
+    echo "foo-$x" > "test.$x.msg"
 done
 
 rm -f test.*.req
@@ -43,7 +43,7 @@ rm -f test.*.proof
 
 for x in $(seq 5); do
     echo >&2 "verify $x"
-    ./bin/sigsum-verify < test.$x.msg --key test.submit.key.pub --policy test.policy "test.$x.msg.proof"
+    ./bin/sigsum-verify < "test.$x.msg" --key test.submit.key.pub --policy test.policy "test.$x.msg.proof"
 done
 
 # Check that the message is taken into account in validation.
