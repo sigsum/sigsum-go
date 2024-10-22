@@ -91,9 +91,6 @@ sigsum-key to-note-verifier [-n name] [-k file] [-t type] [-o output]
   note verifier line. By defaults, uses the corresponding log origin
   as the key name.
 
-sigsum-key from-note-verifier [-o output] [file]
-  Extracts the public key from a note verifier line.
-
 sigsum-key from-hex [-k file] [-o output]
   Reads hex public key from file (by default, stdin) and writes
   OpenSSH format public key to output (by default, stdout).
@@ -192,7 +189,7 @@ sigsum-key from-note-verifier [-o output] [file]
 		name := settings.name
 		if name == "" {
 			if settings.keyType != checkpoint.SigTypeEd25519 {
-				log.Fatal("Key name (-n) option is required for non-ed25519 keys")
+				log.Fatal("Key name (-n) option is required for cosignature keys")
 			}
 			name = types.SigsumCheckpointOrigin(&publicKey)
 		}
