@@ -1,0 +1,48 @@
+#! /bin/sh
+
+set -e
+
+./bin/sigsum-key gen -o test.key
+kh=$(./bin/sigsum-key to-hash -k test.key.pub)
+origin=$(./bin/sigsum-key to-origin -k test.key.pub)
+if [ "${origin}" != "sigsum.org/v1/tree/$kh" ] ; then
+    echo "unexpected origin string: $origin"
+    exit 1
+fi
+
+./bin/sigsum-key to-note-verifier -k test.key.pub -o test.note-verifier
+./bin/sigsum-key from-note-verifier -o test.out test.note-verifier 2>test.stderr
+
+if ! cmp test.out test.key.pub ; then
+    echo "key changed in to-note-verifier, from-note-verifier roundtrip"
+    exit 1
+fi
+
+if [ "$(cut -f1 -d+ test.note-verifier)" != "${origin}" ] ; then
+    echo "unexpected key name, expected sigsum origin"
+    exit 1
+fi
+
+if ! grep >/dev/null "key type: 0x01" test.stderr ; then
+    echo "key type error, expected 0x01"
+    exit 1
+fi
+
+# Similar operation using cosignature type
+./bin/sigsum-key to-note-verifier -t cosignature -n example.org/witness -k test.key.pub -o test.note-verifier
+./bin/sigsum-key from-note-verifier -o test.out test.note-verifier 2>test.stderr
+
+if ! cmp test.out test.key.pub ; then
+    echo "key changed in to-note-verifier, from-note-verifier roundtrip (cosignature)"
+    exit 1
+fi
+
+if [ "$(cut -f1 -d+ test.note-verifier)" != "example.org/witness" ] ; then
+    echo "unexpected key name, expected example.org/witness"
+    exit 1
+fi
+
+if ! grep >/dev/null "key type: 0x04" test.stderr ; then
+    echo "key type error, expected 0x04"
+    exit 1
+fi
