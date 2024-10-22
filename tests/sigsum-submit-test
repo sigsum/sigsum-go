@@ -2,8 +2,8 @@
 
 set -e
 
-./bin/sigsum-key gen -o test.log.key
-./bin/sigsum-key gen -o test.submit.key
+./bin/sigsum-key generate -o test.log.key
+./bin/sigsum-key generate -o test.submit.key
 
 # Reading private key files still supports raw hex.
 printf '%064x' 1 > test.token.key
@@ -37,8 +37,8 @@ for x in $(seq 5); do
 	     --raw-hash -o "test.$x.proof" --signing-key test.submit.key --policy test.policy
 done
 
-./bin/sigsum-key gen -o test.submit2.key
-./bin/sigsum-key gen -o test.submit3.key
+./bin/sigsum-key generate -o test.submit2.key
+./bin/sigsum-key generate -o test.submit3.key
 cat test.submit*.key.pub > test.verify-keys.pub
 
 for x in $(seq 5); do

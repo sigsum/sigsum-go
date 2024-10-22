@@ -2,8 +2,8 @@
 
 set -e
 
-./bin/sigsum-key gen -o test.key
-./bin/sigsum-key gen -o test.log.key
+./bin/sigsum-key generate -o test.key
+./bin/sigsum-key generate -o test.log.key
 
 ./bin/sigsum-token create -k test.key --log-key test.log.key.pub -o test.token
 ./bin/sigsum-token verify --log-key test.log.key.pub -k test.key.pub < test.token

@@ -19,7 +19,7 @@ test_one() {
 }
 
 test_one ./bin/sigsum-key --help
-test_one ./bin/sigsum-key gen --help
+test_one ./bin/sigsum-key generate --help
 test_one ./bin/sigsum-key sign --help
 test_one ./bin/sigsum-key verify --help
 test_one ./bin/sigsum-key to-hash --help

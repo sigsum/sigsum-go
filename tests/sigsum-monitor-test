@@ -2,8 +2,8 @@
 
 set -e
 
-./bin/sigsum-key gen -o test.log.key
-./bin/sigsum-key gen -o test.submit.key
+./bin/sigsum-key generate -o test.log.key
+./bin/sigsum-key generate -o test.submit.key
 
 # Reading private key files still supports raw hex.
 printf '%064x' 1 > test.token.key

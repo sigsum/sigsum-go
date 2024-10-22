@@ -2,8 +2,8 @@
 
 set -e
 
-./bin/sigsum-key gen -o test.log.key
-./bin/sigsum-key gen -o test.witness.key
+./bin/sigsum-key generate -o test.log.key
+./bin/sigsum-key generate -o test.witness.key
 
 # Start witness server
 rm -f test.witness.cth

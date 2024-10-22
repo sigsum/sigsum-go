@@ -47,11 +47,11 @@ sigsum-key help | --help
 sigsum-key version | --version | -v
   Display software version.
 
-sigsum-key gen -o file
+sigsum-key generate -o file
   Generate a new key pair. Private key is stored in the given
   file, in OpenSSH private key format. Corresponding public key
   file gets a ".pub" suffix, and is written in OpenSSH public
-  key format.
+  key format. Abbreviation "gen" is also recognized.
 
 sigsum-key verify [options] < msg
   Verify a signature. For option details, see sigsum-key verify --help.
@@ -85,7 +85,7 @@ sigsum-key from-hex [-k file] [-o output]
 	case "version", "--version", "-v":
 		version.DisplayVersion("sigsum-key")
 		os.Exit(0)
-	case "gen":
+	case "generate", "gen":
 		var settings GenSettings
 		settings.parse(os.Args)
 		pub, signer, err := crypto.NewKeyPair()

@@ -2,7 +2,7 @@
 
 set -e
 
-./bin/sigsum-key gen -o test.key
+./bin/sigsum-key generate -o test.key
 
 kh=$(./bin/sigsum-key to-hash -k test.key.pub)
 # basenc requires uppercase hex

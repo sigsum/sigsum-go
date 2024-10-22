@@ -13,9 +13,9 @@ Documentation of the Sigsum command line tools, including `sigsum-key`,
 # General conventions
 
 There are several tools, some of which have sub commands, e.g.,
-`sigsum-key gen`. The aim is that each command should address one
-task, e.g., `sigsum-submit` is the tool to use to submit new items to
-a Sigsum log, and collect proof of public logging, and
+`sigsum-key genenerate`. The aim is that each command should address
+one task, e.g., `sigsum-submit` is the tool to use to submit new items
+to a Sigsum log, and collect proof of public logging, and
 `sigsum-verify` is the tool to do offline verification of such a
 proof.
 
@@ -90,7 +90,7 @@ and convert between different key formats.
 
 To generate a new key pair, run
 ```
-sigsum-key gen -o KEY-FILE
+sigsum-key generate -o KEY-FILE
 ```
 This generates a new Ed25519 keypair (with key material provided by
 the `crypto/rand` module in the golang standard library). The private
@@ -104,6 +104,8 @@ like
 ```
 ssh-keygen -q -N '' -t ed25519 -f KEY-FILE
 ```
+
+For this command, "generate" may be abbreviated as just "gen".
 
 ## Public key conversion
 
@@ -164,7 +166,7 @@ standard input.
 Create a new private key file "example.key" and corresponding public
 key file "example.key.pub".
 ```
-$ sigsum-key gen -o example.key
+$ sigsum-key generate -o example.key
 ```
 
 Sign a message using that key.
