@@ -116,7 +116,7 @@ sigsum-key to-hex -k KEY-FILE
 The hex representation is used in the Sigsum policy file, and in
 messages on the wire. For the opposite conversion, use
 ```
-sigsum-key from-hex HEX-FILE
+sigsum-key from-hex -k HEX-FILE
 ```
 
 Occasionally, also the key hash is needed; it is used in certain

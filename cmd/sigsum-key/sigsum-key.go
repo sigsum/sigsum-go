@@ -37,11 +37,6 @@ type ExportSettings struct {
 	outputFile string
 }
 
-type ImportSettings struct {
-	inputFile  string
-	outputFile string
-}
-
 func main() {
 	const usage = `sigsum-key sub commands:
 
@@ -72,7 +67,7 @@ sigsum-key to-hex [-k file] [-o output]
   Reads public key from file (by default, stdin) and writes hex key
   to output (by default, stdout).
 
-sigsum-key from-hex [-o output] [file]
+sigsum-key from-hex [-k file] [-o output]
   Reads hex public key from file (by default, stdin) and writes
   OpenSSH format public key to output (by default, stdout).
 `
@@ -126,7 +121,7 @@ sigsum-key from-hex [-o output] [file]
 
 	case "to-hash":
 		var settings ExportSettings
-		settings.parse(os.Args)
+		settings.parse(os.Args, false)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
 			log.Fatal(err)
@@ -137,7 +132,7 @@ sigsum-key from-hex [-o output] [file]
 		})
 	case "to-hex":
 		var settings ExportSettings
-		settings.parse(os.Args)
+		settings.parse(os.Args, false)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
 			log.Fatal(err)
@@ -147,9 +142,9 @@ sigsum-key from-hex [-o output] [file]
 			return err
 		})
 	case "from-hex":
-		var settings ImportSettings
-		settings.parse(os.Args)
-		pub, err := crypto.PublicKeyFromHex(strings.TrimSpace(readInput(settings.inputFile)))
+		var settings ExportSettings
+		settings.parse(os.Args, true)
+		pub, err := crypto.PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
 		if err != nil {
 			log.Fatalf("invalid key: %v", err)
 		}
@@ -168,7 +163,7 @@ func newOptionSet(args []string, params string) *getopt.Set {
 }
 
 // Also adds and processes the help option.
-func parseArgs(set *getopt.Set, args []string, maxArgs int) {
+func parseNoArgs(set *getopt.Set, args []string) {
 	help := false
 	set.FlagLong(&help, "help", 0, "Display help")
 	err := set.Getopt(args[1:], nil)
@@ -183,13 +178,9 @@ func parseArgs(set *getopt.Set, args []string, maxArgs int) {
 		set.PrintUsage(log.Writer())
 		os.Exit(1)
 	}
-	if set.NArgs() > maxArgs {
+	if set.NArgs() > 0 {
 		log.Fatal("Too many arguments.")
 	}
-}
-
-func parseNoArgs(set *getopt.Set, args []string) {
-	parseArgs(set, args, 0)
 }
 
 func (s *GenSettings) parse(args []string) {
@@ -220,20 +211,15 @@ func (s *SignSettings) parse(args []string) {
 	parseNoArgs(set, args)
 }
 
-func (s *ExportSettings) parse(args []string) {
+func (s *ExportSettings) parse(args []string, hex bool) {
 	set := newOptionSet(args, "")
-	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
+	if hex {
+		set.FlagLong(&s.keyFile, "key", 'k', "Hex public key", "file")
+	} else {
+		set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
+	}
 	set.Flag(&s.outputFile, 'o', "Output", "file")
 	parseNoArgs(set, args)
-}
-
-func (s *ImportSettings) parse(args []string) {
-	set := newOptionSet(args, "[file]")
-	set.Flag(&s.outputFile, 'o', "Output", "file")
-	parseArgs(set, args, 1)
-	if set.NArgs() == 1 {
-		s.inputFile = set.Args()[0]
-	}
 }
 
 // If outputFile is non-empty: open file, pass to f, and automatically
