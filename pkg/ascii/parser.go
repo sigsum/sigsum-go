@@ -2,6 +2,7 @@
 package ascii
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -9,6 +10,8 @@ import (
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
+
+var ErrEmptyLine = errors.New("encountered an empty line")
 
 func IntFromDecimal(s string) (uint64, error) {
 	if len(s) > 1 && s[0] == '0' {
@@ -30,12 +33,21 @@ func (p *Parser) GetEOF() error {
 	return p.reader.GetEOF()
 }
 
-// next scans the next line, expecting it to contain a key/value pair separated
-// by =, where the key is name. It returns the value.
+func (p *Parser) GetEmptyLine() error {
+	return p.reader.GetEmptyLine()
+}
+
+// next scans the next line, expecting it to contain a key/value pair
+// separated by =, where the key is name. It returns the value. In
+// case line is completely empty (which sometimes terminates a list of
+// values), returns ErrEmptyLine.
 func (p *Parser) next(name string) (string, error) {
 	line, err := p.reader.GetLine()
 	if err != nil {
 		return "", err
+	}
+	if line == "" {
+		return "", ErrEmptyLine
 	}
 	key, value, ok := strings.Cut(line, "=")
 	if !ok {

@@ -62,8 +62,7 @@ func (pr *InclusionProof) ToASCII(w io.Writer) error {
 	return hashesToASCII(w, pr.Path)
 }
 
-func (pr *InclusionProof) FromASCII(r io.Reader) error {
-	p := ascii.NewParser(r)
+func (pr *InclusionProof) Parse(p ascii.Parser) error {
 	var err error
 	pr.LeafIndex, err = p.GetInt("leaf_index")
 	if err != nil {
@@ -71,6 +70,10 @@ func (pr *InclusionProof) FromASCII(r io.Reader) error {
 	}
 	pr.Path, err = hashesFromASCII(&p)
 	return err
+}
+
+func (pr *InclusionProof) FromASCII(r io.Reader) error {
+	return pr.Parse(ascii.NewParser(r))
 }
 
 func (pr *InclusionProof) Verify(leaf *crypto.Hash, th *TreeHead) error {
@@ -101,22 +104,27 @@ func (pr *ConsistencyProof) ToBase64(w io.Writer) error {
 	return nil
 }
 
-func (pr *ConsistencyProof) FromBase64(r ascii.LineReader) error {
+// First return value is true if list was terminated by an empty
+// line, false if terminated by EOF.
+func (pr *ConsistencyProof) ParseBase64(r *ascii.LineReader) (bool, error) {
 	pr.Path = nil
 	for {
 		line, err := r.GetLine()
 		if err == io.EOF {
-			return nil
+			return false, nil
 		}
 		if err != nil {
-			return err
+			return false, err
+		}
+		if line == "" {
+			return true, nil
 		}
 		if len(pr.Path) >= proofSizeLimit {
-			return fmt.Errorf("too many entries for consistency proof")
+			return false, fmt.Errorf("too many entries for consistency proof")
 		}
 		hash, err := crypto.HashFromBase64(line)
 		if err != nil {
-			return err
+			return false, err
 		}
 		pr.Path = append(pr.Path, hash)
 	}

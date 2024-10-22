@@ -206,30 +206,49 @@ func (cth *CosignedTreeHead) ToASCII(w io.Writer) error {
 	return nil
 }
 
-func ParseCosignatures(p *ascii.Parser) (map[crypto.Hash]Cosignature, error) {
+// Second return value is true if list was terminated by an empty
+// line, false if terminated by EOF.
+func ParseCosignatures(p *ascii.Parser) (map[crypto.Hash]Cosignature, bool, error) {
 	cosignatures := make(map[crypto.Hash]Cosignature)
 	for {
 		var cs Cosignature
 		keyHash, err := cs.Parse(p)
 		if err == io.EOF {
-			return cosignatures, nil
+			return cosignatures, false, nil
+		}
+		if err == ascii.ErrEmptyLine {
+			return cosignatures, true, nil
 		}
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		if _, ok := cosignatures[keyHash]; ok {
-			return nil, fmt.Errorf("duplicate cosignature keyhash")
+			return nil, false, fmt.Errorf("duplicate cosignature keyhash")
 		}
 		cosignatures[keyHash] = cs
 	}
 }
 
+// First return value is true if list was terminated by an empty
+// line, false if terminated by EOF.
+func (cth *CosignedTreeHead) Parse(p *ascii.Parser) (bool, error) {
+	err := cth.SignedTreeHead.Parse(p)
+	if err != nil {
+		return false, err
+	}
+	var emptyLine bool
+	cth.Cosignatures, emptyLine, err = ParseCosignatures(p)
+	return emptyLine, err
+}
+
 func (cth *CosignedTreeHead) FromASCII(r io.Reader) error {
 	p := ascii.NewParser(r)
-	err := cth.SignedTreeHead.Parse(&p)
+	emptyLine, err := cth.Parse(&p)
 	if err != nil {
 		return err
 	}
-	cth.Cosignatures, err = ParseCosignatures(&p)
+	if emptyLine {
+		return ascii.ErrEmptyLine
+	}
 	return err
 }
