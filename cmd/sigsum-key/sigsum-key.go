@@ -47,11 +47,11 @@ sigsum-key help | --help
 sigsum-key version | --version | -v
   Display software version.
 
-sigsum-key gen -o file
+sigsum-key generate -o file
   Generate a new key pair. Private key is stored in the given
   file, in OpenSSH private key format. Corresponding public key
   file gets a ".pub" suffix, and is written in OpenSSH public
-  key format.
+  key format. Abbreviation "gen" is also recognized.
 
 sigsum-key verify [options] < msg
   Verify a signature. For option details, see sigsum-key verify --help.
@@ -59,15 +59,15 @@ sigsum-key verify [options] < msg
 sigsum-key sign [options] < msg
   Create a signature. For option details, see sigsum-key sign --help.
 
-sigsum-key hash [-k file] [-o output]
+sigsum-key to-hash [-k file] [-o output]
   Reads public key from file (by default, stdin) and writes key hash
   to output (by default, stdout).
 
-sigsum-key hex [-k file] [-o output]
+sigsum-key to-hex [-k file] [-o output]
   Reads public key from file (by default, stdin) and writes hex key
   to output (by default, stdout).
 
-sigsum-key hex-to-pub [-k file] [-o output]
+sigsum-key from-hex [-k file] [-o output]
   Reads hex public key from file (by default, stdin) and writes
   OpenSSH format public key to output (by default, stdout).
 `
@@ -85,7 +85,7 @@ sigsum-key hex-to-pub [-k file] [-o output]
 	case "version", "--version", "-v":
 		version.DisplayVersion("sigsum-key")
 		os.Exit(0)
-	case "gen":
+	case "generate", "gen":
 		var settings GenSettings
 		settings.parse(os.Args)
 		pub, signer, err := crypto.NewKeyPair()
@@ -119,11 +119,7 @@ sigsum-key hex-to-pub [-k file] [-o output]
 		}
 		writeSignatureFile(settings.outputFile, &signature)
 
-		// TODO: Change all subcommands hash, hex, hex-to-pub
-		// to take an optional filename arguments for input
-		// and output, and by default read stdin and write to
-		// stdout.
-	case "hash":
+	case "to-hash":
 		var settings ExportSettings
 		settings.parse(os.Args, false)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
@@ -134,7 +130,7 @@ sigsum-key hex-to-pub [-k file] [-o output]
 			_, err := fmt.Fprintf(f, "%x\n", crypto.HashBytes(publicKey[:]))
 			return err
 		})
-	case "hex":
+	case "to-hex":
 		var settings ExportSettings
 		settings.parse(os.Args, false)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
@@ -145,7 +141,7 @@ sigsum-key hex-to-pub [-k file] [-o output]
 			_, err := fmt.Fprintf(f, "%x\n", publicKey[:])
 			return err
 		})
-	case "hex-to-pub":
+	case "from-hex":
 		var settings ExportSettings
 		settings.parse(os.Args, true)
 		pub, err := crypto.PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
@@ -159,14 +155,10 @@ sigsum-key hex-to-pub [-k file] [-o output]
 	}
 }
 
-func newOptionSet(args []string, useStdin bool) *getopt.Set {
+func newOptionSet(args []string, params string) *getopt.Set {
 	set := getopt.New()
 	set.SetProgram(args[0] + " " + args[1])
-	if useStdin {
-		set.SetParameters("< msg")
-	} else {
-		set.SetParameters("")
-	}
+	set.SetParameters(params)
 	return set
 }
 
@@ -192,7 +184,7 @@ func parseNoArgs(set *getopt.Set, args []string) {
 }
 
 func (s *GenSettings) parse(args []string) {
-	set := newOptionSet(args, false)
+	set := newOptionSet(args, "")
 	set.Flag(&s.outputFile, 'o', "Output", "file").Mandatory()
 	parseNoArgs(set, args)
 }
@@ -201,7 +193,7 @@ func (s *VerifySettings) parse(args []string) {
 	// By default, no namespace.
 	s.namespace = ""
 
-	set := newOptionSet(args, true)
+	set := newOptionSet(args, "< msg")
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
 	set.FlagLong(&s.signatureFile, "signature", 's', "Signature", "file").Mandatory()
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
@@ -212,7 +204,7 @@ func (s *SignSettings) parse(args []string) {
 	// By default, no namespace.
 	s.namespace = ""
 
-	set := newOptionSet(args, true)
+	set := newOptionSet(args, "< msg")
 	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key for signing", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Signature output", "file")
 	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
@@ -220,7 +212,7 @@ func (s *SignSettings) parse(args []string) {
 }
 
 func (s *ExportSettings) parse(args []string, hex bool) {
-	set := newOptionSet(args, false)
+	set := newOptionSet(args, "")
 	if hex {
 		set.FlagLong(&s.keyFile, "key", 'k', "Hex public key", "file")
 	} else {

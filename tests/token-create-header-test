@@ -5,8 +5,8 @@ set -e
 # Skip test if we don't have connectivity to the DNS system.
 host test.sigsum.org || exit 77
 
-./bin/sigsum-key gen -o test.key
-./bin/sigsum-key gen -o test.log.key
+./bin/sigsum-key generate -o test.key
+./bin/sigsum-key generate -o test.log.key
 
 # Corresponding public key is registered on test.sigsum.org.
 printf '%064x\n' 1 > test.sigsum.key

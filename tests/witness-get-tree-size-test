@@ -2,8 +2,8 @@
 
 set -e
 
-./bin/sigsum-key gen -o test.log.key
-./bin/sigsum-key gen -o test.witness.key
+./bin/sigsum-key generate -o test.log.key
+./bin/sigsum-key generate -o test.witness.key
 
 # Start witness server
 rm -f test.witness.cth
@@ -21,7 +21,7 @@ trap cleanup EXIT
 # Give server some time to start
 sleep 1
 
-curl -s "http://localhost:7777/get-tree-size/$(./bin/sigsum-key hash -k test.log.key.pub)" > test.rsp
+curl -s "http://localhost:7777/get-tree-size/$(./bin/sigsum-key to-hash -k test.log.key.pub)" > test.rsp
 
 [ "size=0" = "$(cat test.rsp)" ] || (
     echo 1>&2 Unexpected response

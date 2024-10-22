@@ -75,8 +75,8 @@ separated by white space. Comments are written with "#" and extend to
 the end of the line.
 
 Public keys are written in raw hex representation. (The `sigsum-key
-hex` command can be used to convert a public key in openssh format to
-raw hex, and `sigsum-key hex-to-pub` for the opposite conversion.)
+to-hex` command can be used to convert a public key in OpenSSH format to
+raw hex, and `sigsum-key from-hex` for the opposite conversion.)
 
 Lines defining witnesses and logs can appear in any order; the order
 does not imply any preference or priority. A line defining a group can
@@ -144,7 +144,7 @@ group <name> any <name>...
 group <name> <k> <name>...
 ```
 
-All these defines a group, where the group is considered to witnes a
+All these defines a group, where the group is considered to witness a
 tree head if and only if at least k of its n members have witnessed
 that tree head, each group member being either a witness or another group.
 In this terminology, for a single witness, "witnessing" is the same as

@@ -2,7 +2,7 @@
 
 set -e
 
-./bin/sigsum-key gen -o test.key
+./bin/sigsum-key generate -o test.key
 
 ssh-agent sh <<EOF
 set -e

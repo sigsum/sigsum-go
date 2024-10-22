@@ -19,12 +19,12 @@ test_one() {
 }
 
 test_one ./bin/sigsum-key --help
-test_one ./bin/sigsum-key gen --help
+test_one ./bin/sigsum-key generate --help
 test_one ./bin/sigsum-key sign --help
 test_one ./bin/sigsum-key verify --help
-test_one ./bin/sigsum-key hash --help
-test_one ./bin/sigsum-key hex --help
-test_one ./bin/sigsum-key hex-to-pub --help
+test_one ./bin/sigsum-key to-hash --help
+test_one ./bin/sigsum-key to-hex --help
+test_one ./bin/sigsum-key from-hex --help
 test_one ./bin/sigsum-token --help
 test_one ./bin/sigsum-token create --help
 test_one ./bin/sigsum-token record --help

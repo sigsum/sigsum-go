@@ -2,8 +2,8 @@
 
 set -e
 
-./bin/sigsum-key gen -o test.log.key
-./bin/sigsum-key gen -o test.submit.key
+./bin/sigsum-key generate -o test.log.key
+./bin/sigsum-key generate -o test.submit.key
 
 # Reading private key files still supports raw hex.
 printf '%064x' 1 > test.token.key
@@ -25,7 +25,7 @@ trap cleanup EXIT
 # Give log server some time to get ready.
 sleep 2
 
-echo "log $(./bin/sigsum-key hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
 echo "quorum none" >> test.policy
 
 for x in $(seq 5); do
