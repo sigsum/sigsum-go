@@ -52,6 +52,7 @@ func TestWitnessPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	logHash := crypto.HashBytes(logPub[:])
+	origin := types.SigsumCheckpointOrigin(&logPub)
 
 	sth, err := th.Sign(logSigner)
 	if err != nil {
@@ -67,7 +68,7 @@ func TestWitnessPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		cosignature, err := th.Cosign(s, &logHash, 0)
+		cosignature, err := th.Cosign(s, origin, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
