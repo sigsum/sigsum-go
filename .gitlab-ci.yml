@@ -33,6 +33,8 @@ gofmt:
 build-log-go:
   stage: build-log
   allow_failure: true
+  # Doesn't need any of the artifacts from the test stage.
+  dependencies: []
   script:
   - git clone https://git.glasklar.is/sigsum/core/log-go.git &&
     cd log-go && go work init && go work use . .. && go build ./...
