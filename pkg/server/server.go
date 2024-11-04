@@ -93,3 +93,7 @@ func reportError(w http.ResponseWriter, url *url.URL, err error) {
 func logError(url *url.URL, err error) {
 	log.Debug("%q: request failed: %v", url.Path, err)
 }
+
+var handlerBadRequest = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	reportError(w, r.URL, api.ErrBadRequest)
+})

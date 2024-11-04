@@ -13,6 +13,7 @@ import (
 
 func newGetLeavesServer(config *Config, getLeaves func(context.Context, requests.Leaves) ([]types.Leaf, error)) *server {
 	server := newServer(config)
+	server.register(http.MethodGet, types.EndpointGetLeaves, "", handlerBadRequest)
 	server.register(http.MethodGet, types.EndpointGetLeaves, "{start}/{end}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.Leaves
@@ -65,6 +66,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				logError(r.URL, err)
 			}
 		}))
+	server.register(http.MethodGet, types.EndpointGetInclusionProof, "", handlerBadRequest)
 	server.register(http.MethodGet, types.EndpointGetInclusionProof, "{size}/{hash}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.InclusionProof
@@ -89,6 +91,7 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				logError(r.URL, err)
 			}
 		}))
+	server.register(http.MethodGet, types.EndpointGetConsistencyProof, "", handlerBadRequest)
 	server.register(http.MethodGet, types.EndpointGetConsistencyProof, "{old}/{new}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.ConsistencyProof
