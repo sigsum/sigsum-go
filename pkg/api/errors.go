@@ -23,7 +23,7 @@ var ErrNotFound *Error = NewError(http.StatusNotFound, fmt.Errorf("Not Found")) 
 // tree size.
 var ErrConflict *Error = NewError(http.StatusConflict, fmt.Errorf("Conflict")) // 409
 
-// Failure of witness AddTreeHead, invalid consistency proof.
+// Failure of witness AddCheckpointHead, invalid consistency proof.
 var ErrUnprocessableEntity *Error = NewError(422, fmt.Errorf("Unprocessable Entity"))
 
 // Error due to exceeded rate limit.

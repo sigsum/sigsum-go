@@ -10,7 +10,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	checkpoint "sigsum.org/sigsum-go/pkg/checkpoint"
-	crypto "sigsum.org/sigsum-go/pkg/crypto"
 	requests "sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	types "sigsum.org/sigsum-go/pkg/types"
@@ -188,35 +187,4 @@ func (m *MockWitness) AddCheckpoint(arg0 context.Context, arg1 requests.AddCheck
 func (mr *MockWitnessMockRecorder) AddCheckpoint(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCheckpoint", reflect.TypeOf((*MockWitness)(nil).AddCheckpoint), arg0, arg1)
-}
-
-// AddTreeHead mocks base method.
-func (m *MockWitness) AddTreeHead(arg0 context.Context, arg1 requests.AddTreeHead) (crypto.Hash, types.Cosignature, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddTreeHead", arg0, arg1)
-	ret0, _ := ret[0].(crypto.Hash)
-	ret1, _ := ret[1].(types.Cosignature)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// AddTreeHead indicates an expected call of AddTreeHead.
-func (mr *MockWitnessMockRecorder) AddTreeHead(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTreeHead", reflect.TypeOf((*MockWitness)(nil).AddTreeHead), arg0, arg1)
-}
-
-// GetTreeSize mocks base method.
-func (m *MockWitness) GetTreeSize(arg0 context.Context, arg1 requests.GetTreeSize) (uint64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTreeSize", arg0, arg1)
-	ret0, _ := ret[0].(uint64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetTreeSize indicates an expected call of GetTreeSize.
-func (mr *MockWitnessMockRecorder) GetTreeSize(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTreeSize", reflect.TypeOf((*MockWitness)(nil).GetTreeSize), arg0, arg1)
 }

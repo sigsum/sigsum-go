@@ -15,7 +15,6 @@ import (
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/checkpoint"
-	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -106,40 +105,6 @@ func (cli *Client) AddLeaf(ctx context.Context, req requests.Leaf, header *token
 		return false, err
 	}
 	return true, nil
-}
-
-func (cli *Client) GetTreeSize(ctx context.Context, req requests.GetTreeSize) (uint64, error) {
-	var size uint64
-	if err := cli.get(ctx, req.ToURL(types.EndpointGetTreeSize.Path(cli.config.URL)),
-		func(body io.Reader) error {
-			p := ascii.NewParser(body)
-			var err error
-			size, err = p.GetInt("size")
-			if err != nil {
-				return err
-			}
-			return p.GetEOF()
-		}); err != nil {
-		return 0, err
-	}
-	return size, nil
-}
-
-// Deprecated: New witness protocol uses AddCheckPoint instead
-func (cli *Client) AddTreeHead(ctx context.Context, req requests.AddTreeHead) (crypto.Hash, types.Cosignature, error) {
-	buf := bytes.Buffer{}
-	req.ToASCII(&buf)
-	var keyHash crypto.Hash
-	var cs types.Cosignature
-	if err := cli.post(ctx, types.EndpointAddTreeHead.Path(cli.config.URL), nil, &buf,
-		func(r io.Reader) error {
-			var err error
-			keyHash, err = cs.FromASCII(r)
-			return err
-		}, nil); err != nil {
-		return crypto.Hash{}, types.Cosignature{}, err
-	}
-	return keyHash, cs, nil
 }
 
 func processConflictResponse(rsp *http.Response) error {
