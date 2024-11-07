@@ -13,17 +13,18 @@ import (
 
 func newGetLeavesServer(config *Config, getLeaves func(context.Context, requests.Leaves) ([]types.Leaf, error)) *server {
 	server := newServer(config)
-	server.register(types.EndpointGetLeaves, http.MethodGet,
+	server.register(http.MethodGet, types.EndpointGetLeaves, "", handlerBadRequest)
+	server.register(http.MethodGet, types.EndpointGetLeaves, "{start}/{end}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.Leaves
-			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+			if err := req.FromURLArgs(r.PathValue("start"), r.PathValue("end")); err != nil {
+				reportError(w, r.URL, api.ErrBadRequest.WithError(err))
 				return
 			}
 			if req.StartIndex >= req.EndIndex {
-				reportErrorCode(w, r.URL, http.StatusBadRequest,
+				reportError(w, r.URL, api.ErrBadRequest.WithError(
 					fmt.Errorf("start_index(%d) must be less than end_index(%d)",
-						req.StartIndex, req.EndIndex))
+						req.StartIndex, req.EndIndex)))
 				return
 			}
 			leaves, err := getLeaves(r.Context(), req)
@@ -54,7 +55,7 @@ func NewGetLeavesServer(config *Config, getLeaves func(context.Context, requests
 // are rejected, and not passed on to the underlying api.Log.
 func NewLog(config *Config, log api.Log) http.Handler {
 	server := newGetLeavesServer(config, log.GetLeaves)
-	server.register(types.EndpointGetTreeHead, http.MethodGet,
+	server.register(http.MethodGet, types.EndpointGetTreeHead, "",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cth, err := log.GetTreeHead(r.Context())
 			if err != nil {
@@ -65,19 +66,20 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				logError(r.URL, err)
 			}
 		}))
-	server.register(types.EndpointGetInclusionProof, http.MethodGet,
+	server.register(http.MethodGet, types.EndpointGetInclusionProof, "", handlerBadRequest)
+	server.register(http.MethodGet, types.EndpointGetInclusionProof, "{size}/{hash}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.InclusionProof
-			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+			if err := req.FromURLArgs(r.PathValue("size"), r.PathValue("hash")); err != nil {
+				reportError(w, r.URL, api.ErrBadRequest.WithError(err))
 				return
 			}
 			if req.Size < 2 {
 				// Size:0 => not possible to prove inclusion of anything
 				// Size:1 => you don't need an inclusion proof (it is always empty)
-				reportErrorCode(w, r.URL, http.StatusBadRequest,
+				reportError(w, r.URL, api.ErrBadRequest.WithError(
 					fmt.Errorf("size(%d) must be larger than one",
-						req.Size))
+						req.Size)))
 				return
 			}
 			proof, err := log.GetInclusionProof(r.Context(), req)
@@ -89,22 +91,24 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				logError(r.URL, err)
 			}
 		}))
-	server.register(types.EndpointGetConsistencyProof, http.MethodGet,
+	server.register(http.MethodGet, types.EndpointGetConsistencyProof, "", handlerBadRequest)
+	server.register(http.MethodGet, types.EndpointGetConsistencyProof, "{old}/{new}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.ConsistencyProof
-			if err := req.FromURLArgs(GetSigsumURLArguments(r)); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+			if err := req.FromURLArgs(r.PathValue("old"), r.PathValue("new")); err != nil {
+				reportError(w, r.URL, api.ErrBadRequest.WithError(err))
+				return
 			}
 			if req.OldSize < 1 {
-				reportErrorCode(w, r.URL, http.StatusBadRequest,
+				reportError(w, r.URL, api.ErrBadRequest.WithError(
 					fmt.Errorf("old_size(%d) must be larger than zero",
-						req.OldSize))
+						req.OldSize)))
 				return
 			}
 			if req.NewSize <= req.OldSize {
-				reportErrorCode(w, r.URL, http.StatusBadRequest,
+				reportError(w, r.URL, api.ErrBadRequest.WithError(
 					fmt.Errorf("new_size(%d) must be larger than old_size(%d)",
-						req.NewSize, req.OldSize))
+						req.NewSize, req.OldSize)))
 				return
 			}
 			proof, err := log.GetConsistencyProof(r.Context(), req)
@@ -116,18 +120,19 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				logError(r.URL, err)
 			}
 		}))
-	server.register(types.EndpointAddLeaf, http.MethodPost,
+	server.register(http.MethodPost, types.EndpointAddLeaf, "",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var req requests.Leaf
 			var submitHeader *token.SubmitHeader
 			if err := req.FromASCII(r.Body); err != nil {
-				reportErrorCode(w, r.URL, http.StatusBadRequest, err)
+				reportError(w, r.URL, api.ErrBadRequest.WithError(err))
 				return
 			}
 			if headerValue := r.Header.Get("Sigsum-Token"); len(headerValue) > 0 {
 				submitHeader = &token.SubmitHeader{}
 				if err := submitHeader.FromHeader(headerValue); err != nil {
-					reportErrorCode(w, r.URL, http.StatusBadRequest, fmt.Errorf("Invalid Sigsum-Submit: header: %v", err))
+					reportError(w, r.URL, api.ErrBadRequest.WithError(
+						fmt.Errorf("Invalid Sigsum-Submit: header: %v", err)))
 					return
 				}
 			}

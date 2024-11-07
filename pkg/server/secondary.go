@@ -9,7 +9,7 @@ import (
 
 func NewSecondary(config *Config, secondary api.Secondary) http.Handler {
 	server := newServer(config)
-	server.register(types.EndpointGetSecondaryTreeHead, http.MethodGet,
+	server.register(http.MethodGet, types.EndpointGetSecondaryTreeHead, "",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			sth, err := secondary.GetSecondaryTreeHead(r.Context())
 			if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -80,90 +81,149 @@ func TestLeafFromASCII(t *testing.T) {
 	}
 }
 
-func TestLeavesFromURL(t *testing.T) {
+func TestLeavesFromURLArgs(t *testing.T) {
 	for _, table := range []struct {
-		desc    string
-		input   string
-		want    Leaves
-		wantErr bool
+		desc       string
+		start, end string
+		want       *Leaves
+		wantErr    string
 	}{
-		{"invalid: not enough parameters", "some-url", Leaves{}, true},
-		{"invalid: start index has a leading sign", "some-url/+1/2", Leaves{}, true},
-		{"invalid: start index is empty", "some-url//2", Leaves{}, true},
-		{"invalid: end index is empty", "some-url/1/", Leaves{}, true},
-		{"valid", "some-url/1/2", Leaves{1, 2}, false},
+		{
+			desc:    "bad start",
+			start:   "x",
+			end:     "12",
+			wantErr: "parsing \"x\"",
+		},
+		{
+			desc:    "bad end",
+			start:   "1",
+			end:     "-2",
+			wantErr: "parsing \"-2\"",
+		},
+		{
+			desc:  "valid range",
+			start: "1",
+			end:   "20",
+			want:  &Leaves{StartIndex: 1, EndIndex: 20},
+		},
+		{
+			desc:  "valid syntax, improper range",
+			start: "20",
+			end:   "1",
+			want:  &Leaves{StartIndex: 20, EndIndex: 1},
+		},
 	} {
-		var req Leaves
-		err := req.FromURL(table.input)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("%s: got error %v but wanted %v: %v", table.desc, got, want, err)
-		}
-		if err != nil {
-			continue
-		}
-
-		if got, want := req, table.want; got != want {
-			t.Errorf("%s: got leaves request\n%v\nbut wanted\n%v", table.desc, got, want)
+		var leaves Leaves
+		err := leaves.FromURLArgs(table.start, table.end)
+		if table.want != nil {
+			if err != nil {
+				t.Errorf("test %s: %v", table.desc, err)
+			} else if leaves != *table.want {
+				t.Errorf("test %s: got %v, want %v", table.desc, leaves, *table.want)
+			}
+		} else if err == nil {
+			t.Errorf("test %s: expected err, got result %v", table.desc, leaves)
+		} else if !strings.Contains(err.Error(), table.wantErr) {
+			t.Errorf("test %s: expected err %q, got %v", table.desc, table.wantErr, err)
 		}
 	}
 }
 
-func TestInclusionProofFromURL(t *testing.T) {
-	badHex := "F0000000x0000000000000000000000000000000000000000000000000000000"
-	shortHex := "00ff"
-	zeroHash := "0000000000000000000000000000000000000000000000000000000000000000"
+func TestInclusionProofFromURLArgs(t *testing.T) {
 	for _, table := range []struct {
-		desc    string
-		input   string
-		want    InclusionProof
-		wantErr bool
+		desc       string
+		size, hash string
+		want       *InclusionProof
+		wantErr    string
 	}{
-		{"invalid: not enough parameters", "some-url", InclusionProof{}, true},
-		{"invalid: tree size has a leading sign", "some-url/+1/" + zeroHash, InclusionProof{}, true},
-		{"invalid: tree size is empty", "some-url//" + zeroHash, InclusionProof{}, true},
-		{"invalid: leaf hash is invalid hex", "some-url/1/" + badHex, InclusionProof{}, true},
-		{"invalid: leaf hash is hex but too short", "some-url/1/" + shortHex, InclusionProof{}, true},
-		{"valid", "some-url/1/" + zeroHash, InclusionProof{1, crypto.Hash{}}, false},
+		{
+			desc:    "bad size",
+			size:    "x",
+			hash:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			wantErr: "parsing \"x\"",
+		},
+		{
+			desc:    "bad hash",
+			size:    "10",
+			hash:    "aaaaa",
+			wantErr: "odd length",
+		},
+		{
+			desc: "valid",
+			size: "10",
+			hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			want: &InclusionProof{
+				Size: 10,
+				LeafHash: crypto.Hash{
+					170, 170, 170, 170, 170, 170, 170, 170,
+					170, 170, 170, 170, 170, 170, 170, 170,
+					170, 170, 170, 170, 170, 170, 170, 170,
+					170, 170, 170, 170, 170, 170, 170, 170,
+				},
+			},
+		},
 	} {
-		var req InclusionProof
-		err := req.FromURL(table.input)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("%s: got error %v but wanted %v: %v", table.desc, got, want, err)
-		}
-		if err != nil {
-			continue
-		}
-
-		if got, want := req, table.want; got != want {
-			t.Errorf("%s: got inclusion proof request\n%v\nbut wanted\n%v", table.desc, got, want)
+		var proof InclusionProof
+		err := proof.FromURLArgs(table.size, table.hash)
+		if table.want != nil {
+			if err != nil {
+				t.Errorf("test %s: %v", table.desc, err)
+			} else if proof != *table.want {
+				t.Errorf("test %s: got %v, want %v", table.desc, proof, *table.want)
+			}
+		} else if err == nil {
+			t.Errorf("test %s: expected err, got result %v", table.desc, proof)
+		} else if !strings.Contains(err.Error(), table.wantErr) {
+			t.Errorf("test %s: expected err %q, got %v", table.desc, table.wantErr, err)
 		}
 	}
+
 }
 
-func TestConsistencyProofFromURL(t *testing.T) {
+func TestConsistencyProofFromURLArgs(t *testing.T) {
 	for _, table := range []struct {
-		desc    string
-		input   string
-		want    ConsistencyProof
-		wantErr bool
+		desc     string
+		old, new string
+		want     *ConsistencyProof
+		wantErr  string
 	}{
-		{"invalid: not enough parameters", "some-url", ConsistencyProof{}, true},
-		{"invalid: old size has a leading sign", "some-url/+1/2", ConsistencyProof{}, true},
-		{"invalid: old size is empty", "some-url//2", ConsistencyProof{}, true},
-		{"invalid: new size is empty", "some-url/1/", ConsistencyProof{}, true},
-		{"valid", "some-url/1/2", ConsistencyProof{1, 2}, false},
+		{
+			desc:    "bad old",
+			old:     "x",
+			new:     "12",
+			wantErr: "parsing \"x\"",
+		},
+		{
+			desc:    "bad new",
+			old:     "1",
+			new:     "-2",
+			wantErr: "parsing \"-2\"",
+		},
+		{
+			desc: "valid range",
+			old:  "1",
+			new:  "20",
+			want: &ConsistencyProof{OldSize: 1, NewSize: 20},
+		},
+		{
+			desc: "valid syntax, improper range",
+			old:  "20",
+			new:  "1",
+			want: &ConsistencyProof{OldSize: 20, NewSize: 1},
+		},
 	} {
-		var req ConsistencyProof
-		err := req.FromURL(table.input)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("%s: got error %v but wanted %v: %v", table.desc, got, want, err)
-		}
-		if err != nil {
-			continue
-		}
-
-		if got, want := req, table.want; got != want {
-			t.Errorf("%s: got consistency proof request\n%v\nbut wanted\n%v", table.desc, got, want)
+		var proof ConsistencyProof
+		err := proof.FromURLArgs(table.old, table.new)
+		if table.want != nil {
+			if err != nil {
+				t.Errorf("test %s: %v", table.desc, err)
+			} else if proof != *table.want {
+				t.Errorf("test %s: got %v, want %v", table.desc, proof, *table.want)
+			}
+		} else if err == nil {
+			t.Errorf("test %s: expected err, got result %v", table.desc, proof)
+		} else if !strings.Contains(err.Error(), table.wantErr) {
+			t.Errorf("test %s: expected err %q, got %v", table.desc, table.wantErr, err)
 		}
 	}
 }

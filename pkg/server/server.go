@@ -12,7 +12,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"sigsum.org/sigsum-go/pkg/api"
@@ -26,36 +25,7 @@ type server struct {
 }
 
 func newServer(config *Config) *server {
-	server := server{config: *config, mux: http.NewServeMux()}
-	if server.config.Metrics == nil {
-		server.config.Metrics = noMetrics{}
-	}
-	return &server
-}
-
-// Wrapper to check that the appropriate method is used. Also used to
-// distinguish our registered handlers from internally generated ones.
-type handlerWithMethod struct {
-	method  string
-	handler http.Handler
-}
-
-type sigsumURLArguments struct{}
-
-func (h *handlerWithMethod) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Error handling is based on RFC 7231, see Sections 6.5.5
-	// (Status 405) and 6.5.1 (Status 400).
-	if r.Method != h.method {
-		statusCode := http.StatusBadRequest
-		switch r.Method {
-		case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut:
-			w.Header().Set("Allow", h.method)
-			statusCode = http.StatusMethodNotAllowed
-		}
-		http.Error(w, http.StatusText(statusCode), statusCode)
-		return
-	}
-	h.handler.ServeHTTP(w, r)
+	return &server{config: config.withDefaults(), mux: http.NewServeMux()}
 }
 
 // A response writer that records the status code.
@@ -76,52 +46,42 @@ func (ws *responseWriterWithStatus) WriteHeader(statusCode int) {
 	ws.w.WriteHeader(statusCode)
 }
 
-func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	handler, pattern := s.mux.Handler(r)
-	if _, ok := handler.(*handlerWithMethod); !ok {
-		// Some internally generated handler (redirect, or
-		// page not found), just call it with no additional
-		// processing.
-		handler.ServeHTTP(w, r)
-		return
-	}
-	endpoint := strings.TrimPrefix(pattern, "/")
-	if len(s.config.Prefix) > 0 {
-		endpoint = strings.TrimPrefix(endpoint, s.config.Prefix+"/")
-	}
+// Wrapper to produce metrics.
+type handlerWithMetrics struct {
+	config   *Config
+	endpoint string
+	handler  http.Handler
+}
 
-	s.config.Metrics.OnRequest(endpoint)
+func (h *handlerWithMetrics) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.config.Metrics.OnRequest(h.endpoint)
 	start := time.Now()
 
 	response := responseWriterWithStatus{w: w, statusCode: http.StatusOK}
 	defer func() {
 		latency := time.Now().Sub(start)
-		s.config.Metrics.OnResponse(endpoint, response.statusCode, latency)
+		h.config.Metrics.OnResponse(h.endpoint, response.statusCode, latency)
 	}()
 
-	ctx, cancel := context.WithTimeout(r.Context(), s.config.getTimeout())
+	h.handler.ServeHTTP(&response, r)
+}
+
+func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), s.config.Timeout)
 	defer cancel()
-	if strings.HasSuffix(pattern, "/") {
-		ctx = context.WithValue(ctx, sigsumURLArguments{},
-			strings.TrimPrefix(r.URL.Path, pattern))
-	}
-	handler.ServeHTTP(&response, r.WithContext(ctx))
+	s.mux.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// Returns an empty string for missing arguments.
-func GetSigsumURLArguments(r *http.Request) string {
-	if args, ok := r.Context().Value(sigsumURLArguments{}).(string); ok {
-		return args
-	}
-	return ""
+func (s *server) register(method string, endpoint types.Endpoint, args string, handler http.Handler) {
+	s.mux.Handle(method+" /"+endpoint.Path(s.config.Prefix)+args,
+		&handlerWithMetrics{config: &s.config, endpoint: string(endpoint), handler: handler})
 }
 
-func (s *server) register(endpoint types.Endpoint, method string, handler http.Handler) {
-	s.mux.Handle("/"+endpoint.Path(s.config.Prefix), &handlerWithMethod{method: method, handler: handler})
-}
-
-func reportErrorCode(w http.ResponseWriter, url *url.URL, statusCode int, err error) {
-	// Log all internal server errors.
+// Note that it's not useful to report errors that occur when writing
+// the response: It's too late to change the status code, and the
+// likely reason for the error is that the client has disconnected.
+func reportError(w http.ResponseWriter, url *url.URL, err error) {
+	statusCode := api.ErrorStatusCode(err)
 	if statusCode == http.StatusInternalServerError {
 		log.Error("Internal server error for %q: %v", url.Path, err)
 	} else {
@@ -130,13 +90,10 @@ func reportErrorCode(w http.ResponseWriter, url *url.URL, statusCode int, err er
 	http.Error(w, err.Error(), statusCode)
 }
 
-// Note that it's not useful to report errors that occur when writing
-// the response: It's too late to change the status code, and the
-// likely reason for the error is that the client has disconnected.
-func reportError(w http.ResponseWriter, url *url.URL, err error) {
-	reportErrorCode(w, url, api.ErrorStatusCode(err), err)
-}
-
 func logError(url *url.URL, err error) {
 	log.Debug("%q: request failed: %v", url.Path, err)
 }
+
+var handlerBadRequest = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	reportError(w, r.URL, api.ErrBadRequest)
+})
