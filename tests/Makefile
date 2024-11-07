@@ -3,7 +3,6 @@ TESTS = ssh-agent-test \
 	keyhash-test keyhex-test help-msg-test version-msg-test \
 	token-record-test token-create-raw-test token-create-header-test \
 	sigsum-submit-test sigsum-submit-batch-test \
-	witness-get-tree-size-test witness-add-tree-head-test \
 	witness-add-checkpoint-test \
 	sigsum-submit-witness-test
 all:

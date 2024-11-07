@@ -148,31 +148,6 @@ func newWitness(signer crypto.Signer, pub *crypto.PublicKey, logPub *crypto.Publ
 	}
 }
 
-func (s *witness) GetTreeSize(_ context.Context, req requests.GetTreeSize) (uint64, error) {
-	if req.KeyHash != crypto.HashBytes(s.logPub[:]) {
-		return 0, api.ErrNotFound
-	}
-	return s.state.GetSize(), nil
-}
-
-func (s *witness) AddTreeHead(_ context.Context, req requests.AddTreeHead) (crypto.Hash, types.Cosignature, error) {
-	logKeyHash := crypto.HashBytes(s.logPub[:])
-	if req.KeyHash != logKeyHash {
-		return crypto.Hash{}, types.Cosignature{}, api.ErrNotFound
-	}
-	if !req.TreeHead.Verify(&s.logPub) {
-		return crypto.Hash{}, types.Cosignature{}, api.ErrForbidden
-	}
-	cs, err := s.state.Update(&req.TreeHead, req.OldSize, &req.Proof, &s.keyHash,
-		func() (types.Cosignature, error) {
-			return req.TreeHead.Cosign(s.signer, s.origin, uint64(time.Now().Unix()))
-		})
-	if err != nil {
-		return crypto.Hash{}, types.Cosignature{}, err
-	}
-	return s.keyHash, cs, nil
-}
-
 func (w *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error) {
 	if req.Checkpoint.Origin != w.origin {
 		return nil, api.ErrNotFound
@@ -237,12 +212,6 @@ func (s *state) Load(pub, logPub *crypto.PublicKey) error {
 	}
 	s.th = cth.SignedTreeHead.TreeHead
 	return nil
-}
-
-func (s *state) GetSize() uint64 {
-	s.m.Lock()
-	defer s.m.Unlock()
-	return s.th.Size
 }
 
 // Must be called with lock held.

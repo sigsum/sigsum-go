@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"sigsum.org/sigsum-go/pkg/checkpoint"
-	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -26,8 +25,6 @@ type Log interface {
 
 // Interface for witness api.
 type Witness interface {
-	GetTreeSize(context.Context, requests.GetTreeSize) (uint64, error)
-	AddTreeHead(context.Context, requests.AddTreeHead) (crypto.Hash, types.Cosignature, error)
 	AddCheckpoint(context.Context, requests.AddCheckpoint) ([]checkpoint.CosignatureLine, error)
 }
 
