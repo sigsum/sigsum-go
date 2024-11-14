@@ -1,6 +1,7 @@
 package merkle
 
 import (
+	"slices"
 	"testing"
 
 	"encoding/binary"
@@ -106,7 +107,7 @@ func TestInclusion(t *testing.T) {
 		[]crypto.Hash{hashes[2], h01, hashes[4]},
 		[]crypto.Hash{h0123},
 	} {
-		if proof, err := tree.ProveInclusion(uint64(i), 5); err != nil || !pathEqual(proof, p) {
+		if proof, err := tree.ProveInclusion(uint64(i), 5); err != nil || !slices.Equal(proof, p) {
 			if err != nil {
 				t.Fatalf("ProveInclusion %d, 5 failed: %v", i, err)
 			}
@@ -288,7 +289,7 @@ func TestConsistency(t *testing.T) {
 		} else {
 			if err != nil {
 				t.Errorf("ProveConsistency %d, %d failed: %v", table.m, table.n, err)
-			} else if !pathEqual(proof, table.path) {
+			} else if !slices.Equal(proof, table.path) {
 				t.Errorf("unexpected inclusion path m %d, n %d\n  got: %x\n want: %x\n",
 					table.m, table.n, proof, table.path)
 			}

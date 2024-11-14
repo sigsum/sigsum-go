@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -234,7 +234,7 @@ func TestLeavesFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := leaves, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := leaves, table.want; !slices.Equal(got, want) {
 			t.Errorf("got leaves\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
