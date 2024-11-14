@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -151,7 +152,7 @@ func TestConsistencyProofParseBase64(t *testing.T) {
 			t.Errorf("failed for size %d: %v", i, err)
 			continue
 		}
-		if got, want := pr.Path, makePath(i); !reflect.DeepEqual(pr.Path, want) {
+		if got, want := pr.Path, makePath(i); !slices.Equal(pr.Path, want) {
 			t.Errorf("bad result for size %d, got: %v, want: %v", i, got, want)
 		}
 		if emptyLine {

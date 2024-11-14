@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/bits"
+	"slices"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
@@ -203,7 +204,7 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 	}
 
 	if len(leaves) == 1 {
-		if !pathEqual(startPath, endPath) {
+		if !slices.Equal(startPath, endPath) {
 			return fmt.Errorf("proof invalid, inconsistent paths")
 		}
 		return VerifyInclusion(&leaves[0], fn, size, root, startPath)
@@ -258,7 +259,7 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 	if startPath[k] != er || endPath[0] != fr {
 		return fmt.Errorf("start and end trees not consistent")
 	}
-	if !pathEqual(startPath[k+1:], endPath[1:]) {
+	if !slices.Equal(startPath[k+1:], endPath[1:]) {
 		return fmt.Errorf("proof invalid, inconsistent paths")
 	}
 
@@ -301,16 +302,4 @@ func VerifyInclusionTail(leaves []crypto.Hash, fn uint64, root *crypto.Hash, pat
 
 func isOdd(num uint64) bool {
 	return (num & 1) != 0
-}
-
-func pathEqual(a, b []crypto.Hash) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, h := range a {
-		if h != b[i] {
-			return false
-		}
-	}
-	return true
 }
