@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -42,17 +43,7 @@ type batchWorker struct {
 
 // Remove any nil elements.
 func compactSlice[T any](s []*T) []*T {
-	for i := 0; i < len(s); {
-		if s[len(s)-1] == nil {
-			s = s[:len(s)-1]
-		} else if s[i] == nil {
-			s[i] = s[len(s)-1]
-			s = s[:len(s)-1]
-		} else {
-			i++
-		}
-	}
-	return s
+	return slices.DeleteFunc(s, func(p *T) bool { return p == nil })
 }
 
 // Delete given item from slice. Panics if not present.
@@ -87,8 +78,8 @@ func (w *batchWorker) run(ctx context.Context, done chan<- func(),
 	}
 
 	// Pass on the result of a successful submit.
-	result := func(callback ProofCallback, pr *proof.SigsumProof) {
-		done <- func() { callback(*pr) }
+	result := func(callback ProofCallback, pr proof.SigsumProof) {
+		done <- func() { callback(pr) }
 	}
 
 	// Wait until we get a new item, or it's time to poll log, or
@@ -170,7 +161,7 @@ func (w *batchWorker) run(ctx context.Context, done chan<- func(),
 
 					pendingItems[i] = nil
 					result(item.done,
-						&proof.SigsumProof{LogKeyHash: w.logKeyHash,
+						proof.SigsumProof{LogKeyHash: w.logKeyHash,
 							Leaf:      proof.NewShortLeaf(&item.leaf),
 							TreeHead:  th,
 							Inclusion: inclusionProof,

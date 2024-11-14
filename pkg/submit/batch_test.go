@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"slices"
 	"testing"
 	"time"
 
@@ -267,27 +268,27 @@ func TestBatchFailover(t *testing.T) {
 	}
 
 	success := leavesByLog(doBatch(7))
-	if got, want := success[logAKeyHash], []uint64{0, 1, 2, 3}; !sliceEqual(got, want) {
+	if got, want := success[logAKeyHash], []uint64{0, 1, 2, 3}; !slices.Equal(got, want) {
 		t.Errorf("Unexpected logA leaves, got: %v, want: %v", got, want)
 	}
-	if got, want := success[logBKeyHash], []uint64{0, 1, 2}; !sliceEqual(got, want) {
+	if got, want := success[logBKeyHash], []uint64{0, 1, 2}; !slices.Equal(got, want) {
 		t.Errorf("Unexpected logB leaves, got: %v, want: %v", got, want)
 	}
 
 	failOver := leavesByLog(doBatch(6))
 	// TODO: Unclear why we get proof for leaf 7 before the proof for leaf 6.
-	if got, want := failOver[logAKeyHash], []uint64{4, 5, 7, 6}; !sliceEqual(got, want) {
+	if got, want := failOver[logAKeyHash], []uint64{4, 5, 7, 6}; !slices.Equal(got, want) {
 		t.Errorf("Unexpected logA leaves, got: %v, want: %v", got, want)
 	}
-	if got, want := failOver[logBKeyHash], []uint64{3, 4}; !sliceEqual(got, want) {
+	if got, want := failOver[logBKeyHash], []uint64{3, 4}; !slices.Equal(got, want) {
 		t.Errorf("Unexpected logB leaves, got: %v, want: %v", got, want)
 	}
 
 	singleLog := leavesByLog(doBatch(3))
-	if got, want := singleLog[logAKeyHash], []uint64{8, 9, 10}; !sliceEqual(got, want) {
+	if got, want := singleLog[logAKeyHash], []uint64{8, 9, 10}; !slices.Equal(got, want) {
 		t.Errorf("Unexpected logA leaves, got: %v, want: %v", got, want)
 	}
-	if got, want := singleLog[logBKeyHash], []uint64{}; !sliceEqual(got, want) {
+	if got, want := singleLog[logBKeyHash], []uint64{}; !slices.Equal(got, want) {
 		t.Errorf("Unexpected logB leaves, got: %v, want: %v", got, want)
 	}
 
@@ -436,18 +437,6 @@ func TestBatchErrors(t *testing.T) {
 	if proofs[size-1] != nil {
 		t.Errorf("Unexpected proof for final message")
 	}
-}
-
-func sliceEqual[T comparable](a, b []T) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, x := range a {
-		if x != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // Convenience function to create a testLog and needed keys.
