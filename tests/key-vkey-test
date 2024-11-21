@@ -1,0 +1,44 @@
+#! /bin/sh
+
+set -e
+
+./bin/sigsum-key gen -o test.key
+kh=$(./bin/sigsum-key to-hash -k test.key.pub)
+origin="sigsum.org/v1/tree/${kh}"
+
+./bin/sigsum-key to-vkey -k test.key.pub -o test.log.vkey
+./bin/sigsum-key from-vkey -k test.log.vkey -o test.out 2>test.stderr
+
+if ! cmp test.out test.key.pub ; then
+    echo "key changed in to-vkey, from-vkey roundtrip"
+    exit 1
+fi
+
+if [ "$(cut -f1 -d+ test.log.vkey)" != "${origin}" ] ; then
+    echo "unexpected key name, expected sigsum origin"
+    exit 1
+fi
+
+if ! grep >/dev/null "key type: 0x01" test.stderr ; then
+    echo "key type error, expected 0x01"
+    exit 1
+fi
+
+# Similar operation using cosignature type
+./bin/sigsum-key to-vkey -t cosignature -n example.org/witness -k test.key.pub -o test.witness.vkey
+./bin/sigsum-key from-vkey -k test.witness.vkey -o test.out 2>test.stderr
+
+if ! cmp test.out test.key.pub ; then
+    echo "key changed in to-vkey, from-vkey roundtrip (cosignature)"
+    exit 1
+fi
+
+if [ "$(cut -f1 -d+ test.witness.vkey)" != "example.org/witness" ] ; then
+    echo "unexpected key name, expected example.org/witness"
+    exit 1
+fi
+
+if ! grep >/dev/null "key type: 0x04" test.stderr ; then
+    echo "key type error, expected 0x04"
+    exit 1
+fi
