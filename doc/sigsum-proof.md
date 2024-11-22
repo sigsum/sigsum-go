@@ -38,20 +38,20 @@ Building on the [ascii
 format](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md)
 used on the wire when interacting with a sigsum log, we defined the
 following ascii format for a sigsum proof. It includes a version
-number, currently 1, the keyhash identifying the log that was used,
-the recorded sigsum leaf (but with truncated checksum), a cosigned
-tree head and an inclusion proof, with an empty line (i.e., double
-newline character) separating distinct parts.
+number, currently 2, the keyhash identifying the log that was used,
+the recorded Sigsum leaf (but without the checksum), a cosigned
+tree head, and an inclusion proof. An empty line, i.e., double
+newline character, separates the distinct parts.
 
 ```
-version=1
+version=2
 log=KEYHASH
-leaf=SHORT-CHECKSUM KEYHASH SIGNATURE
+leaf=KEYHASH SIGNATURE
 
 tree_size=NUMBER
 root_hash=HASH
 signature=SIGNATURE
-cosignature=VERSION KEYHASH TIMESTAMP SIGNATURE
+cosignature=KEYHASH TIMESTAMP SIGNATURE
 cosignature=...
 
 leaf_index=NUMBER
@@ -62,9 +62,8 @@ node_hash=...
 The version line specifies the version of the proof format, and will
 be incremented as the format is changed or extended. The `log` line
 identifies the sigsum log. In the next line, `leaf` is similar to the
-response to the `get-leaves` request, but the checksum is truncated to
-only the first 16 bits (4 hex digits); full checksum must be derived
-from other context.
+response to the `get-leaves` request, but the checksum is omitted; the
+checksum must be derived from other context.
 
 The last two blocks are verbatim responses from the get-tree-head and
 get-inclusion proof requests (in the corner case that `tree_size` = 1,
@@ -82,9 +81,7 @@ witnesses.
 
 To verify the proof, the following steps are required:
 
-1. Compute `checksum = H(message)`, and check that it matches the
-   truncated checksum on the leaf line. (This check serves to detect
-   accidental mismatch between message and proof).
+1. Compute `checksum = H(message)`.
 
 2. Check that the leaf keyhash equals the hash of the submitter's
    public key, and that the log keyhash equals the hash of a
@@ -115,3 +112,37 @@ cosignature, and hence are required to be able to verify the
 cosignature. However, after a cosignature has been verified, the
 timestamp value is ignored by the above verification procedure.
 Application policy may apply additional constraints on the timestamps.
+
+# Notes on the previous version 1 of the Sigsum proof format
+
+The format above is the second iteration of the proof format. The
+previous version differed in the first line, which said `version=1`,
+and the third line, which used the format
+
+```
+leaf=SHORT-CHECKSUM KEYHASH SIGNATURE
+```
+
+The additional field was 4 hex digits, the encoding the first 16 bits
+of the checksum. The only purpose of this short checksum was to enable
+a clearer error message if by accident a proof file was applied to the
+wrong data. A proof verifier was expected to compare the short
+checksum in the proof to the checksum of the message being verified,
+before attempting to verify the leaf signature. See [proposal][] for
+the rationale for removing this field.
+
+The current version of the `sigsum-verify` tool recognizes both
+version 1 and version 2 proofs. When reading a version 1 proof, it
+discards the short checksum after only verifying that it is
+syntactically correct.
+
+The current version of the `sigsum-submit` tool always produces
+version 2 proofs. If you need a version 1 proof, one can be
+constructed rather easily as a post-processing step (add the truncated
+checksum on the leaf line, and change the version field back from 2 to
+1). Or use `sigsum.org/sigsum-go/cmd/sigsum-submit@v0.9.1`, the last
+version producing version 1 proofs.
+
+[proposal]: https://git.glasklar.is/sigsum/project/documentation/-/blob/main/proposals/2024-11-proof-with-no-leaf-checksum.md
+
+
