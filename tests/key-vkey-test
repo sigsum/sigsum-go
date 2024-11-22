@@ -7,7 +7,7 @@ kh=$(./bin/sigsum-key to-hash -k test.key.pub)
 origin="sigsum.org/v1/tree/${kh}"
 
 ./bin/sigsum-key to-vkey -k test.key.pub -o test.log.vkey
-./bin/sigsum-key from-vkey -k test.log.vkey -o test.out 2>test.stderr
+./bin/sigsum-key from-vkey -v -k test.log.vkey -o test.out 2>test.stderr
 
 if ! cmp test.out test.key.pub ; then
     echo "key changed in to-vkey, from-vkey roundtrip"
@@ -25,8 +25,8 @@ if ! grep >/dev/null "key type: 0x01" test.stderr ; then
 fi
 
 # Similar operation using cosignature type
-./bin/sigsum-key to-vkey -t cosignature -n example.org/witness -k test.key.pub -o test.witness.vkey
-./bin/sigsum-key from-vkey -k test.witness.vkey -o test.out 2>test.stderr
+./bin/sigsum-key to-vkey -t cosignature/v1 -n example.org/witness -k test.key.pub -o test.witness.vkey
+./bin/sigsum-key from-vkey -v -k test.witness.vkey -o test.out 2>test.stderr
 
 if ! cmp test.out test.key.pub ; then
     echo "key changed in to-vkey, from-vkey roundtrip (cosignature)"
@@ -40,5 +40,22 @@ fi
 
 if ! grep >/dev/null "key type: 0x04" test.stderr ; then
     echo "key type error, expected 0x04"
+    exit 1
+fi
+
+# Attempt to convert one of the armored witness vkeys, from
+# https://github.com/transparency-dev/armored-witness/blob/main/devices/prod/720A9DEAD4390C1D.witness.0
+echo "ArmoredWitness-falling-pond+3fcb3644+AVTEhiyrpO+UL+Grxq+2XWPLoKVdPmMT/1kVS4WG2ILi" |
+    ./bin/sigsum-key from-vkey -v -o test.out 2>test.stderr
+
+if ! grep >/dev/null '"ArmoredWitness-falling-pond"' test.stderr ; then
+    echo "unexpected key name, expected ArmoredWitness-falling-pond"
+    exit 1
+fi
+
+# This vkey uses type 0x1 (and corresponding key type), not type 0x4
+# as one might expect from a witness key,
+if ! grep >/dev/null "key type: 0x01" test.stderr ; then
+    echo "key type error, expected 0x01"
     exit 1
 fi

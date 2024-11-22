@@ -39,12 +39,13 @@ type ExportSettings struct {
 	outputFile string
 }
 
-type ImportSettings struct {
-	inputFile  string
+type VkeyImportSettings struct {
+	keyFile    string
 	outputFile string
+	verbose    bool
 }
 
-type VerifierExportSettings struct {
+type VkeyExportSettings struct {
 	keyFile    string
 	outputFile string
 	name       string
@@ -83,15 +84,15 @@ sigsum-key to-hex [-k file] [-o output]
 
 sigsum-key to-vkey [-n name] [-k file] [-t type] [-o output]
   Reads public key from file (by default, stdin) and writes a signed
-  note verifier line. By default, uses the corresponding log origin
-  as the key name.
+  note verifier line. By default, creates a vkey for a Sigsum log.
 
 sigsum-key from-hex [-k file] [-o output]
   Reads hex public key from file (by default, stdin) and writes
   OpenSSH format public key to output (by default, stdout).
 
 sigsum-key from-vkey [-k file] [-o output]
-  Extracts the public key from a vkey.
+  Reads a vkey from file (by default, stdin) and writes the
+  OpenSSH format public key to output (by default, stdout).
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -164,7 +165,7 @@ sigsum-key from-vkey [-k file] [-o output]
 			return err
 		})
 	case "to-vkey":
-		var settings VerifierExportSettings
+		var settings VkeyExportSettings
 		settings.parse(os.Args)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
@@ -173,7 +174,7 @@ sigsum-key from-vkey [-k file] [-o output]
 		name := settings.name
 		if name == "" {
 			if settings.keyType != checkpoint.SigTypeEd25519 {
-				log.Fatal("Key name (-n) option is required for cosignature keys")
+				log.Fatal("Key name (-n) option is required for cosignature/v1 keys")
 			}
 			name = types.SigsumCheckpointOrigin(&publicKey)
 		}
@@ -194,15 +195,27 @@ sigsum-key from-vkey [-k file] [-o output]
 			return err
 		})
 	case "from-vkey":
-		var settings ExportSettings
-		settings.parse(os.Args, "Signed note verifier (vkey)")
+		var settings VkeyImportSettings
+		settings.parse(os.Args)
 		var nv checkpoint.NoteVerifier
 		if err := nv.FromString(strings.TrimSpace(readInput(settings.keyFile))); err != nil {
 			log.Fatal(err)
 		}
-		log.Printf("Key name %q, key type: 0x%02x", nv.Name, nv.Type)
+		if settings.verbose {
+			var keyType string
+			switch nv.Type {
+			case checkpoint.SigTypeEd25519:
+				keyType = "ed25519"
+			case checkpoint.SigTypeCosignature:
+				keyType = "cosignature/v1"
+			default:
+				keyType = "unknown"
+			}
+			log.Printf("Key name %q, key type: 0x%02x (%s)", nv.Name, nv.Type, keyType)
+		}
 		if want := checkpoint.NewKeyId(nv.Name, nv.Type, &nv.PublicKey); nv.KeyId != want {
-			log.Printf("Verifier Key id %x is inconsistent with name and public key, expected %x", nv.KeyId, want)
+			// TODO: Add --force to proceeed regardless.
+			log.Fatalf("Verifier Key id %x is inconsistent with name and public key, expected %x", nv.KeyId, want)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
 			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&nv.PublicKey))
@@ -281,20 +294,28 @@ func (s *ExportSettings) parse(args []string, keyHelp string) {
 	parseNoArgs(set, args)
 }
 
-func (s *VerifierExportSettings) parse(args []string) {
+func (s *VkeyImportSettings) parse(args []string) {
+	set := newOptionSet(args, "")
+	set.FlagLong(&s.keyFile, "key", 'k', "Signed note verifier (vkey)", "file")
+	set.Flag(&s.outputFile, 'o', "Output", "file")
+	set.FlagLong(&s.verbose, "verbose", 'v')
+	parseNoArgs(set, args)
+}
+
+func (s *VkeyExportSettings) parse(args []string) {
 	set := newOptionSet(args, "")
 	keyType := ""
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
 	set.Flag(&s.outputFile, 'o', "Output", "file")
-	set.Flag(&s.name, 'n', "Key name (for 'ed25519', defaults to corresponding Sigsum origin line)", "name")
-	set.Flag(&keyType, 't', "Signature type. 'ed25519' (default) or 'cosignature'", "type")
+	set.Flag(&s.name, 'n', "Key name (defaults to the origin line of a Sigsum log server)", "name")
+	set.Flag(&keyType, 't', "Signature type. 'ed25519' (default) or 'cosignature/v1'", "type")
 	parseNoArgs(set, args)
 	switch keyType {
 	default:
-		log.Fatalf("Unknown signature type %q, must be 'ed25519' or 'cosignature'", keyType)
+		log.Fatalf("Unknown signature type %q, must be 'ed25519' or 'cosignature/v1'", keyType)
 	case "", "ed25519":
 		s.keyType = checkpoint.SigTypeEd25519
-	case "cosignature":
+	case "cosignature/v1":
 		s.keyType = checkpoint.SigTypeCosignature
 	}
 }
