@@ -25,6 +25,8 @@ test_one ./bin/sigsum-key verify --help
 test_one ./bin/sigsum-key to-hash --help
 test_one ./bin/sigsum-key to-hex --help
 test_one ./bin/sigsum-key from-hex --help
+test_one ./bin/sigsum-key to-vkey --help
+test_one ./bin/sigsum-key from-vkey --help
 test_one ./bin/sigsum-token --help
 test_one ./bin/sigsum-token create --help
 test_one ./bin/sigsum-token record --help
