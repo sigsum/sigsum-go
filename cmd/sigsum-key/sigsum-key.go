@@ -90,7 +90,7 @@ sigsum-key from-hex [-k file] [-o output]
   Reads hex public key from file (by default, stdin) and writes
   OpenSSH format public key to output (by default, stdout).
 
-sigsum-key from-vkey [-k file] [-o output]
+sigsum-key from-vkey [--verbose] [-k file] [-o output]
   Reads a vkey from file (by default, stdin) and writes the
   OpenSSH format public key to output (by default, stdout).
 `
@@ -298,7 +298,7 @@ func (s *VkeyImportSettings) parse(args []string) {
 	set := newOptionSet(args, "")
 	set.FlagLong(&s.keyFile, "key", 'k', "Signed note verifier (vkey)", "file")
 	set.Flag(&s.outputFile, 'o', "Output", "file")
-	set.FlagLong(&s.verbose, "verbose", 'v')
+	set.FlagLong(&s.verbose, "verbose", 'v', "Display name and type of the key")
 	parseNoArgs(set, args)
 }
 
