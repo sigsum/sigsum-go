@@ -123,25 +123,13 @@ and the third line, which used the format
 leaf=SHORT-CHECKSUM KEYHASH SIGNATURE
 ```
 
-The additional field was 4 hex digits, the encoding the first 16 bits
-of the checksum. The only purpose of this short checksum was to enable
-a clearer error message if by accident a proof file was applied to the
+The additional field was 4 hex digits, encoding the first 16 bits of
+the checksum. The only purpose of this short checksum was to enable a
+clearer error message if by accident a proof file was applied to the
 wrong data. A proof verifier was expected to compare the short
 checksum in the proof to the checksum of the message being verified,
 before attempting to verify the leaf signature. See [proposal][] for
 the rationale for removing this field.
-
-The current version of the `sigsum-verify` tool recognizes both
-version 1 and version 2 proofs. When reading a version 1 proof, it
-discards the short checksum after only verifying that it is
-syntactically correct.
-
-The current version of the `sigsum-submit` tool always produces
-version 2 proofs. If you need a version 1 proof, one can be
-constructed rather easily as a post-processing step (add the truncated
-checksum on the leaf line, and change the version field back from 2 to
-1). Or use `sigsum.org/sigsum-go/cmd/sigsum-submit@v0.9.1`, the last
-version producing version 1 proofs.
 
 [proposal]: https://git.glasklar.is/sigsum/project/documentation/-/blob/main/proposals/2024-11-proof-with-no-leaf-checksum.md
 

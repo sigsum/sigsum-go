@@ -306,8 +306,10 @@ requirements, and an inclusion proof for the submitted leaf.
 If submission to the first log fails, or polling for the required proof
 material times out, `sigsum-submit` tries the next log.
 
-On submission success, the Sigsum proof is written to respective
-output file, as described above.
+On submission success, a Sigsum proof, version 2, is written to
+respective output file, as described above. (The last version
+producing version 1 proofs was
+`sigsum.org/sigsum-go/cmd/sigsum-submit@v0.9.1`).
 
 ## Producing a leaf hash
 
@@ -337,9 +339,9 @@ quorum none
 Submit a message to this log.
 ```
 $ echo "Hello old friend" | sigsum-submit -k example.key -p example.policy
-version=0
+version=2
 log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
-leaf=9c30 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc 40160c833571c121bfdc6a02006053a80d3e91a8b73abb4dd0e07cc3098d8e58a41921d8f5649e9fb81c9b7c6b458747c4c3b49cc08c869867100a7f7be78902
+leaf=5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc 40160c833571c121bfdc6a02006053a80d3e91a8b73abb4dd0e07cc3098d8e58a41921d8f5649e9fb81c9b7c6b458747c4c3b49cc08c869867100a7f7be78902
 
 size=3
 root_hash=5b0cc467f86fdd57b371e434843b571a4cb47c6a64dad4bc80d96dd7d15c63a9
@@ -361,9 +363,9 @@ public_key=e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
 Then submit it to the log.
 ```
 $ sigsum-submit -p example.policy < example.req
-version=0
+version=2
 log=c9e525b98f412ede185ff2ac5abf70920a2e63a6ae31c88b1138b85de328706b
-leaf=a2ee 5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
+leaf=5aa7e6233f9f4d2efbeb9eeef766dce8ba2aa5e8cdd3f53da94b5d59e67d92fc aa5bd628d88be12d4f09feefe4bf65290b03bdeba8523fa38e396218140d79e0850132082914b08876cdc4a6041be8217402a57bfb8328310ad5407bc440060e
 
 size=4
 root_hash=fd23842c67ba396cbabaa22226f3cd7737a4cc9f36c897f4fce2cc5070925dc2
@@ -381,8 +383,9 @@ $ sigsum-submit < example.req
 
 # The `sigsum-verify` tool
 
-The `sigsum-verify` tool verifies a Sigsum proof, as created by
-`sigsum-submit`.
+The `sigsum-verify` tool verifies a Sigsum proof. It accepts both
+version 2 proofs, as created by the current `sigsum-submit`, and
+version 1 proofs, as created by older versions of `sigsum-submit`.
 
 The message to be verified is read from standard input. Like for
 `sigsum-submit`, by default the message is the SHA256 hash of the
