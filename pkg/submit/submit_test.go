@@ -93,7 +93,7 @@ func TestSubmitFailure(t *testing.T) {
 		var addError, getTHError, getInclusionError error
 		switch i {
 		case 1:
-			leaf.Checksum[0] ^= 1
+			msg[1] ^= 1
 		case 2:
 			sth.Signature[0] ^= 1
 		case 3:

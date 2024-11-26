@@ -1,7 +1,6 @@
 package proof
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -13,41 +12,52 @@ import (
 )
 
 const (
-	SigsumProofVersion = 1
-	ShortChecksumSize  = 2
+	// The current version. Reading of version 1 is still supported.
+	SigsumProofVersion     = 2
+	prevSigsumProofVersion = 1
+	// Relevant only for version 1 proofs.
+	ShortChecksumSize = 2
 )
 
-type ShortChecksum [ShortChecksumSize]byte
-
-// Variant of types.Leaf, with truncated checksum.
+// Variant of types.Leaf, without checksum.
 type ShortLeaf struct {
-	ShortChecksum ShortChecksum
-	Signature     crypto.Signature
-	KeyHash       crypto.Hash
+	Signature crypto.Signature
+	KeyHash   crypto.Hash
 }
 
 func NewShortLeaf(leaf *types.Leaf) ShortLeaf {
-	proofLeaf := ShortLeaf{Signature: leaf.Signature, KeyHash: leaf.KeyHash}
-	copy(proofLeaf.ShortChecksum[:], leaf.Checksum[:ShortChecksumSize])
-	return proofLeaf
+	return ShortLeaf{Signature: leaf.Signature, KeyHash: leaf.KeyHash}
 }
 
-func (l *ShortLeaf) ToLeaf(checksum *crypto.Hash) (types.Leaf, error) {
-	if !bytes.Equal(l.ShortChecksum[:], checksum[:ShortChecksumSize]) {
-		return types.Leaf{}, fmt.Errorf("checksum doesn't match truncated checksum")
-	}
-	return types.Leaf{Checksum: *checksum, Signature: l.Signature, KeyHash: l.KeyHash}, nil
+func (l *ShortLeaf) ToLeaf(checksum *crypto.Hash) types.Leaf {
+	return types.Leaf{Checksum: *checksum, Signature: l.Signature, KeyHash: l.KeyHash}
 }
 
 func (l *ShortLeaf) Parse(p ascii.Parser) error {
+	// Same as a leaf line from get-leaves, except that checksum is omitted.
+	v, err := p.GetValues("leaf", 2)
+	if err != nil {
+		return err
+	}
+	l.KeyHash, err = crypto.HashFromHex(v[0])
+	if err != nil {
+		return fmt.Errorf("invalid submitter key hash: %v", err)
+	}
+	l.Signature, err = crypto.SignatureFromHex(v[1])
+	if err != nil {
+		return fmt.Errorf("invalid leaf signature: %v", err)
+	}
+	return nil
+}
+
+func (l *ShortLeaf) ParseVersion1(p ascii.Parser) error {
 	// Same as a leaf line from get-leaves, except that checksum is truncated.
 	v, err := p.GetValues("leaf", 3)
 	if err != nil {
 		return err
 	}
-	l.ShortChecksum, err = decodeShortChecksum(v[0])
-	if err != nil {
-		return fmt.Errorf("invalid submitter checksum: %v", err)
+	if err := checkShortChecksum(v[0]); err != nil {
+		return fmt.Errorf("invalid (version 1) checksum: %v", err)
 	}
 
 	l.KeyHash, err = crypto.HashFromHex(v[1])
@@ -62,7 +72,7 @@ func (l *ShortLeaf) Parse(p ascii.Parser) error {
 }
 
 func (l *ShortLeaf) ToASCII(w io.Writer) error {
-	return ascii.WriteLine(w, "leaf", l.ShortChecksum[:], l.KeyHash[:], l.Signature[:])
+	return ascii.WriteLine(w, "leaf", l.KeyHash[:], l.Signature[:])
 }
 
 type SigsumProof struct {
@@ -72,18 +82,15 @@ type SigsumProof struct {
 	Inclusion  types.InclusionProof
 }
 
-func decodeShortChecksum(s string) (out ShortChecksum, err error) {
-	var b []byte
-	b, err = hex.DecodeString(s)
+func checkShortChecksum(s string) error {
+	b, err := hex.DecodeString(s)
 	if err != nil {
-		return
+		return err
 	}
-	if len(b) != len(out) {
-		err = fmt.Errorf("unexpected checksum length, expected %d, got %d", len(out), len(b))
-		return
+	if got, want := len(b), ShortChecksumSize; got != want {
+		return fmt.Errorf("unexpected checksum length, got %d, expected %d", got, want)
 	}
-	copy(out[:], b)
-	return
+	return nil
 }
 
 func (sp *SigsumProof) FromASCII(r io.Reader) error {
@@ -92,15 +99,19 @@ func (sp *SigsumProof) FromASCII(r io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("invalid version line: %v", err)
 	}
-	if version != SigsumProofVersion {
-		return fmt.Errorf("unexpected version %d, wanted %d", version, SigsumProofVersion)
+	if version != SigsumProofVersion && version != 1 {
+		return fmt.Errorf("unknown version %d, wanted %d or %d", version, prevSigsumProofVersion, SigsumProofVersion)
 	}
 
 	sp.LogKeyHash, err = p.GetHash("log")
 	if err != nil {
 		return fmt.Errorf("invalid log line: %v", err)
 	}
-	if err := sp.Leaf.Parse(p); err != nil {
+	if version == 1 {
+		if err := sp.Leaf.ParseVersion1(p); err != nil {
+			return err
+		}
+	} else if err := sp.Leaf.Parse(p); err != nil {
 		return err
 	}
 	if err := p.GetEmptyLine(); err != nil {
@@ -156,10 +167,7 @@ func (sp *SigsumProof) ToASCII(w io.Writer) error {
 
 func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKeys map[crypto.Hash]crypto.PublicKey, policy *policy.Policy) error {
 	checksum := crypto.HashBytes(msg[:])
-	leaf, err := sp.Leaf.ToLeaf(&checksum)
-	if err != nil {
-		return err
-	}
+	leaf := sp.Leaf.ToLeaf(&checksum)
 	submitKey, ok := submitKeys[sp.Leaf.KeyHash]
 	if !ok {
 		return fmt.Errorf("unknown leaf key hash")
