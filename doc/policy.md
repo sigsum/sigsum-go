@@ -46,8 +46,8 @@ group X-witnesses 2 X1 X2 X3
 
 witness Y1 <key>
 witness Y2 <key>
-witness Y2 <key>
-group Y-witnesses any Y1 Y2 Y2
+witness Y3 <key>
+group Y-witnesses any Y1 Y2 Y3
 
 group X-and-Y all X-witnesses Y-witnesses
 quorum X-and-Y
