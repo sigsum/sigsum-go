@@ -8,8 +8,8 @@ require (
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
 	github.com/golang/mock v1.6.0
 	github.com/pborman/getopt/v2 v2.1.0
-	golang.org/x/net v0.31.0
-	golang.org/x/text v0.20.0
+	golang.org/x/net v0.34.0
+	golang.org/x/text v0.21.0
 )
 
 require (
