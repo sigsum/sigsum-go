@@ -109,16 +109,20 @@ For this command, "generate" may be abbreviated as just "gen".
 
 ## Public key conversion
 
+By default, the key conversion tool `sigsum-key` reads from standard
+input and writes to standard output. It's optional to specify an input
+key file with `-k`, or output file with `-o`.
+
 As explained above, OpenSSH format is the main representation for
 public Sigsum keys, when stored in key files. Such a public key can be
 converted to a raw form using
 ```
-sigsum-key to-hex -k KEY-FILE
+sigsum-key to-hex [-k KEY-FILE] [-o OUTPUT-FILE]
 ```
 The hex representation is used in the Sigsum policy file, and in
 messages on the wire. For the opposite conversion, use
 ```
-sigsum-key from-hex -k HEX-FILE
+sigsum-key from-hex [-k HEX-FILE] [-o OUTPUT-FILE]
 ```
 
 Occasionally, also the key hash is needed; it is used in certain
@@ -126,13 +130,27 @@ messages on the wire, and in the Sigsum log server's [rate
 limit](https://git.glasklar.is/sigsum/core/log-go/-/blob/main/doc/rate-limit.md)
 configuration. The key hash can be computed using
 ```
-sigsum-key to-hash -k KEY-FILE
+sigsum-key to-hash [-k KEY-FILE] [-o OUTPUT-FILE]
 ```
 
-These three conversion tools read standard input and write to standard
-output by default. It's optional to specify an input file (with `-k`
-option for inputs that are in OpenSSH public key format), or output
-file, with `-o`.
+The sigsum-key tool also supports conversion to and from the [vkey
+format](https://pkg.go.dev/golang.org/x/mod/sumdb/note), related to
+the [signed note
+format](https://github.com/C2SP/C2SP/blob/signed-note/v1.0.0-rc.1/signed-note.md).
+Two key types are supported, `ed25519` and `cosignature/v1`.
+
+To read a vkey, use
+```
+sigsum-key from-vkey [--verbose] [-k VKEY-FILE] [-o OUTPUT-FILE]
+```
+
+To write a vkey, use
+```
+sigsum-key to-vkey [-n KEY-NAME] [-k KEY-FILE] [-t TYPE] [-o OUTPUT-FILE]
+```
+The key type defaults to `ed25519`, and the key name defaults to the
+origin line when the key is used as a sigsum log key, i.e.,
+`sigsum.org/v1/tree/<KEY-HASH>`.
 
 ## Sign and verify operations
 
