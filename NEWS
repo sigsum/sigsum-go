@@ -1,4 +1,12 @@
-NEWS for Sigsum tools, v0.9.x
+NEWS for Sigsum tools, v0.10.x
+
+	The main changes in this version are support for the vkey
+	format and an update of the Sigsum proof format. For details,
+	see the updated documentation, doc/tools.md and
+	doc/sigsum-proof.md, and corresponding proposals:
+
+	  https://git.glasklar.is/sigsum/project/documentation/-/blob/main/proposals/2024-11-vkey-conversion-tools.md
+	  https://git.glasklar.is/sigsum/project/documentation/-/blob/main/proposals/2024-11-proof-with-no-leaf-checksum.md
 
 	Incompatible changes:
 
@@ -8,6 +16,19 @@ NEWS for Sigsum tools, v0.9.x
 	  "hash" --> "to-hash"
 	  "hex" --> "to-hex"
 	  "hex-to-pub" --> "from-hex"
+
+	* sigsum-witness: Delete support for the old non-checkpoint
+	  witness protocol.
+
+	* sigsum-submit: Sigsum proof format updated to version 2.
+
+	New features:
+
+	* sigsum-key: New subcommands to-vkey and from-vkey.
+
+	* sigsum-verify: Add support for the version 2 Sigsum proof
+	  format. For backwards compatibility, support for version 1
+	  is kept.
 
 NEWS for Sigsum tools, v0.9.1
 
