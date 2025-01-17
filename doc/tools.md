@@ -134,7 +134,7 @@ sigsum-key to-hash [-k KEY-FILE] [-o OUTPUT-FILE]
 ```
 
 The sigsum-key tool also supports conversion to and from the [vkey
-format](https://pkg.go.dev/golang.org/x/mod/sumdb/note), related to
+format](https://pkg.go.dev/golang.org/x/mod/sumdb/note), which is related to
 the [signed note
 format](https://github.com/C2SP/C2SP/blob/signed-note/v1.0.0-rc.1/signed-note.md).
 Two key types are supported, `ed25519` and `cosignature/v1`.
