@@ -1,0 +1,14 @@
+#! /bin/sh
+
+set -e
+
+die() {
+    echo 2>&1 "$@"
+    exit 1
+}
+
+./bin/sigsum-token test-key -o test.sigsum.org.key
+./bin/sigsum-key to-hex -k test.sigsum.org.key.pub -o test.sigsum.org.key.hex
+
+[ "$(cat test.sigsum.org.key.hex)" = 4cb5abf6ad79fbf5abbccafcc269d85cd2651ed4b885b5869f241aedf0a5ba29 ] ||
+    die "Unexpected public key"
