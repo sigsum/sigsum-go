@@ -93,6 +93,9 @@ sigsum-key from-hex [-k file] [-o output]
 sigsum-key from-vkey [--verbose] [-k file] [-o output]
   Reads a vkey from file (by default, stdin) and writes the
   OpenSSH format public key to output (by default, stdout).
+
+sigsum-key from-private [-k file] [-o output]
+  Writes public key file, corresponding to input private key.
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -219,6 +222,18 @@ sigsum-key from-vkey [--verbose] [-k file] [-o output]
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
 			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&nv.PublicKey))
+			return err
+		})
+	case "from-private":
+		var settings ExportSettings
+		settings.parse(os.Args, "Private key")
+		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pub := signer.Public()
+		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
+			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&pub))
 			return err
 		})
 	}

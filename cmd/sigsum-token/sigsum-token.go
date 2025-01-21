@@ -10,6 +10,7 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
@@ -35,6 +36,10 @@ type verifySettings struct {
 	quiet      bool
 }
 
+type testKeySettings struct {
+	outputFile string
+}
+
 func main() {
 	const usage = `sigsum-token sub commands:
 
@@ -55,6 +60,9 @@ sigsum-token record [options]
 sigsum-token verify [options] < token
   Verifies a submit token. The input on stdin is either a raw hex
   token or a HTTP header.
+
+sigsum-token test-key -o file
+  Writes a public and private key file corresponding to test.sigsum.org domain.
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -163,6 +171,14 @@ sigsum-token verify [options] < token
 				log.Fatalf("Verifying using given key failed: %v", err)
 			}
 		}
+	case "test-key":
+		var settings testKeySettings
+		settings.parse(os.Args)
+		var private crypto.PrivateKey
+		private[crypto.PrivateKeySize-1] = 1
+		withOutput(settings.outputFile, func(f io.Writer) error {
+			return ssh.WritePrivateKeyFile(f, crypto.NewEd25519Signer(&private))
+		})
 	}
 }
 
@@ -229,6 +245,16 @@ func (s *verifySettings) parse(args []string) {
     validation fails if they are inconsistent with what's looked up
     from the HTTP header. The -q (quiet) option suppresses output on
     validation errors, with result only reflected in the exit code.
+`)
+}
+
+func (s *testKeySettings) parse(args []string) {
+	set := newOptionSet(args, "")
+	set.Flag(&s.outputFile, 'o', "Output", "file").Mandatory()
+	parseNoArgs(set, args, `
+    Private test key is stored in the given file, in OpenSSH private
+    key format. Corresponding public key file gets a ".pub" suffix,
+    and is written in OpenSSH public key format.
 `)
 }
 
