@@ -15,6 +15,10 @@ the file formats for the policy files and the proofs of logging used
 by the tools. See <https://www.sigsum.org/docs/> for protocol
 specifications, and documentation of other parts of the Sigsum system.
 
+See the [RELEASES](./RELEASES.md) file for information about how
+sigsum-go is released, and the [NEWS](./NEWS) file for a summary of
+changes between releases.
+
 ## Development
 
 You are encouraged to file [issues][] and open merge requests. Sign up
