@@ -2,7 +2,7 @@ TESTS = ssh-agent-test \
 	sign-verify-test sign-agent-test \
 	keyhash-test keyhex-test key-vkey-test \
 	help-msg-test version-msg-test \
-	token-record-test token-create-raw-test token-create-header-test \
+	token-record-test token-create-raw-test token-create-header-test token-test-key-test \
 	sigsum-submit-test sigsum-submit-batch-test \
 	witness-add-checkpoint-test \
 	sigsum-submit-witness-test

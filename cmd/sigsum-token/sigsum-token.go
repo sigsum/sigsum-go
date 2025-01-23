@@ -62,7 +62,10 @@ sigsum-token verify [options] < token
   token or a HTTP header.
 
 sigsum-token test-key -o file
-  Writes a public and private key file corresponding to test.sigsum.org domain.
+  Writes a public and private key file corresponding to the record
+  registered for the test.sigsum.org domain. The private key is
+  written to the given file, and the public key file gets a ".pub"
+  suffix.
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
@@ -174,11 +177,19 @@ sigsum-token test-key -o file
 	case "test-key":
 		var settings testKeySettings
 		settings.parse(os.Args)
-		var private crypto.PrivateKey
-		private[crypto.PrivateKeySize-1] = 1
+		var privateKey crypto.PrivateKey
+		privateKey[crypto.PrivateKeySize-1] = 1
+		signer := crypto.NewEd25519Signer(&privateKey)
+		publicKey := signer.Public()
 		withOutput(settings.outputFile, func(f io.Writer) error {
-			return ssh.WritePrivateKeyFile(f, crypto.NewEd25519Signer(&private))
+			return ssh.WritePrivateKeyFile(f, signer)
 		})
+		if len(settings.outputFile) > 0 {
+			withOutput(settings.outputFile+".pub", func(f io.Writer) error {
+				_, err := io.WriteString(f, ssh.FormatPublicEd25519(&publicKey))
+				return err
+			})
+		}
 	}
 }
 
