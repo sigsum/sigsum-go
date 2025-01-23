@@ -15,16 +15,16 @@ not all tags are considered releases).
 
 The following programs are released and supported:
 
-- ./cmd/sigsum-key
-- ./cmd/sigsum-submit
-- ./cmd/sigsum-token
-- ./cmd/sigsum-verify
+- `./cmd/sigsum-key`
+- `./cmd/sigsum-submit`
+- `./cmd/sigsum-token`
+- `./cmd/sigsum-verify`
 
 User visible changes in these tools are documented in the [NEWS][]
 file.
 
 There are two additional programs, currently not properly supported:
-./cmd/sigsum-monitor is work-in-progress. ./cmd/sigsum-witness is
+`./cmd/sigsum-monitor` is work-in-progress. `./cmd/sigsum-witness` is
 intended mainly for test purposes (to operate a witness, see
 [litewitness][]).
 
@@ -32,7 +32,7 @@ intended mainly for test purposes (to operate a witness, see
 
 ### Library
 
-The Go library (exported packages under ./pkg) is intended for
+The Go library (exported packages under `./pkg`) is intended for
 applications that want to implement Sigsum logging, without going via
 the command line tools. However, we are not yet able to promise API
 stability (as indicated by the "v0.*" module version), and there's no
