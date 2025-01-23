@@ -209,8 +209,7 @@ e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
 # The `sigsum-submit` tool
 
 The `sigsum-submit` tool is used to create and/or submit add-leaf
-requests to a Sigsum log (as defined in the [Sigsum
-spec](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md).
+requests to a Sigsum log (as defined in the [Sigsum spec][].
 
 To create and immediately submit one or more requests, pass both of
 the `-k` (signing key) and `-p` (policy) options, described below.
@@ -221,6 +220,8 @@ first run `sigsum-submit -k` to create and sign the request. Collect
 the output, which in this case is the body of a Sigsum add-leaf
 request, and pass that as input input to `sigsum -p` later on, to
 submit it to a log.
+
+[Sigsum spec]: https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md
 
 ## Inputs
 
@@ -439,17 +440,16 @@ $ echo "Hello old friend" | sigsum-verify -k example.key.pub -p example.policy e
 
 The `sigsum-token` tool is used to manage the Sigsum "submit tokens"
 that are used for domain based rate limiting (as defined in the
-[Sigsum
-spec](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md),
-see also [rate limit
-configuration](https://git.glasklar.is/sigsum/core/log-go/-/blob/main/doc/rate-limit.md)).
-There are three sub commands, `record`, `create` and `verify`. The
+[Sigsum spec][], see also [rate limit configuration][]). There are
+four sub commands, `record`, `create`, `verify`, and `test-key`. The
 `record` sub command is useful when setting up the DNS record that is
 required for submitting to a log server with rate limits.
 
-The other two sub commands are more obscure, and are intended for
-scripts that need to handle submit tokens manually, e.g., to submit an
-add-leaf request without using the `sigsum-submit` tool.
+The other sub commands are more obscure. The `create` and `verify`
+commands are intended for scripts that need to handle submit tokens
+manually, e.g., to submit an add-leaf request without using the
+`sigsum-submit` tool. The `test-key` command is useful to submit
+requests on behalf of the domain `test.sigsum.org`.
 
 Using submit tokens requires a signing key, and it is recommended to
 create a separate key used exclusively for this purpose.
@@ -494,6 +494,21 @@ required. For a HTTP header, `--key` and `--domain` are optional, but
 validation fails if they are inconsistent with what's looked up from
 the HTTP header. The `-q` (quiet) option suppresses output on
 validation errors, with result only reflected in the exit code.
+
+## Key files for test.sigsum.org
+
+There's a [test domain][] `test.sigsum.org`, with a public key
+registered in DNS, and a private key that is a fixed non-secret. To
+generate corresponding key files in OpenSSH format, run `sigsum-token
+test-key -o KEY-FILE`. The conventions are similar to `sigsum-key
+generate` except that the produced private key is **totally
+insecure**, and the private key file is also created world-readable.
+
+By default, Sigsum log servers disallow requests associated with this
+test domain, but it can be enabled for test convenience.
+
+[rate limit configuration]: https://git.glasklar.is/sigsum/core/log-go/-/blob/main/doc/rate-limit.md
+[test domain]: https://git.glasklar.is/sigsum/core/log-go/-/blob/main/doc/rate-limit.md#test-domain
 
 ## Examples
 
