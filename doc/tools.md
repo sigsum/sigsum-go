@@ -300,7 +300,7 @@ tried in random order.
 
 If the log(s) used are configured to apply domain-based rate limiting
 (as publicly accessible logs are expected to do), the
-`--token-key` option must be used to specify the private key used
+`--token-signing-key` option must be used to specify the private key used
 for signing a submit token, and the `--token-domain` option specifies
 the domain (without the special "_sigsum_v1" label) where the
 corresponding public key is registered. An appropriate "sigsum-token:"
@@ -483,7 +483,7 @@ command outputs a complete HTTP header line.
 
 Note that when using `sigsum-submit`, you don't need `sigsum-token` to
 create any tokens; `sigsum-submit` creates appropriate tokens for each
-log if you pass the `--token-key` and `--token-domain` options.
+log if you pass the `--token-signing-key` and `--token-domain` options.
 
 ## Verifying a submit token
 
