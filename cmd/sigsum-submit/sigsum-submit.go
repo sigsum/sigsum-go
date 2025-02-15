@@ -23,7 +23,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/submit"
-	"sigsum.org/sigsum-go/pkg/submit-token"
+	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -247,19 +247,19 @@ If input files are provided on the command line, each file
 corresponds to one request, and result is written to a
 corresponding output file, based on these rules:
 
-1. If there's exactly one input file, and the -o option is used,
-   output is written to that file. Any existing file is overwritten.
+  1. If there's exactly one input file, and the -o option is used,
+  output is written to that file. Any existing file is overwritten.
 
-2. For a request output, the suffix ".req" is added to the input
-   file name.
+  2. For a request output, the suffix ".req" is added to the input
+  file name.
 
-3. For a proof output, if the input is a request, any ".req"
-   suffix on the input file name is stripped. Then the suffix
-   ".proof" is added.
+  3. For a proof output, if the input is a request, any ".req" suffix
+  on the input file name is stripped. Then the suffix ".proof" is
+  added.
 
-4. If the --output-dir option is provided, any directory part of
-   the input file name is stripped, and the output is written as a
-   file in the specified output directory.
+  4. If the --output-dir option is provided, any directory part of the
+  input file name is stripped, and the output is written as a file in
+  the specified output directory.
 
 If a corresponding .proof file already exists, that proof is read
 and verified. If the proof is valid, the input file is skipped. If
@@ -289,8 +289,8 @@ overwritten (TODO: Figure out if that is the proper behavior).
 	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
 	set.Parse(args)
 	if help {
+		fmt.Print(usage[1:] + "\n")
 		set.PrintUsage(os.Stdout)
-		fmt.Print(usage)
 		os.Exit(0)
 	}
 	if versionFlag {
