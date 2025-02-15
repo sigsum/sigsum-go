@@ -1,0 +1,6 @@
+[REPORTING BUGS]
+Use the issue tracker located at
+.B https://git.glasklar.is/sigsum/core/sigsum-go/-/issues.
+To file issues without a GitLab account, send an email to
+.B sigsum-core-sigsum-go-issues@incoming.glasklar.is
+and wait for a maintainer to make the issue public.

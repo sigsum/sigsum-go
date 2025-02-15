@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -eu
+cd "$(dirname "$0")"
+
+opt=$1; shift
+case "$opt" in
+	--help)
+		../../../build/sigsum-key --help
+		;;
+	--version)
+		../../../build/sigsum-key --version
+		;;
+	*)
+		echo "invalid option: $opt"
+		exit 1
+		;;
+esac
