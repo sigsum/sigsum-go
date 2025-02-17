@@ -239,7 +239,6 @@ func parseArgs(set *getopt.Set, args []string, maxArgs int) {
 	// Check help first; if seen, ignore errors about missing mandatory arguments.
 	if help {
 		set.PrintUsage(os.Stdout)
-		fmt.Printf("\nFor general information on this tool, see %s help.\n", args[0])
 		os.Exit(0)
 	}
 	if err != nil {
