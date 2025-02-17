@@ -1,0 +1,2 @@
+[NAME]
+sigsum-key from-hex - convert public key in hex format to OpenSSH

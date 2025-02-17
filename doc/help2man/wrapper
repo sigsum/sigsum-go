@@ -4,12 +4,17 @@ set -eu
 cd "$(dirname "$0")"
 
 cmd=$1; shift
+sub=$1; shift
 opt=$1; shift
 case "$opt" in
     --help)
         case "$cmd" in
             sigsum-key|sigsum-token)
-                go run "../../cmd/$cmd/$cmd.go" --help
+                if [[ $sub == no ]]; then
+                    go run "../../cmd/$cmd/$cmd.go" --help
+                else
+                    go run "../../cmd/$cmd/$cmd.go" "$sub" --help | sed "/^Usage:/ a\\\nOptions:"
+                fi
                 ;;
             *)
                 go run "../../cmd/$cmd/$cmd.go" --help | sed "/^Usage:/ a\\\nOptions:"
