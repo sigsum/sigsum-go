@@ -13,7 +13,7 @@ import (
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
-	"sigsum.org/sigsum-go/pkg/submit-token"
+	token "sigsum.org/sigsum-go/pkg/submit-token"
 )
 
 type createSettings struct {
@@ -180,8 +180,8 @@ func parseNoArgs(set *getopt.Set, args []string, usage string) {
 	err := set.Getopt(args[1:], nil)
 	// Check help first; if seen, ignore errors about missing mandatory arguments.
 	if help {
+		fmt.Print(usage[1:] + "\n")
 		set.PrintUsage(os.Stdout)
-		fmt.Print(usage)
 		os.Exit(0)
 	}
 	if err != nil {
@@ -201,9 +201,9 @@ func (s *createSettings) parse(args []string) {
 	set.FlagLong(&s.logKeyFile, "log-key", 0, "Log's public key", "file").Mandatory()
 	set.FlagLong(&s.domain, "domain", 0, "Domain")
 	parseNoArgs(set, args, `
-    Create a token for submissions to the the given log, essentially a
-    signature on the log's public key. If --domain is given, output a
-    complete HTTP header.
+Create a token for submissions to the the given log, essentially a
+signature on the log's public key. If --domain is given, output a
+complete HTTP header.
 `)
 }
 
@@ -212,7 +212,7 @@ func (s *recordSettings) parse(args []string) {
 	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
 	set.Flag(&s.outputFile, 'o', "Output", "file")
 	parseNoArgs(set, args, `
-    Format the public key as a TXT record in zone file format.
+Format the public key as a TXT record in zone file format.
 `)
 }
 
@@ -223,12 +223,12 @@ func (s *verifySettings) parse(args []string) {
 	set.FlagLong(&s.domain, "domain", 0, "Domain")
 	set.FlagLong(&s.quiet, "quiet", 'q', "Quiet mode")
 	parseNoArgs(set, args, `
-    Verifies a submit token. The input on stdin is either a raw hex
-    token or a HTTP header. For a raw token, one of -k or --domain is
-    required. For a HTTP header, --key and --domain are optional, but
-    validation fails if they are inconsistent with what's looked up
-    from the HTTP header. The -q (quiet) option suppresses output on
-    validation errors, with result only reflected in the exit code.
+Verifies a submit token. The input on stdin is either a raw hex
+token or a HTTP header. For a raw token, one of -k or --domain is
+required. For a HTTP header, --key and --domain are optional, but
+validation fails if they are inconsistent with what's looked up
+from the HTTP header. The -q (quiet) option suppresses output on
+validation errors, with result only reflected in the exit code.
 `)
 }
 
