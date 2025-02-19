@@ -1,3 +1,5 @@
+default: doc
+
 check: mocks
 	go build ./...
 	go test ./...
@@ -6,11 +8,11 @@ check: mocks
 mocks:
 	cd pkg/mocks && $(MAKE)
 
-manpages:
+doc:
 	doc/help2man/generate
 
 clean:
 	cd tests && $(MAKE) clean
 	cd pkg/mocks && $(MAKE) clean
 
-.PHONY: all check clean manpages mocks
+.PHONY: default check clean doc mocks
