@@ -10,6 +10,7 @@ mocks:
 
 doc:
 	doc/help2man/generate
+	pandoc doc/tools.md -s -t man -o doc/sigsum-tools.1
 
 clean:
 	cd tests && $(MAKE) clean

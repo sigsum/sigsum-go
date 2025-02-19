@@ -5,3 +5,4 @@
 .BR sigsum-token-create (1)
 .BR sigsum-token-record (1)
 .BR sigsum-token-verify (1)
+.BR sigsum-tools (5)
