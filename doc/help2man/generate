@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")"
 
-COMMANDS=("sigsum-key" "sigsum-verify" "sigsum-submit" "sigsum-token")
+COMMANDS=("sigsum-key" "sigsum-monitor" "sigsum-verify" "sigsum-submit" "sigsum-token")
 
 declare -A SUBCOMMANDS
 SUBCOMMANDS["sigsum-key"]="generate verify sign to-hash to-hex to-vkey from-hex from-vkey"
