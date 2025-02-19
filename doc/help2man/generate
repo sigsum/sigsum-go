@@ -11,7 +11,7 @@ SUBCOMMANDS["sigsum-token"]="create record verify"
 
 version=$(git describe --tags --always)
 for cmd in "${COMMANDS[@]}"; do
-    echo "INFO: generating cmd/$cmd/$cmd.1" >&2
+    echo "INFO: generating doc/$cmd.1" >&2
     help2man \
         --no-info \
         --version-string "$cmd -- git $version" \
@@ -20,12 +20,12 @@ for cmd in "${COMMANDS[@]}"; do
         --include="return-codes.help2man" \
         --include="reporting-bugs.help2man" \
         --include="contact.help2man" \
-        -o "../../cmd/$cmd/$cmd.1" "./wrapper $cmd no"
+        -o "../$cmd.1" "./wrapper $cmd no"
 
     # Generate subcommand man pages
     if [[ -n "${SUBCOMMANDS[$cmd]:-}" ]]; then
         for subcmd in ${SUBCOMMANDS[$cmd]}; do
-            echo "INFO: generating cmd/$cmd/$cmd-$subcmd.1" >&2
+            echo "INFO: generating doc/$cmd-$subcmd.1" >&2
             help2man \
                 --no-info \
                 --version-string "$cmd $subcmd -- git $version" \
@@ -34,7 +34,7 @@ for cmd in "${COMMANDS[@]}"; do
                 --include="return-codes.help2man" \
                 --include="reporting-bugs.help2man" \
                 --include="contact.help2man" \
-                -o "../../cmd/$cmd/$cmd-$subcmd.1" "./wrapper $cmd $subcmd"
+                -o "../$cmd-$subcmd.1" "./wrapper $cmd $subcmd"
         done
     fi
 done
