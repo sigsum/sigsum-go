@@ -9,12 +9,12 @@ declare -A SUBCOMMANDS
 SUBCOMMANDS["sigsum-key"]="generate verify sign to-hash to-hex to-vkey from-hex from-vkey"
 SUBCOMMANDS["sigsum-token"]="create record verify"
 
-version=$(git describe --tags --always)
+version=$1; shift
 for cmd in "${COMMANDS[@]}"; do
     echo "INFO: generating doc/$cmd.1" >&2
     help2man \
         --no-info \
-        --version-string "$cmd -- git $version" \
+        --version-string "$cmd $version" \
         --include="../../cmd/$cmd/help2man/name.help2man" \
         --include="../../cmd/$cmd/help2man/see-also.help2man" \
         --include="return-codes.help2man" \
@@ -28,7 +28,7 @@ for cmd in "${COMMANDS[@]}"; do
             echo "INFO: generating doc/$cmd-$subcmd.1" >&2
             help2man \
                 --no-info \
-                --version-string "$cmd $subcmd -- git $version" \
+                --version-string "$cmd $subcmd $version" \
                 --include="../../cmd/$cmd/help2man/$subcmd.help2man" \
                 --include="../../cmd/$cmd/help2man/see-also.help2man" \
                 --include="return-codes.help2man" \

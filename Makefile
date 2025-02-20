@@ -1,3 +1,6 @@
+DATE := $(shell date +"%B %Y")
+VERSION := $(shell git describe --tags --always)
+
 default: doc
 
 check: mocks
@@ -9,8 +12,13 @@ mocks:
 	cd pkg/mocks && $(MAKE)
 
 doc:
-	doc/help2man/generate
-	pandoc doc/tools.md -s -t man -o doc/sigsum-tools.1
+	doc/help2man/generate $(VERSION)
+	pandoc doc/tools.md -s -t man -o doc/sigsum-tools.1 \
+		-M title="sigsum-tools" \
+		-M section="5" \
+		-M header="User guide" \
+		-M footer="sigsum-tools $(VERSION)" \
+		-M date="$(DATE)"
 
 clean:
 	cd tests && $(MAKE) clean
