@@ -53,57 +53,34 @@ type VkeyExportSettings struct {
 }
 
 func main() {
-	const usage = `sigsum-key sub commands:
+	const usage = `
+Generate submit and rate-limit key pairs in OpenSSH format.  Convert
+public keys in OpenSSH format to and from other formats.
 
-sigsum-key help | --help
-  Display this help. All the below sub commands also accept the --help
-  option, to display help for that sub command.
+Usage: sigsum-key [--help|help] [--version|version]
+   or: sigsum-key from-hex [options]
+   or: sigsum-key from-vkey [options]
+   or: sigsum-key generate [options]
+   or: sigsum-key sign [options]
+   or: sigsum-key to-hash [options]
+   or: sigsum-key to-hex [options]
+   or: sigsum-key to-vkey [options]
+   or: sigsum-key verify [options]
 
-sigsum-key version | --version | -v
-  Display software version.
-
-sigsum-key generate -o file
-  Generate a new key pair. Private key is stored in the given
-  file, in OpenSSH private key format. Corresponding public key
-  file gets a ".pub" suffix, and is written in OpenSSH public
-  key format. Abbreviation "gen" is also recognized.
-
-sigsum-key verify [options] < msg
-  Verify a signature. For option details, see sigsum-key verify --help.
-
-sigsum-key sign [options] < msg
-  Create a signature. For option details, see sigsum-key sign --help.
-
-sigsum-key to-hash [-k file] [-o output]
-  Reads public key from file (by default, stdin) and writes key hash
-  to output (by default, stdout).
-
-sigsum-key to-hex [-k file] [-o output]
-  Reads public key from file (by default, stdin) and writes hex key
-  to output (by default, stdout).
-
-sigsum-key to-vkey [-n name] [-k file] [-t type] [-o output]
-  Reads public key from file (by default, stdin) and writes a signed
-  note verifier line. By default, creates a vkey for a Sigsum log.
-
-sigsum-key from-hex [-k file] [-o output]
-  Reads hex public key from file (by default, stdin) and writes
-  OpenSSH format public key to output (by default, stdout).
-
-sigsum-key from-vkey [--verbose] [-k file] [-o output]
-  Reads a vkey from file (by default, stdin) and writes the
-  OpenSSH format public key to output (by default, stdout).
+Options:
+      --help     Show usage message and exit
+  -v, --version  Show program version and exit
 `
 	log.SetFlags(0)
 	if len(os.Args) < 2 {
-		log.Fatal(usage)
+		log.Fatal(usage[1:])
 	}
 
 	switch os.Args[1] {
 	default:
-		log.Fatal(usage)
+		log.Fatal(usage[1:])
 	case "help", "--help":
-		fmt.Print(usage)
+		fmt.Print(usage[1:])
 		os.Exit(0)
 	case "version", "--version", "-v":
 		version.DisplayVersion("sigsum-key")
@@ -143,8 +120,13 @@ sigsum-key from-vkey [--verbose] [-k file] [-o output]
 		writeSignatureFile(settings.outputFile, &signature)
 
 	case "to-hash":
+		const usage = `
+Read a public key in OpenSSH format and output its hash in hex format.
+The public key is read on stdin and output is written on stdout.
+Override the default behavior using the -k and -o options.
+`
 		var settings ExportSettings
-		settings.parse(os.Args, "")
+		settings.parse(os.Args, "Public key in OpenSSH format", "Hashed public key in hex format", usage)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
 			log.Fatal(err)
@@ -154,8 +136,13 @@ sigsum-key from-vkey [--verbose] [-k file] [-o output]
 			return err
 		})
 	case "to-hex":
+		const usage = `
+Read a public key in OpenSSH format and output it in hex format.  The
+public key is read on stdin and output is written on stdout.  Override
+the default behavior using the -k and -o options.
+`
 		var settings ExportSettings
-		settings.parse(os.Args, "")
+		settings.parse(os.Args, "Public key in OpenSSH format", "Public key in hex format", usage)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
 			log.Fatal(err)
@@ -184,8 +171,13 @@ sigsum-key from-vkey [--verbose] [-k file] [-o output]
 			return err
 		})
 	case "from-hex":
+		const usage = `
+Read a public key in hex format and output it in OpenSSH format.  The
+public key is read on stdin and output is written on stdout.  Override
+the default behavior using the -k and -o options.
+`
 		var settings ExportSettings
-		settings.parse(os.Args, "Hex public key")
+		settings.parse(os.Args, "Public key in hex format", "Public key in OpenSSH format", usage)
 		pub, err := crypto.PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
 		if err != nil {
 			log.Fatalf("invalid key: %v", err)
@@ -232,12 +224,13 @@ func newOptionSet(args []string, params string) *getopt.Set {
 }
 
 // Also adds and processes the help option.
-func parseArgs(set *getopt.Set, args []string, maxArgs int) {
+func parseArgs(set *getopt.Set, args []string, maxArgs int, usage string) {
 	help := false
-	set.FlagLong(&help, "help", 0, "Display help")
+	set.FlagLong(&help, "help", 0, "Show usage message and exit")
 	err := set.Getopt(args[1:], nil)
 	// Check help first; if seen, ignore errors about missing mandatory arguments.
 	if help {
+		fmt.Print(usage[1:] + "\n")
 		set.PrintUsage(os.Stdout)
 		os.Exit(0)
 	}
@@ -251,68 +244,102 @@ func parseArgs(set *getopt.Set, args []string, maxArgs int) {
 	}
 }
 
-func parseNoArgs(set *getopt.Set, args []string) {
-	parseArgs(set, args, 0)
+func parseNoArgs(set *getopt.Set, args []string, usage string) {
+	parseArgs(set, args, 0, usage)
 }
 
 func (s *GenSettings) parse(args []string) {
+	const usage = `
+Create a new key pair. The private key is stored in the given file
+in OpenSSH private-key format. The corresponding public-key file gets
+a ".pub" suffix and is written in OpenSSH public-key format.
+`
 	set := newOptionSet(args, "")
-	set.Flag(&s.outputFile, 'o', "Output", "file").Mandatory()
-	parseNoArgs(set, args)
+	set.FlagLong(&s.outputFile, "output", 'o', "File to store the private key in", "key-file").Mandatory()
+	parseNoArgs(set, args, usage)
 }
 
 func (s *VerifySettings) parse(args []string) {
-	// By default, no namespace.
+	const usage = `
+Verify an Ed25519 signature with a given namespace.  The namespaces
+that are used in the Sigsum system are 'sigsum.org/v1/tree-leaf'
+(signed checksums) and 'sigsum.org/v1/submit-token' (rate limitting).
+The default behavior is to not use any namespace.
+
+The message to verify is provided on stdin.
+`
 	s.namespace = ""
 
 	set := newOptionSet(args, "< msg")
-	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file").Mandatory()
-	set.FlagLong(&s.signatureFile, "signature", 's', "Signature", "file").Mandatory()
-	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
-	parseNoArgs(set, args)
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key in OpenSSH format", "key-file").Mandatory()
+	set.FlagLong(&s.signatureFile, "signature", 's', "Signature in hex format", "sig-file").Mandatory()
+	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace to ensure domain separation", "namespace")
+	parseNoArgs(set, args, usage)
 }
 
 func (s *SignSettings) parse(args []string) {
-	// By default, no namespace.
+	const usage = `
+Create an Ed25519 signature with a given namespace. The namespaces
+that are used in the Sigsum system are 'sigsum.org/v1/tree-leaf'
+(signed checksums) and 'sigsum.org/v1/submit-token' (rate limitting).
+The default behavior is to not use any namespace.
+
+The message to sign is provided on stdin.
+`
 	s.namespace = ""
 
 	set := newOptionSet(args, "< msg")
-	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key for signing", "file").Mandatory()
-	set.Flag(&s.outputFile, 'o', "Signature output", "file")
-	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace")
-	parseNoArgs(set, args)
+	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key in OpenSSH format; or a corresponding public key where the private part is accessed using the SSH agent protocol", "key-file").Mandatory()
+	set.FlagLong(&s.outputFile, "output", 'o', "Signature in hex format", "output-file")
+	set.FlagLong(&s.namespace, "namespace", 'n', "Signature namespace to ensure domain separation", "namespace")
+	parseNoArgs(set, args, usage)
 }
 
-func (s *ExportSettings) parse(args []string, keyHelp string) {
+func (s *ExportSettings) parse(args []string, keyHelp, outputHelp, usage string) {
 	set := newOptionSet(args, "")
-	if keyHelp == "" {
-		keyHelp = "Public key"
-	}
-	set.FlagLong(&s.keyFile, "key", 'k', keyHelp, "file")
-	set.Flag(&s.outputFile, 'o', "Output", "file")
-	parseNoArgs(set, args)
+	set.FlagLong(&s.keyFile, "key", 'k', keyHelp, "key-file")
+	set.FlagLong(&s.outputFile, "output", 'o', outputHelp, "output-file")
+	parseNoArgs(set, args, usage)
 }
 
 func (s *VkeyImportSettings) parse(args []string) {
+	const usage = `
+Read a public key in vkey format and output it in OpenSSH format.  The
+public key is read on stdin and output is written on stdout.  Override
+the default behavior using the -k and -o options.
+`
 	set := newOptionSet(args, "")
-	set.FlagLong(&s.keyFile, "key", 'k', "Signed note verifier (vkey)", "file")
-	set.Flag(&s.outputFile, 'o', "Output", "file")
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key in vkey format", "key-file")
+	set.FlagLong(&s.outputFile, "output", 'o', "Public key in OpenSSH format", "output-file")
 	set.FlagLong(&s.verbose, "verbose", 'v', "Display name and type of the key")
-	parseNoArgs(set, args)
+	parseNoArgs(set, args, usage)
 }
 
 func (s *VkeyExportSettings) parse(args []string) {
+	const usage = `
+Read a public key in OpenSSH format and output it in vkey format.
+The public key is read on stdin and output is written on stdout.
+Override the default behavior using the -k and -o options.
+
+It is assumed that a vkey for a sigsum log server is requested unless
+the -n option is provided.  I.e., the vkey name defaults to the log's
+origin line 'sigsum.org/v1/tree/<key hash>' and the ed25519 type (-t).
+
+Use the -n and -t options to encode vkeys for witness cosigning.  The
+best practise is to use a schemaless URL for the name, e.g.,
+foo.exampele.org and example.org/bar would be two good examples.
+`
 	set := newOptionSet(args, "")
-	keyType := ""
-	set.FlagLong(&s.keyFile, "key", 'k', "Public key", "file")
-	set.Flag(&s.outputFile, 'o', "Output", "file")
-	set.Flag(&s.name, 'n', "Key name (defaults to the origin line of a Sigsum log server)", "name")
-	set.Flag(&keyType, 't', "Signature type. 'ed25519' (default) or 'cosignature/v1'", "type")
-	parseNoArgs(set, args)
+	keyType := "ed25519"
+	set.FlagLong(&s.keyFile, "key", 'k', "Public key in OpenSSH format", "key-file")
+	set.FlagLong(&s.outputFile, "output", 'o', "Public key in vkey format", "output-file")
+	set.FlagLong(&s.name, "name", 'n', "Name of the public key", "key-name")
+	set.FlagLong(&keyType, "type", 't', "Available types: ed25519, cosignature/v1", "type")
+	parseNoArgs(set, args, usage)
 	switch keyType {
 	default:
 		log.Fatalf("Unknown signature type %q, must be 'ed25519' or 'cosignature/v1'", keyType)
-	case "", "ed25519":
+	case "ed25519":
 		s.keyType = checkpoint.SigTypeEd25519
 	case "cosignature/v1":
 		s.keyType = checkpoint.SigTypeCosignature
