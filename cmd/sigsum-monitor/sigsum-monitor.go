@@ -79,23 +79,31 @@ func main() {
 }
 
 func (s *Settings) parse(args []string) {
+	const usage = `
+Discover signed checksums for public keys in OpenSSH format.
+
+Be warned: this is a work-in-progress implementation.  Witness
+cosignatures are not verified and no state is kept between runs.
+`
+
 	set := getopt.New()
-	set.SetParameters("submit-keys")
+	set.SetParameters("key-files")
 
 	help := false
 	versionFlag := false
 	s.diagnostics = "info"
 	s.interval = 10 * time.Minute
 
-	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file").Mandatory()
-	set.FlagLong(&s.interval, "interval", 0, "Monitoring interval")
-	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
-	set.FlagLong(&help, "help", 0, "Display help")
-	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
+	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and the end-user's quorum rule", "policy-file").Mandatory()
+	set.FlagLong(&s.interval, "interval", 'i', "How often to fetch the latest entries", "interval")
+	set.FlagLong(&s.diagnostics, "diagnostics", 0, "Available levels: fatal, error, warning, info, debug", "log-level")
+	set.FlagLong(&help, "help", 0, "Show usage message and exit")
+	set.FlagLong(&versionFlag, "version", 'v', "Show program version and exit")
 	err := set.Getopt(args, nil)
 	// Check --help and --version first; if seen, ignore errors
 	// about missing mandatory arguments.
 	if help {
+		fmt.Print(usage[1:] + "\n")
 		set.PrintUsage(os.Stdout)
 		os.Exit(0)
 	}
