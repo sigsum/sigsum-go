@@ -1,2 +1,2 @@
 [NAME]
-sigsum-key generate - generate OpenSSH key pair
+sigsum-key generate - generate key pair in OpenSSH format

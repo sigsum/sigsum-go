@@ -1,2 +1,2 @@
 [NAME]
-sigsum-key to-hex - convert OpenSSH public key to hex
+sigsum-key to-hex - convert public key in OpenSSH format to hex format

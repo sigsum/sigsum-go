@@ -1,2 +1,2 @@
 [NAME]
-sigsum-key to-vkey - convert OpenSSH public key to vkey
+sigsum-key to-vkey - convert public key in OpenSSH format to vkey format
