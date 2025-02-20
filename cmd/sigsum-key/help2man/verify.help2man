@@ -1,2 +1,2 @@
 [NAME]
-sigsum-key verify - verify OpenSSH signature
+sigsum-key verify - verify Ed25519 signature

@@ -1,2 +1,2 @@
 [NAME]
-sigsum-submit - log signed checksums for a given trust policy
+sigsum-submit - prepare and log signed checksums

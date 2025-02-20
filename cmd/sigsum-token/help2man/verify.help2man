@@ -1,2 +1,2 @@
 [NAME]
-sigsum-token verify - verify a submit token for a given domain
+sigsum-token verify - verify submit token for a given domain

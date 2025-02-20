@@ -1,2 +1,2 @@
 [NAME]
-sigsum-monitor - find signed checksums for the specified keys
+sigsum-monitor - discover signed checksums for one or more keys
