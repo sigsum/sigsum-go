@@ -4,10 +4,11 @@ stages:
 - build
 - test
 - build-log
+- documentation
 
 make-all:
   stage: build
-  script: make all
+  script: make check
 
 make-check:
   stage: test
@@ -38,3 +39,11 @@ build-log-go:
   script:
   - git clone https://git.glasklar.is/sigsum/core/log-go.git &&
     cd log-go && go work init && go work use . .. && go build ./...
+
+make-doc:
+  stage: documentation
+  before_script:
+    - apt-get update
+    - apt-get install -y help2man pandoc
+  script:
+    - make doc

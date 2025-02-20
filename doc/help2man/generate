@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -eu
+cd "$(dirname "$0")"
+
+COMMANDS=("sigsum-key" "sigsum-monitor" "sigsum-verify" "sigsum-submit" "sigsum-token")
+
+declare -A SUBCOMMANDS
+SUBCOMMANDS["sigsum-key"]="generate verify sign to-hash to-hex to-vkey from-hex from-vkey"
+SUBCOMMANDS["sigsum-token"]="create record verify"
+
+version=$1; shift
+for cmd in "${COMMANDS[@]}"; do
+    echo "INFO: generating doc/$cmd.1" >&2
+    help2man \
+        --no-info \
+        --version-string "$cmd $version" \
+        --include="../../cmd/$cmd/help2man/name.help2man" \
+        --include="../../cmd/$cmd/help2man/see-also.help2man" \
+        --include="return-codes.help2man" \
+        --include="reporting-bugs.help2man" \
+        --include="contact.help2man" \
+        -o "../$cmd.1" "./wrapper $cmd no"
+
+    # Generate subcommand man pages
+    if [[ -n "${SUBCOMMANDS[$cmd]:-}" ]]; then
+        for subcmd in ${SUBCOMMANDS[$cmd]}; do
+            echo "INFO: generating doc/$cmd-$subcmd.1" >&2
+            help2man \
+                --no-info \
+                --version-string "$cmd $subcmd $version" \
+                --include="../../cmd/$cmd/help2man/$subcmd.help2man" \
+                --include="../../cmd/$cmd/help2man/see-also.help2man" \
+                --include="return-codes.help2man" \
+                --include="reporting-bugs.help2man" \
+                --include="contact.help2man" \
+                -o "../$cmd-$subcmd.1" "./wrapper $cmd $subcmd"
+        done
+    fi
+done

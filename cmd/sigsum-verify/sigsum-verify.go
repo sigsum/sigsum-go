@@ -74,8 +74,8 @@ the hash value, either exactly 32 octets, or a hex string).
 	// Check --help and --version first; if seen, ignore errors
 	// about missing mandatory arguments.
 	if help {
+		fmt.Print(usage[1:] + "\n")
 		set.PrintUsage(os.Stdout)
-		fmt.Print(usage)
 		os.Exit(0)
 	}
 	if versionFlag {
