@@ -86,6 +86,8 @@ func (s *Settings) parse(args []string) {
 	const usage = `
 Provides a service for cosigning a sigsum log (currently, only a
 single log), listening on the given host and port.
+
+Be warned: this tool is only used for internal testing.
 `
 	set := getopt.New()
 	set.SetParameters("host:port")
