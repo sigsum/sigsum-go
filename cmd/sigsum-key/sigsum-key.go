@@ -327,7 +327,7 @@ origin line 'sigsum.org/v1/tree/<key hash>' and the ed25519 type (-t).
 
 Use the -n and -t options to encode vkeys for witness cosigning.  The
 best practise is to use a schemaless URL for the name, e.g.,
-foo.exampele.org and example.org/bar would be two good examples.
+foo.example.org and example.org/bar would be two good examples.
 `
 	set := newOptionSet(args, "")
 	keyType := "ed25519"
