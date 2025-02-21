@@ -123,7 +123,7 @@ func main() {
 		}
 		config := submit.Config{Policy: policy,
 			Domain:        settings.tokenDomain,
-			PerLogTimeout: settings.timeout,
+			GlobalTimeout: settings.timeout,
 		}
 		ctx := context.Background()
 
@@ -163,26 +163,18 @@ func main() {
 			return true
 		}
 
-		// An item to submit.
-		type Item struct {
-			leaf      requests.Leaf
-			inputName string // empty for stdin
-		}
-		var items []Item
-		// TODO: Actually do requests in batch.
+		var reqs []requests.Leaf
+		var inputNames []string
 		source(skip, func(name string, leaf *requests.Leaf) {
-			items = append(items, Item{
-				leaf:      *leaf,
-				inputName: name,
-			})
+			reqs = append(reqs, *leaf)
+			inputNames = append(inputNames, name)
 		})
-
-		for _, item := range items {
-			proof, err := submit.SubmitLeafRequest(ctx, &config, &item.leaf)
-			if err != nil {
-				log.Fatal("Submit failed: %v", err)
-			}
-			if err := settings.withOutputFile(item.inputName, ".proof", proof.ToASCII); err != nil {
+		proofs, err := submit.SubmitLeafRequests(ctx, &config, reqs)
+		if err != nil {
+			log.Fatal("Submit failed: %v", err)
+		}
+		for i := 0; i < len(proofs); i++ {
+			if err := settings.withOutputFile(inputNames[i], ".proof", proofs[i].ToASCII); err != nil {
 				log.Fatal("Writing proof failed: %v", err)
 			}
 		}
