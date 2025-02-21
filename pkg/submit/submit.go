@@ -1,5 +1,5 @@
-// package submit acts as a sigsum submit client
-// It submits a leaf to a log, and collects a sigsum proof.
+// package submit acts as a sigsum submit client It submits a leaf to a log, and
+// collects a sigsum proof.
 package submit
 
 import (
@@ -40,9 +40,8 @@ type Config struct {
 	// timeout is used.
 	RequestTimeout time.Duration
 
-	// Delay when repeating add-leaf requests to the log, as well
-	// as for polling for a cosigned tree head and inclusion
-	// proof.
+	// Delay when repeating add-leaf requests to the log, as well as for polling
+	// for a cosigned tree head and inclusion proof.
 	PollDelay time.Duration
 
 	UserAgent string
@@ -50,8 +49,8 @@ type Config struct {
 	// The policy specifies the logs and witnesses to use.
 	Policy *policy.Policy
 
-	// HTTPClient specifies the HTTP client to use when making requests to the log.
-	// If nil, a default client is created.
+	// HTTPClient specifies the HTTP client to use when making requests to the
+	// log.  If nil, a default client is created.
 	HTTPClient *http.Client
 }
 
@@ -83,8 +82,7 @@ func (c *Config) getUserAgent() string {
 	return c.UserAgent
 }
 
-// Sleep for the given delay, but fail early if the context is
-// cancelled.
+// Sleep for the given delay, but fail early if the context is cancelled.
 func sleepWithContext(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
