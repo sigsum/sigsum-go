@@ -1,10 +1,9 @@
-// package submit acts as a sigsum submit client
-// It submits a leaf to a log, and collects a sigsum proof.
+// package submit acts as a sigsum submit client It submits a leaf to a log, and
+// collects a sigsum proof.
 package submit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -21,11 +20,10 @@ import (
 )
 
 const (
-	defaultPollDelay = 2 * time.Second
-	// Default log server publishing interval is 30 seconds, so
-	// use something longer.
-	defaultTimeout   = 45 * time.Second
-	defaultUserAgent = "sigsum-go submit"
+	defaultPollDelay      = 2 * time.Second
+	defaultGlobalTimeout  = 10 * time.Minute
+	defaultRequestTimeout = 30 * time.Second
+	defaultUserAgent      = "sigsum-go submit"
 )
 
 type Config struct {
@@ -33,13 +31,17 @@ type Config struct {
 	Domain          string
 	RateLimitSigner crypto.Signer
 
-	// Timeout, before trying try next log. Zero implies a default
-	// timeout is used.
-	PerLogTimeout time.Duration
+	// GlobalTimeout is the time before giving up on all submissions.  Zero
+	// implies a default timeout is used.
+	GlobalTimeout time.Duration
 
-	// Delay when repeating add-leaf requests to the log, as well
-	// as for polling for a cosigned tree head and inclusion
-	// proof.
+	// RequestTimeout is the time before giving up on a particular request,
+	// e.g., adding a leaf or collecting its proof.  Zero implies a default
+	// timeout is used.
+	RequestTimeout time.Duration
+
+	// Delay when repeating add-leaf requests to the log, as well as for polling
+	// for a cosigned tree head and inclusion proof.
 	PollDelay time.Duration
 
 	UserAgent string
@@ -47,8 +49,8 @@ type Config struct {
 	// The policy specifies the logs and witnesses to use.
 	Policy *policy.Policy
 
-	// HTTPClient specifies the HTTP client to use when making requests to the log.
-	// If nil, a default client is created.
+	// HTTPClient specifies the HTTP client to use when making requests to the
+	// log.  If nil, a default client is created.
 	HTTPClient *http.Client
 }
 
@@ -59,11 +61,18 @@ func (c *Config) getPollDelay() time.Duration {
 	return c.PollDelay
 }
 
-func (c *Config) getTimeout() time.Duration {
-	if c.PerLogTimeout <= 0 {
-		return defaultTimeout
+func (c *Config) getGlobalTimeout() time.Duration {
+	if c.GlobalTimeout <= 0 {
+		return defaultGlobalTimeout
 	}
-	return c.PerLogTimeout
+	return c.GlobalTimeout
+}
+
+func (c *Config) getRequestTimeout() time.Duration {
+	if c.RequestTimeout <= 0 {
+		return defaultRequestTimeout
+	}
+	return c.RequestTimeout
 }
 
 func (c *Config) getUserAgent() string {
@@ -73,8 +82,7 @@ func (c *Config) getUserAgent() string {
 	return c.UserAgent
 }
 
-// Sleep for the given delay, but fail early if the context is
-// cancelled.
+// Sleep for the given delay, but fail early if the context is cancelled.
 func sleepWithContext(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
@@ -96,119 +104,174 @@ func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, me
 	if err != nil {
 		return proof.SigsumProof{}, err
 	}
-	return SubmitLeafRequest(ctx, config, &requests.Leaf{
+	proofs, err := SubmitLeafRequests(ctx, config, []requests.Leaf{requests.Leaf{
 		Message:   *message,
 		Signature: signature,
 		PublicKey: signer.Public(),
-	})
+	}})
+	if err != nil {
+		return proof.SigsumProof{}, err
+	}
+	return proofs[0], nil
 }
 
-func SubmitLeafRequest(ctx context.Context, config *Config, req *requests.Leaf) (proof.SigsumProof, error) {
-	leaf, err := req.Verify()
+// SubmitLeafRequests ensures that the given requests are logged in any log with
+// sufficient amounts of witnessing (based on config.Policy).  The collected
+// proofs of logging are returned in the same order as the input requests.
+func SubmitLeafRequests(ctx context.Context, config *Config, reqs []requests.Leaf) ([]proof.SigsumProof, error) {
+	logs, err := logClientsFromConfig(config)
 	if err != nil {
-		return proof.SigsumProof{}, fmt.Errorf("verifying leaf request failed: %v", err)
+		return nil, err
 	}
-	leafHash := leaf.ToHash()
+	sctx, cancel := context.WithTimeout(ctx, config.getGlobalTimeout())
+	defer cancel()
+	submissions, err := submitLeaves(sctx, config.getRequestTimeout(), logs, reqs)
+	if err != nil {
+		return nil, err
+	}
+	return collectProofs(sctx, config.getRequestTimeout(), config.sleep, config.Policy, submissions)
+}
 
-	logs := config.Policy.GetLogsWithUrl()
-	if len(logs) == 0 {
-		return proof.SigsumProof{}, fmt.Errorf("no logs defined in policy")
-	}
-	for _, entity := range logs {
-		log.Info("Attempting submit to log: %s", entity.URL)
+type pendingSubmission struct {
+	log       *logClient      // which log
+	request   requests.Leaf   // which request
+	leafHash  crypto.Hash     // expected leaf hash
+	shortLeaf proof.ShortLeaf // leaf without checksum
+}
+
+type logClient struct {
+	entity policy.Entity
+	client api.Log
+	header *token.SubmitHeader
+}
+
+func logClientsFromConfig(config *Config) ([]logClient, error) {
+	var logs []logClient
+	for _, entity := range config.Policy.GetLogsWithUrl() {
 		var header *token.SubmitHeader
 		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
 			signature, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
 			if err != nil {
-				return proof.SigsumProof{}, fmt.Errorf("creating submit token failed: %v", err)
+				return nil, fmt.Errorf("creating submit token failed: %v", err)
 			}
 			header = &token.SubmitHeader{Domain: config.Domain, Token: signature}
 		}
-
 		client := client.New(client.Config{
 			UserAgent:  config.getUserAgent(),
 			URL:        entity.URL,
 			HTTPClient: config.HTTPClient,
 		})
-
-		logKeyHash := crypto.HashBytes(entity.PublicKey[:])
-		pr, err := func() (proof.SigsumProof, error) {
-			ctx, cancel := context.WithTimeout(ctx, config.getTimeout())
-			defer cancel()
-			return submitLeafToLog(ctx, config.Policy, client, &logKeyHash, header, config.sleep, req, &leafHash)
-		}()
-		if err == nil {
-			pr.Leaf = proof.NewShortLeaf(&leaf)
-			return pr, nil
-		}
-		log.Error("Submitting to log %q failed: %v", entity.URL, err)
+		logs = append(logs, logClient{entity, client, header})
 	}
-	return proof.SigsumProof{}, fmt.Errorf("all logs failed, giving up")
+	if len(logs) == 0 {
+		return nil, fmt.Errorf("no logs defined in policy")
+	}
+	return logs, nil
 }
 
-func submitLeafToLog(ctx context.Context, policy *policy.Policy,
-	cli api.Log, logKeyHash *crypto.Hash, header *token.SubmitHeader, sleep func(context.Context) error,
-	req *requests.Leaf, leafHash *crypto.Hash) (proof.SigsumProof, error) {
-	pr := proof.SigsumProof{
-		// Note: Leaves to caller to populate proof.Leaf.
-		LogKeyHash: *logKeyHash,
-	}
-
-	for {
-		persisted, err := cli.AddLeaf(ctx, *req, header)
-
+// submitLeaves ensures we get HTTP status 2XX for each of the signed checksums.
+// Use collectProofs() to ensure these 2XX responses transition into 200 OK with
+// appropriate proofs of logging.
+//
+// Note: by ensuring that some log says it will take each signed checksum and
+// then collecting the proofs, we don't wait as much for tree heads to rotate.
+func submitLeaves(ctx context.Context, timeout time.Duration, logs []logClient, reqs []requests.Leaf) ([]pendingSubmission, error) {
+	var submissions []pendingSubmission
+	for i, req := range reqs {
+		leaf, err := req.Verify()
 		if err != nil {
-			return proof.SigsumProof{}, err
+			return nil, fmt.Errorf("verifying leaf request failed: %v", err)
 		}
-		if persisted {
+
+		for _, lc := range logs {
+			if err = ctx.Err(); err != nil {
+				return nil, err
+			}
+
+			log.Info("Attempting to submit checksum#%d to log: %s", i+1, lc.entity.URL)
+			if err = submitLeaf(ctx, timeout, lc, req); err != nil {
+				log.Error("Submitting to log %q failed: %v", lc.entity.URL, err)
+				continue
+			}
+
+			submissions = append(submissions, pendingSubmission{
+				log:       &lc,
+				request:   req,
+				leafHash:  leaf.ToHash(),
+				shortLeaf: proof.NewShortLeaf(&leaf),
+			})
 			break
 		}
-		log.Debug("Leaf submitted, waiting for it to be persisted.")
-		if err := sleep(ctx); err != nil {
-			return proof.SigsumProof{}, err
+		if err != nil {
+			return nil, fmt.Errorf("all logs failed, giving up")
 		}
 	}
-	// Leaf submitted, now get a signed tree head + inclusion proof.
-	for {
-		var err error
-		pr.TreeHead, err = cli.GetTreeHead(ctx)
-		if err != nil {
-			return proof.SigsumProof{}, err
-		}
-		if err := policy.VerifyCosignedTreeHead(&pr.LogKeyHash, &pr.TreeHead); err != nil {
-			return proof.SigsumProof{}, fmt.Errorf("verifying tree head failed: %v", err)
-		}
+	return submissions, nil
+}
 
-		// See if we can have an inclusion proof for this tree size.
-		if pr.TreeHead.Size == 0 {
-			// Certainly not included yet.
-			log.Debug("Signed tree is still empty, waiting.")
-			if err := sleep(ctx); err != nil {
-				return proof.SigsumProof{}, err
+func submitLeaf(ctx context.Context, timeout time.Duration, lc logClient, req requests.Leaf) error {
+	sctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	_, err := lc.client.AddLeaf(sctx, req, lc.header)
+	return err // nil on HTTP status 2XX responses
+}
+
+// collectProofs ensures the pending submissions transition from HTTP status 2XX
+// to HTTP status 200 OK in the respective logs. Proofs are then collected.
+func collectProofs(ctx context.Context, timeout time.Duration, sleep func(ctx context.Context) error, policy *policy.Policy, submissions []pendingSubmission) ([]proof.SigsumProof, error) {
+	var proofs []proof.SigsumProof
+	for i, submission := range submissions {
+		for {
+			log.Info("Attempting to retreive proof for checksum#%d", i+1)
+			pr, err := collectProof(ctx, timeout, policy, submission)
+			if err != nil {
+				return nil, err
 			}
-			continue
-		}
-		pr.Inclusion, err = cli.GetInclusionProof(ctx,
-			requests.InclusionProof{
-				Size:     pr.TreeHead.Size,
-				LeafHash: *leafHash,
-			})
-		if errors.Is(err, api.ErrNotFound) {
-			log.Debug("No inclusion proof yet, waiting.")
-			if err := sleep(ctx); err != nil {
-				return proof.SigsumProof{}, err
+			if pr != nil {
+				proofs = append(proofs, *pr)
+				break
 			}
-			continue
+			if errInner := sleep(ctx); errInner != nil {
+				return nil, errInner
+			}
 		}
-		if err != nil {
-			return proof.SigsumProof{}, fmt.Errorf("failed to get inclusion proof: %v", err)
-		}
-
-		// Check validity.
-		if err = pr.Inclusion.Verify(leafHash, &pr.TreeHead.TreeHead); err != nil {
-			return proof.SigsumProof{}, fmt.Errorf("inclusion proof invalid: %v", err)
-		}
-
-		return pr, nil
 	}
+	return proofs, nil
+}
+
+// collectProof returns (non-nil, nil) when a proof was collected successfully.
+// Returns an error if it seems unlikely that trying again will help.
+func collectProof(ctx context.Context, timeout time.Duration, policy *policy.Policy, submission pendingSubmission) (*proof.SigsumProof, error) {
+	sctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	pr := proof.SigsumProof{
+		LogKeyHash: crypto.HashBytes(submission.log.entity.PublicKey[:]),
+		Leaf:       submission.shortLeaf,
+	}
+	persisted, err := submission.log.client.AddLeaf(sctx, submission.request, submission.log.header)
+	if err != nil {
+		log.Debug("Checking that checksum was accepted: %v", err)
+		return nil, nil // continue trying
+	}
+	if !persisted {
+		log.Debug("Checking that checksum was sequenced: not yet")
+		return nil, nil // continue trying
+	}
+	if pr.TreeHead, err = submission.log.client.GetTreeHead(sctx); err != nil {
+		log.Debug("Getting latest tree head: %v", err)
+		return nil, nil // continue trying
+	}
+	if err := policy.VerifyCosignedTreeHead(&pr.LogKeyHash, &pr.TreeHead); err != nil {
+		log.Info("Verifying latest tree head: %v", err)
+		return nil, nil // continue trying
+	}
+	req := requests.InclusionProof{Size: pr.TreeHead.Size, LeafHash: submission.leafHash}
+	if pr.Inclusion, err = submission.log.client.GetInclusionProof(sctx, req); err != nil {
+		log.Debug("Getting inclusion proof: %v", err)
+		return nil, nil // continue trying
+	}
+	if err = pr.Inclusion.Verify(&submission.leafHash, &pr.TreeHead.TreeHead); err != nil {
+		return nil, fmt.Errorf("Inclusion proof invalid: %v", err)
+	}
+	return &pr, nil
 }

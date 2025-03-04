@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
-
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
 	"sigsum.org/sigsum-go/pkg/mocks"
 	"sigsum.org/sigsum-go/pkg/policy"
-	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -22,113 +21,165 @@ func TestSubmitSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating log key failed: %v", err)
 	}
-
 	submitPub, submitSigner, err := crypto.NewKeyPair()
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
-
-	logKeyHash := crypto.HashBytes(logPub[:])
-
-	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
+	p, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
 	if err != nil {
 		t.Fatalf("creating policy failed: %v", err)
 	}
 	tree := merkle.NewTree()
+	timeout := 1 * time.Minute
 
 	oneTest := func(t *testing.T, i int) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		client := mocks.NewMockLog(ctrl)
+		logs := []logClient{logClient{
+			client: client,
+			entity: policy.Entity{
+				PublicKey: logPub,
+				URL:       "http://example.org",
+			},
+		}}
 
-		msg, sth, inclusionProof, req, leaf, leafHash := prepareResponse(t, submitSigner, logSigner, &tree, i)
+		msg, sth, inclusionProof, req := prepareResponse(t, submitSigner, logSigner, &tree, i)
 		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, nil)
-		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
-		client.EXPECT().GetTreeHead(gomock.Any()).Return(
-			types.CosignedTreeHead{SignedTreeHead: sth}, nil)
-		client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
-		pr, err := submitLeafToLog(context.Background(), policy,
-			client, &logKeyHash, nil, func(_ context.Context) error { return nil },
-			&req, &leafHash)
+
+		submissions, err := submitLeaves(context.Background(), timeout, logs, []requests.Leaf{req})
 		if err != nil {
 			t.Errorf("submit failed: %v", err)
-		} else {
-			pr.Leaf = proof.NewShortLeaf(&leaf)
-			if err := pr.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
-				crypto.HashBytes(submitPub[:]): submitPub}, policy); err != nil {
-				t.Errorf("returned sigsum proof failed to verify: %v", err)
-			}
+			return
+		}
+		if got, want := len(submissions), 1; got != want {
+			t.Errorf("unexpected number of submissions: got %d, want %d", got, want)
+			return
+		}
+
+		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
+		client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{SignedTreeHead: sth}, nil)
+		client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
+
+		proofs, err := collectProofs(context.Background(), timeout, nop, p, submissions)
+		if err != nil {
+			t.Errorf("collect failed: %v", err)
+			return
+		}
+		if got, want := len(proofs), 1; got != want {
+			t.Errorf("unexpected number of proofs: got %d, want %d", got, want)
+			return
+		}
+
+		pr := proofs[0]
+		if err := pr.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
+			crypto.HashBytes(submitPub[:]): submitPub}, p); err != nil {
+			t.Errorf("returned sigsum proof failed to verify: %v", err)
 		}
 	}
+
 	for i := 1; i < 10; i++ {
 		t.Run(fmt.Sprintf("leaf %d", i), func(t *testing.T) { oneTest(t, i) })
 	}
 }
 
-func TestSubmitFailure(t *testing.T) {
+func TestSubmitWithFailure(t *testing.T) {
 	logPub, logSigner, err := crypto.NewKeyPair()
 	if err != nil {
 		t.Fatalf("creating log key failed: %v", err)
 	}
-
-	submitPub, submitSigner, err := crypto.NewKeyPair()
+	_, submitSigner, err := crypto.NewKeyPair()
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
-
-	logKeyHash := crypto.HashBytes(logPub[:])
-
-	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
+	p, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
 	if err != nil {
 		t.Fatalf("creating policy failed: %v", err)
 	}
 	tree := merkle.NewTree()
+	timeout := 1 * time.Minute
 
-	oneTest := func(t *testing.T, i int) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		client := mocks.NewMockLog(ctrl)
-
-		msg, sth, inclusionProof, req, leaf, leafHash := prepareResponse(t, submitSigner, logSigner, &tree, i)
-		var addError, getTHError, getInclusionError error
-		switch i {
-		case 1:
-			msg[1] ^= 1
-		case 2:
-			sth.Signature[0] ^= 1
-		case 3:
-			inclusionProof.Path[0][0] ^= 1
-		case 4:
-			leafHash[0] ^= 1
-		case 5:
-			addError = errors.New("mock error")
-		case 6:
-			getTHError = errors.New("mock error")
-		case 7:
-			getInclusionError = errors.New("mock error")
-		}
-		client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, addError)
-		client.EXPECT().GetTreeHead(gomock.Any()).Return(
-			types.CosignedTreeHead{SignedTreeHead: sth}, getTHError).AnyTimes()
-		client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, getInclusionError).AnyTimes()
-		pr, err := submitLeafToLog(context.Background(), policy,
-			client, &logKeyHash, nil, func(_ context.Context) error { return nil },
-			&req, &leafHash)
-		if err == nil {
-			pr.Leaf = proof.NewShortLeaf(&leaf)
-			err := pr.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
-				crypto.HashBytes(submitPub[:]): submitPub}, policy)
-			if err == nil {
-				t.Errorf("case %d submit and verify succeeded; should have failed", i)
-			}
-		}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mocks.NewMockLog(ctrl)
+	clientAlwaysFail := mocks.NewMockLog(ctrl)
+	logs := []logClient{
+		logClient{
+			client: clientAlwaysFail,
+			entity: policy.Entity{
+				URL: "http://always-fail.example.org",
+			},
+		},
+		logClient{
+			client: client,
+			entity: policy.Entity{
+				PublicKey: logPub,
+				URL:       "http://example.org",
+			},
+		},
 	}
-	for i := 1; i <= 7; i++ {
-		t.Run(fmt.Sprintf("leaf %d", i), func(t *testing.T) { oneTest(t, i) })
+
+	// Get a few entries added to the tree
+	for i := 1; i < 10; i++ {
+		prepareResponse(t, submitSigner, logSigner, &tree, i)
+	}
+
+	// Both logs fail
+	_, sth, inclusionProof, req := prepareResponse(t, submitSigner, logSigner, &tree, 10)
+	clientAlwaysFail.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, errors.New("mock error"))
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, errors.New("mock error"))
+
+	submissions, err := submitLeaves(context.Background(), timeout, logs, []requests.Leaf{req})
+	if err == nil {
+		t.Errorf("submit succeeded but shouldn't have")
+		return
+	}
+
+	// One log succeeds after a whole bunch of retrying
+	clientAlwaysFail.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, errors.New("mock error"))
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, nil)
+
+	submissions, err = submitLeaves(context.Background(), timeout, logs, []requests.Leaf{req})
+	if err != nil {
+		t.Errorf("submit failed: %v", err)
+		return
+	}
+
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, errors.New("mock error"))
+
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, nil) // not persisted yet
+
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
+	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{}, errors.New("mock error"))
+
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
+	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{}, nil) // bad tree head
+
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
+	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{SignedTreeHead: sth}, nil)
+	client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, errors.New("mock error"))
+
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
+	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{SignedTreeHead: sth}, nil)
+	client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
+
+	if _, err := collectProofs(context.Background(), timeout, nop, p, submissions); err != nil {
+		t.Errorf("collect failed but shouldn't have: %v", err)
+		return
+	}
+
+	inclusionProof.LeafIndex += 1 // make proof invalid
+	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
+	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{SignedTreeHead: sth}, nil)
+	client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
+
+	if _, err := collectProofs(context.Background(), timeout, nop, p, submissions); err == nil {
+		t.Errorf("collect succeeded but shouldn't have")
+		return
 	}
 }
 
-func prepareResponse(t *testing.T, submitSigner, logSigner crypto.Signer, tree *merkle.Tree, i int) (crypto.Hash, types.SignedTreeHead, types.InclusionProof, requests.Leaf, types.Leaf, crypto.Hash) {
+func prepareResponse(t *testing.T, submitSigner, logSigner crypto.Signer, tree *merkle.Tree, i int) (crypto.Hash, types.SignedTreeHead, types.InclusionProof, requests.Leaf) {
 	msg := crypto.HashBytes([]byte{byte(i)})
 	signature, err := types.SignLeafMessage(submitSigner, msg[:])
 	if err != nil {
@@ -166,5 +217,9 @@ func prepareResponse(t *testing.T, submitSigner, logSigner crypto.Signer, tree *
 		LeafIndex: tree.Size() - 1,
 		Path:      path,
 	}
-	return msg, sth, inclusionProof, req, leaf, leafHash
+	return msg, sth, inclusionProof, req
+}
+
+func nop(_ context.Context) error {
+	return nil
 }
