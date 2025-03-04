@@ -249,7 +249,7 @@ proof will cause sigsum-submit to exit with an error.
 If a ".req" file already exists, then it is simply overwritten.
 `
 	s.diagnostics = "info"
-	s.timeout = 45 * time.Second
+	s.timeout = 10 * time.Minute
 
 	set := getopt.New()
 	set.SetParameters("[input files]")
