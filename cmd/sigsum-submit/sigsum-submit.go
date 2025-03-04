@@ -205,80 +205,69 @@ func main() {
 
 func (s *Settings) parse(args []string) {
 	const usage = `
-Create and/or submit add-leaf request(s).
+Sign checksums and submit them for logging with add-leaf requests.
 
-If no input files are listed on the command line, a single request
-is processed, reading from standard input, and writing to standard
-output (or file specified with the -o option). See further below
-for processing of multiple files.
+If no input files and output options are specified, a single add-leaf
+request is processed by reading from stdin and writing to stdout.
 
-If a signing key (-k option) is specified, a new request is
-created by signing the the SHA256 hash of the input (or, if
---raw-hash is given, input is the hash value, either exactly 32
-octets, or a hex string). The key file uses openssh format, it
-must be either an unencrypted private key, or a public key, in
-which case the corresponding private key is accessed via
-ssh-agent.
+If no signing key is provided (-k option), the input must be the body
+of an add-leaf request.  It is parsed and verified before submission.
 
-If no signing key is provided, input should instead be the body of
-an add-leaf request, which is parsed and verified.
+If no trust policy is specified (-p option), the output will be the
+body of an add-leaf request.  This is useful to sign a checksum on one
+system and then submit the request for logging on a different system.
 
-If a Sigsum policy (-p option) is provided, the request is
-submitted to the log specified by the policy, and a Sigsum proof
-is collected and output. If there are multiple logs in
-the policy, they are tried in randomized order.
+If a signing key is specified (-k option), an add-leaf request is
+created by signing the input as a signed checksum.  Use the --raw-hash
+option if the input has already been hashed with SHA256.
 
-With -k but without -p, the add-leaf request itself is output.
-With no -k and no -p, the request syntax and signature of the
-input request are verified, but there is no output.
+If a trust policy is specified (-p option), the proof is collected
+such that the policy is satisifed.  In other words, the checksum will
+be in any of the logs with enough witness cosignatures.
 
-The --leaf-hash option can be used to output the hash of the
-resulting leaf, instead of submitting it.
+If one or more input files are specified, each file corresponds to a
+separate add-leaf request.  Output is written to file(s) based on:
 
-If input files are provided on the command line, each file
-corresponds to one request, and result is written to a
-corresponding output file, based on these rules:
-
-  1. If there's exactly one input file, and the -o option is used,
+  1. If there's exactly one input file and the -o option is used, then
   output is written to that file. Any existing file is overwritten.
 
-  2. For a request output, the suffix ".req" is added to the input
-  file name.
+  2. If the output is an add-leaf request (no -p option), then the
+  output file name is formed by adding ".req" to the input file name.
 
-  3. For a proof output, if the input is a request, any ".req" suffix
-  on the input file name is stripped. Then the suffix ".proof" is
-  added.
+  3. If the output is a proof (-p option), then the output file name
+  is formed by adding ".proof" to the input file name.  If the input
+  is an add-leaf request, any ".req" suffix is removed first.
 
-  4. If the --output-dir option is provided, any directory part of the
-  input file name is stripped, and the output is written as a file in
-  the specified output directory.
+  4. If the output is written to a directory (-O option), then any
+  directory part of the input file name is stripped and the output is
+  written as a file in the specified output directory.
 
-If a corresponding .proof file already exists, that proof is read
-and verified. If the proof is valid, the input file is skipped. If
-the proof is not valid, sigsum-submit exits with an error.
+If a ".proof" file already exists, then sigsum-submit just ensures the
+proof is valid without performing a new add-leaf request.  An invalid
+proof will cause sigsum-submit to exit with an error.
 
-If a corresponding .req output file already exists, it is
-overwritten (TODO: Figure out if that is the proper behavior).
+If a ".req" file already exists, then it is simply overwritten.
 `
 	s.diagnostics = "info"
+	s.timeout = 45 * time.Second
 
 	set := getopt.New()
 	set.SetParameters("[input files]")
 
 	help := false
 	versionFlag := false
-	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input is already hashed")
-	set.FlagLong(&s.keyFile, "signing-key", 'k', "Key for signing the leaf", "file")
-	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file")
-	set.FlagLong(&s.leafHash, "leaf-hash", 0, "Output leaf hash")
-	set.Flag(&s.outputFile, 'o', "Write output to file, instead of stdout", "file")
-	set.FlagLong(&s.outputDir, "output-dir", 0, "Directory for output files", "directory")
-	set.FlagLong(&s.diagnostics, "diagnostics", 0, "One of \"fatal\", \"error\", \"warning\", \"info\", or \"debug\"", "level")
-	set.FlagLong(&s.tokenDomain, "token-domain", 0, "Create a Sigsum-Token: header for this domain")
-	set.FlagLong(&s.tokenKeyFile, "token-signing-key", 0, "Key for signing Sigsum-Token: header", "file")
-	set.FlagLong(&s.timeout, "timeout", 0, "Per-log submission timeout. Zero means library default, currently 45s", "duration")
-	set.FlagLong(&help, "help", 0, "Display help")
-	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
+	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octects or a hex string")
+	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key in OpenSSH format to sign checksums; or a corresponding public key where the private part is accessed using the SSH agent protocol", "key-file")
+	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and a quorum rule; omit to only output requests and exit", "policy-file")
+	set.FlagLong(&s.leafHash, "leaf-hash", 0, "Output the request's leaf hash without submission and exit")
+	set.FlagLong(&s.outputFile, "output", 'o', "Store output in a file, only works for a single input", "output-file")
+	set.FlagLong(&s.outputDir, "output-dir", 'O', "Store output in a directory [same as corresponding input file]", "output-dir")
+	set.FlagLong(&s.diagnostics, "diagnostics", 0, "Available levels: fatal, error, warning, info, debug", "log-level")
+	set.FlagLong(&s.tokenDomain, "token-domain", 'd', "Domain name to use for rate-limiting; \"_sigsum_v1.\" will be prepended", "domain-name")
+	set.FlagLong(&s.tokenKeyFile, "token-signing-key", 'a', "Private key in OpenSSH format to sign DNS rate-limit tokens; or a corresponding public key where the private part is accessed using the SSH agent protocol", "key-file")
+	set.FlagLong(&s.timeout, "timeout", 't', "Timeout for submitting all signed checksums and collecting the proofs", "timeout")
+	set.FlagLong(&help, "help", 0, "Show usage message and exit")
+	set.FlagLong(&versionFlag, "version", 'v', "Show software version and exit")
 	set.Parse(args)
 	if help {
 		fmt.Print(usage[1:] + "\n")

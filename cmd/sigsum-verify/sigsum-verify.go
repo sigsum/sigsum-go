@@ -55,21 +55,19 @@ func main() {
 
 func (s *Settings) parse(args []string) {
 	const usage = `
-Verifies a sigsum proof, as produced by sigsum-submit. The proof
-file is passed on the command line. The message being verified is
-the hash of the data on stdin (or if --raw-hash is given, input is
-the hash value, either exactly 32 octets, or a hex string).
+Verify that a message's signed checksum is logged for a given trust
+policy.  The message to be verified is read on stdin.
 `
 	set := getopt.New()
-	set.SetParameters("proof < input")
+	set.SetParameters("proof-file < input")
 
 	help := false
 	versionFlag := false
-	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input is already hashed")
-	set.FlagLong(&s.submitKey, "key", 'k', "Submitter public key(s) ", "file").Mandatory()
-	set.FlagLong(&s.policyFile, "policy", 'p', "Sigsum policy", "file").Mandatory()
-	set.FlagLong(&help, "help", 0, "Display help")
-	set.FlagLong(&versionFlag, "version", 'v', "Display software version")
+	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octects or a hex string")
+	set.FlagLong(&s.submitKey, "key", 'k', "Submitter public keys, one per line in OpenSSH format", "key-file").Mandatory()
+	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and a quorum rule", "policy-file").Mandatory()
+	set.FlagLong(&help, "help", 0, "Show usage message and exit")
+	set.FlagLong(&versionFlag, "version", 'v', "Show software version and exit")
 	err := set.Getopt(args, nil)
 	// Check --help and --version first; if seen, ignore errors
 	// about missing mandatory arguments.
