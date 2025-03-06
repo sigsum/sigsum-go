@@ -122,8 +122,8 @@ func main() {
 			log.Fatal("Invalid policy file: %v", err)
 		}
 		config := submit.Config{Policy: policy,
-			Domain:        settings.tokenDomain,
-			GlobalTimeout: settings.timeout,
+			Domain:  settings.tokenDomain,
+			Timeout: settings.timeout,
 		}
 		ctx := context.Background()
 
@@ -249,7 +249,7 @@ proof will cause sigsum-submit to exit with an error.
 If a ".req" file already exists, then it is simply overwritten.
 `
 	s.diagnostics = "info"
-	s.timeout = 10 * time.Minute
+	s.timeout = submit.DefaultTimeout
 
 	set := getopt.New()
 	set.SetParameters("[input files]")
