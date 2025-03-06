@@ -20,8 +20,9 @@ import (
 )
 
 const (
+	DefaultTimeout = 10 * time.Minute
+
 	defaultPollDelay      = 2 * time.Second
-	defaultGlobalTimeout  = 10 * time.Minute
 	defaultRequestTimeout = 30 * time.Second
 	defaultUserAgent      = "sigsum-go submit"
 )
@@ -31,9 +32,9 @@ type Config struct {
 	Domain          string
 	RateLimitSigner crypto.Signer
 
-	// GlobalTimeout is the time before giving up on all submissions.  Zero
-	// implies a default timeout is used.
-	GlobalTimeout time.Duration
+	// Timeout is the time before giving up on all submissions.  Zero implies a
+	// default timeout is used.
+	Timeout time.Duration
 
 	// RequestTimeout is the time before giving up on a particular request,
 	// e.g., adding a leaf or collecting its proof.  Zero implies a default
@@ -62,10 +63,10 @@ func (c *Config) getPollDelay() time.Duration {
 }
 
 func (c *Config) getGlobalTimeout() time.Duration {
-	if c.GlobalTimeout <= 0 {
-		return defaultGlobalTimeout
+	if c.Timeout <= 0 {
+		return DefaultTimeout
 	}
-	return c.GlobalTimeout
+	return c.Timeout
 }
 
 func (c *Config) getRequestTimeout() time.Duration {
