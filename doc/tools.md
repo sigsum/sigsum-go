@@ -177,7 +177,7 @@ Signatures can be verified using
 ```
 sigsum-key verify -k KEY-FILE -s SIGNATURE-FILE [-n NAMESPACE] < MSG
 ```
-The `-k `and `-s` options, specifying the public key and the
+The `-k` and `-s` options, specifying the public key and the
 signature, are required. The namespace must match the namespace used
 when the signature was created. The message signed is read from
 standard input.
