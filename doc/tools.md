@@ -12,25 +12,28 @@ Documentation of Sigsum's supported command-line tools.
 
 # General conventions
 
-There are several tools, some of which have sub commands, e.g.,
-`sigsum-key genenerate`. The aim is that each command should address
-one task, e.g., `sigsum-submit` is the tool to use to submit new items
-to a Sigsum log, and collect proof of public logging, and
-`sigsum-verify` is the tool to do offline verification of such a
-proof.
+There are several tools.  Some of these tools have sub commands, e.g.,
+`sigsum-key genenerate`.  The aim is that each command should address
+one task.  For example, `sigsum-submit` is the tool to use to submit new
+items to a Sigsum log and collect proofs of public logging, whereas
+`sigsum-verify` is the tool to do offline verification of such proofs.
 
 ## Configuration
 
-Command line options follow GNU conventions, with long and short
-options, e.g., `-k` or `--key`, and a `--help` option to display usage
-information.
+Command line options follow GNU conventions with long and short options.
+For example, `-deVALUE` is the same as `-d -eVALUE`.  If the long option
+of `-e` is `--example`, then `-d --example VALUE` would be another valid
+variation.  All tools display a usage message if `--help` is provided.
+All tools display a program version if `--version` is provided.  All
+tools that have sub commands additionally accept `help` and `version`.
 
-Operation of several tools is controlled by a Sigsum policy, defined
-by a separate [policy file](./policy.md). The location of the policy
-file is specified using the `--policy` option. 
+Operation of several tools is controlled by a Sigsum policy, defined by
+a separate [policy file](./policy.md).  The location of the policy file
+is specified using the `-p` option.  Most tools also require one or
+more input keys.  The `-k` option is used to specify a key file, but
+some commands have additional ways of taking keys and key-file input.
 
-There are no default locations for policy file or keys, and no other
-configuration files read by default.
+There are no default locations for policy file or key files.
 
 ## Key handling
 
@@ -60,10 +63,9 @@ character are ignored (same convention as for OpenSSH's
 
 ### Private keys
 
-Private keys are stored as unencrypted OpenSSH private key files
-(i.e., PEM files with a tag OPENSSH PRIVATE KEY, and contents
-defined by [OpenSSH key
-format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key)).
+Private keys are stored as unencrypted OpenSSH private key files, i.e.,
+PEM files with a tag `OPENSSH PRIVATE KEY` and the contents defined by
+[OpenSSH key format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key).
 
 Using unencrypted private keys on disk may be adequate for some use
 cases, e.g., for the key used to sign the submit tokens used for
