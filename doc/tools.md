@@ -192,7 +192,7 @@ $ sigsum-key generate -o example.key
 
 Sign a message using that key.
 ```
-$ echo Hello | sigsum-key sign  -k example.key -o hello.sign
+$ echo Hello | sigsum-key sign -k example.key -o hello.sign
 ```
 
 Verify the signature, with exit code indicating success or failure. On
