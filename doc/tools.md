@@ -137,8 +137,9 @@ sigsum-key to-hash [-k KEY-FILE] [-o OUTPUT-FILE]
 ```
 
 The sigsum-key tool also supports conversion to and from the [vkey
-format](https://pkg.go.dev/golang.org/x/mod/sumdb/note), which is related to
-the [signed note
+format](https://pkg.go.dev/golang.org/x/mod/sumdb/note).  The vkey
+format is often used by operators when sharing log and witness
+configuration, and it is also used in the related [signed note
 format](https://github.com/C2SP/C2SP/blob/signed-note/v1.0.0-rc.1/signed-note.md).
 Two key types are supported, `ed25519` and `cosignature/v1`.
 
@@ -151,9 +152,8 @@ To write a vkey, use
 ```
 sigsum-key to-vkey [-n KEY-NAME] [-k KEY-FILE] [-t TYPE] [-o OUTPUT-FILE]
 ```
-The key type defaults to `ed25519`, and the key name defaults to the
-origin line when the key is used as a sigsum log key, i.e.,
-`sigsum.org/v1/tree/<KEY-HASH>`.
+The key type defaults to `ed25519`.  The key name defaults to a Sigsum
+log's origin line, i.e., `sigsum.org/v1/tree/<KEY-HASH>`.
 
 ## Sign and verify operations
 
