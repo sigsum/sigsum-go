@@ -4,7 +4,7 @@ Documentation of Sigsum's supported command-line tools.
 
 ## Table of contents
 
-  * [General conventions tool](#general-conventions)
+  * [General conventions](#general-conventions)
   * [The sigsum-key tool](#the-sigsum-key-tool)
   * [The sigsum-submit tool](#the-sigsum-submit-tool)
   * [The sigsum-verify tool](#the-sigsum-verify-tool)
