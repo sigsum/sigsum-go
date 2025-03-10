@@ -1,7 +1,6 @@
 # Sigsum command line tools
 
-Documentation of the Sigsum command line tools, including `sigsum-key`,
-`sigsum-submit` and `sigsum-verify`.
+Documentation of Sigsum's supported command-line tools.
 
 ## Table of contents
 
