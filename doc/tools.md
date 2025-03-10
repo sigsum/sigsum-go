@@ -107,7 +107,8 @@ like
 ssh-keygen -q -N '' -t ed25519 -f KEY-FILE
 ```
 
-For this command, "generate" may be abbreviated as just "gen".
+For this command, "generate" may be abbreviated "gen" (which is the
+older deprecated sub command name; please migrate to "generate").
 
 ## Public key conversion
 
