@@ -105,7 +105,7 @@ Options:
 		var settings verifySettings
 		settings.parse(os.Args)
 		if settings.quiet {
-			log.SetOutput(nil)
+			log.SetOutput(io.Discard)
 		}
 		logKey, err := key.ReadPublicKeyFile(settings.logKeyFile)
 		if err != nil {
