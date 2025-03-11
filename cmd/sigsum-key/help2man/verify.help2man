@@ -1,2 +1,2 @@
 [NAME]
-sigsum-key verify - verify Ed25519 signature
+sigsum-key-verify - verify Ed25519 signature

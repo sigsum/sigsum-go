@@ -1,2 +1,2 @@
 [NAME]
-sigsum-token record - format rate-limit key as a TXT record
+sigsum-token-record - format rate-limit key as a TXT record
