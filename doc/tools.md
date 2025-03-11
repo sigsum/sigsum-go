@@ -25,7 +25,7 @@ For example, `-deVALUE` is the same as `-d -eVALUE`.  If the long option
 of `-e` is `--example`, then `-d --example VALUE` would be another valid
 variation.  All tools display a usage message if `--help` is provided.
 All tools display a program version if `--version` is provided.  All
-tools that have sub commands additionally accept `help` and `version`.
+tools that have sub commands additionally accept "help" and "version".
 
 Operation of several tools is controlled by a Sigsum policy, defined by
 a separate [policy file](./policy.md).  The location of the policy file
@@ -304,7 +304,7 @@ If the log(s) used are configured to apply domain-based rate limiting
 (as publicly accessible logs are expected to do), the
 `-a` option must be used to specify the private key used
 for signing a submit token, and the `-d` option specifies
-the domain (without the special `_sigsum_v1` label) where the
+the domain (without the special "_sigsum_v1" label) where the
 corresponding public key is registered. An appropriate "sigsum-token:"
 header is created and attached to each add-leaf request.
 
