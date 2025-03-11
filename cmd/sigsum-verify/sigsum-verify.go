@@ -63,7 +63,7 @@ policy.  The message to be verified is read on stdin.
 
 	help := false
 	versionFlag := false
-	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octects or a hex string")
+	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octets or a hex string")
 	set.FlagLong(&s.submitKey, "key", 'k', "Submitter public keys, one per line in OpenSSH format", "key-file").Mandatory()
 	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and a quorum rule", "policy-file").Mandatory()
 	set.FlagLong(&help, "help", 0, "Show usage message and exit")
