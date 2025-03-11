@@ -20,7 +20,7 @@ import (
 
 // Implements api.Log.
 // TODO: Move to some public package, and add an RWMutex for
-// syncronization.
+// synchronization.
 type testLog struct {
 	leaves []types.Leaf
 	tree   merkle.Tree

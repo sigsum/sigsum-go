@@ -29,7 +29,7 @@ fi
 export srcdir
 
 if [ -n "$TEST_SHLIB_DIR" ] ; then
-  # Prepend to LD_LIBRARY_PATH, if it is alredy set.
+  # Prepend to LD_LIBRARY_PATH, if it is already set.
   LD_LIBRARY_PATH="${TEST_SHLIB_DIR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   # For MACOS
   DYLD_LIBRARY_PATH="$TEST_SHLIB_DIR"

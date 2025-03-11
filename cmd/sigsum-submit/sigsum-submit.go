@@ -222,7 +222,7 @@ created by signing the input as a signed checksum.  Use the --raw-hash
 option if the input has already been hashed with SHA256.
 
 If a trust policy is specified (-p option), the proof is collected
-such that the policy is satisifed.  In other words, the checksum will
+such that the policy is satisfied.  In other words, the checksum will
 be in any of the logs with enough witness cosignatures.
 
 If one or more input files are specified, each file corresponds to a

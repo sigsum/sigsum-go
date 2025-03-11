@@ -206,7 +206,7 @@ the default behavior using the -k and -o options.
 			log.Printf("Key name %q, key type: 0x%02x (%s)", nv.Name, nv.Type, keyType)
 		}
 		if want := checkpoint.NewKeyId(nv.Name, nv.Type, &nv.PublicKey); nv.KeyId != want {
-			// TODO: Add --force to proceeed regardless.
+			// TODO: Add --force to proceed regardless.
 			log.Fatalf("Verifier Key id %x is inconsistent with name and public key, expected %x", nv.KeyId, want)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
