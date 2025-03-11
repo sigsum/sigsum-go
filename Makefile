@@ -13,7 +13,7 @@ mocks:
 
 doc:
 	doc/help2man/generate $(VERSION)
-	pandoc doc/tools.md -s -t man -o doc/sigsum-tools.1 \
+	pandoc doc/tools.md -s -t man -o doc/sigsum-tools.5 \
 		-M title="sigsum-tools" \
 		-M section="5" \
 		-M header="User guide" \
