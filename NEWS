@@ -1,3 +1,32 @@
+NEWS for Sigsum tools, v0.11.0
+
+	The main changes in this version are more efficient batch
+	submissions as well as improved documentation for all tools.
+
+	New features:
+
+	* sigsum-submit: batch submissions are done more efficiently
+	  underneath the hood (the UI of passing >1 input is the same).
+
+	* sigsum tools: some short and long option names have been added,
+	  e.g., "-a" is now the short option for "--token-signing-key".
+
+	Bug fixes:
+
+	* Fix so that the --verbose option cannot crash sigsum-token.
+
+	Documentation improvements:
+
+	* sigsum tools: all usage messages have been brushed up.
+
+	* man pages: can be generated with `make doc`.  Depends on
+	  help2man (cmd/*) and pandoc (doc/tools.md) being installed.
+
+	Incompatible changes:
+
+	* sigsum-submit: increase timeout from 45s to 10m.  There is a builtin
+	  shorter timeout for individual log queries that is not configurable.
+
 NEWS for Sigsum tools, v0.10.1
 
 	The main changes in this version are support for the vkey
