@@ -13,7 +13,7 @@ NEWS for Sigsum tools, v0.11.0
 
 	Bug fixes:
 
-	* Fix so that the --verbose option cannot crash sigsum-token.
+	* Fix so that the --quiet option cannot crash sigsum-token.
 
 	Documentation improvements:
 
