@@ -177,7 +177,7 @@ func (w *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) (
 
 type state struct {
 	fileName string
-	// Syncronizes all updates to both the size field and the
+	// Synchronizes all updates to both the size field and the
 	// underlying file.
 	m  sync.Mutex
 	th types.TreeHead

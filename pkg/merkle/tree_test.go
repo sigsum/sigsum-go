@@ -19,7 +19,7 @@ func TestSize(t *testing.T) {
 			t.Fatalf("AddLeafHash failed at size %d", tree.Size())
 		}
 		if got, want := tree.Size(), uint64(i)+1; got != want {
-			t.Errorf("unexepcted size, got %d, want %d", got, want)
+			t.Errorf("unexpected size, got %d, want %d", got, want)
 		}
 	}
 }

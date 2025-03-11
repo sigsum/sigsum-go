@@ -94,7 +94,7 @@ To generate a new key pair, run
 ```
 sigsum-key generate -o KEY-FILE
 ```
-This generates a new Ed25519 keypair (with key material provided by
+This generates a new Ed25519 key pair (with key material provided by
 the `crypto/rand` module in the golang standard library). The private
 key is stored to the given output KEY-FILE, in OpenSSH format. The
 private key is *not* encrypted, but stored with restrictive file
@@ -472,7 +472,7 @@ essentially a signature on the log's public key.
 
 To create a token, use `sigsum-token create`. There are two mandatory
 options, `-k` to specify the signing key, i.e., the private half of the
-rate limit keypair, and `-l`, to specify the file with the log's
+rate limit key pair, and `-l`, to specify the file with the log's
 public key. If no other options are used, the output is the token in
 the form of a hex string (representing an Ed25519 signature).
 

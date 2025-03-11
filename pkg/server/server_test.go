@@ -173,7 +173,7 @@ func TestMetrics(t *testing.T) {
 	// scheduling on an overloaded machine.
 	maxExpectedDelay := 100 * time.Millisecond
 
-	// Just long enough to be noticable.
+	// Just long enough to be noticeable.
 	testDelay := 200 * time.Millisecond
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

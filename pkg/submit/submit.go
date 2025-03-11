@@ -223,7 +223,7 @@ func collectProofs(ctx context.Context, timeout time.Duration, sleep func(ctx co
 	var proofs []proof.SigsumProof
 	for i, submission := range submissions {
 		for {
-			log.Info("Attempting to retreive proof for checksum#%d", i+1)
+			log.Info("Attempting to retrieve proof for checksum#%d", i+1)
 			pr, err := collectProof(ctx, timeout, policy, submission)
 			if err != nil {
 				return nil, err
