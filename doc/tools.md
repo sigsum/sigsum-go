@@ -1,10 +1,10 @@
 # Sigsum command line tools
 
-Documentation of the Sigsum command line tools, including `sigsum-key`,
-`sigsum-submit` and `sigsum-verify`.
+Documentation of Sigsum's supported command-line tools.
 
 ## Table of contents
-  * [General conventions tool](#general-conventions)
+
+  * [General conventions](#general-conventions)
   * [The sigsum-key tool](#the-sigsum-key-tool)
   * [The sigsum-submit tool](#the-sigsum-submit-tool)
   * [The sigsum-verify tool](#the-sigsum-verify-tool)
@@ -12,25 +12,28 @@ Documentation of the Sigsum command line tools, including `sigsum-key`,
 
 # General conventions
 
-There are several tools, some of which have sub commands, e.g.,
-`sigsum-key genenerate`. The aim is that each command should address
-one task, e.g., `sigsum-submit` is the tool to use to submit new items
-to a Sigsum log, and collect proof of public logging, and
-`sigsum-verify` is the tool to do offline verification of such a
-proof.
+There are several tools.  Some of these tools have sub commands, e.g.,
+`sigsum-key genenerate`.  The aim is that each command should address
+one task.  For example, `sigsum-submit` is the tool to use to submit new
+items to a Sigsum log and collect proofs of public logging, whereas
+`sigsum-verify` is the tool to do offline verification of such proofs.
 
 ## Configuration
 
-Command line options follow GNU conventions, with long and short
-options, e.g., `-k` or `--key`, and a `--help` option to display usage
-information.
+Command line options follow GNU conventions with long and short options.
+For example, `-deVALUE` is the same as `-d -eVALUE`.  If the long option
+of `-e` is `--example`, then `-d --example VALUE` would be another valid
+variation.  All tools display a usage message if `--help` is provided.
+All tools display a program version if `--version` is provided.  All
+tools that have sub commands additionally accept "help" and "version".
 
-Operation of several tools is controlled by a Sigsum policy, defined
-by a separate [policy file](./policy.md). The location of the policy
-file is specified using the `--policy` option. 
+Operation of several tools is controlled by a Sigsum policy, defined by
+a separate [policy file](./policy.md).  The location of the policy file
+is specified using the `-p` option.  Most tools also require one or
+more input keys.  The `-k` option is used to specify a key file, but
+some commands have additional ways of taking keys and key-file input.
 
-There are no default locations for policy file or keys, and no other
-configuration files read by default.
+There are no default locations for policy file or key files.
 
 ## Key handling
 
@@ -60,10 +63,9 @@ character are ignored (same convention as for OpenSSH's
 
 ### Private keys
 
-Private keys are stored as unencrypted OpenSSH private key files
-(i.e., PEM files with a tag OPENSSH PRIVATE KEY, and contents
-defined by [OpenSSH key
-format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key)).
+Private keys are stored as unencrypted OpenSSH private key files, i.e.,
+PEM files with a tag `OPENSSH PRIVATE KEY` and the contents defined by
+[OpenSSH key format](https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.key).
 
 Using unencrypted private keys on disk may be adequate for some use
 cases, e.g., for the key used to sign the submit tokens used for
@@ -105,7 +107,8 @@ like
 ssh-keygen -q -N '' -t ed25519 -f KEY-FILE
 ```
 
-For this command, "generate" may be abbreviated as just "gen".
+For this command, "generate" may be abbreviated "gen" (which is the
+older deprecated sub command name; please migrate to "generate").
 
 ## Public key conversion
 
@@ -134,8 +137,9 @@ sigsum-key to-hash [-k KEY-FILE] [-o OUTPUT-FILE]
 ```
 
 The sigsum-key tool also supports conversion to and from the [vkey
-format](https://pkg.go.dev/golang.org/x/mod/sumdb/note), which is related to
-the [signed note
+format](https://pkg.go.dev/golang.org/x/mod/sumdb/note).  The vkey
+format is often used by operators when sharing log and witness
+configuration, and it is also used in the related [signed note
 format](https://github.com/C2SP/C2SP/blob/signed-note/v1.0.0-rc.1/signed-note.md).
 Two key types are supported, `ed25519` and `cosignature/v1`.
 
@@ -148,9 +152,8 @@ To write a vkey, use
 ```
 sigsum-key to-vkey [-n KEY-NAME] [-k KEY-FILE] [-t TYPE] [-o OUTPUT-FILE]
 ```
-The key type defaults to `ed25519`, and the key name defaults to the
-origin line when the key is used as a sigsum log key, i.e.,
-`sigsum.org/v1/tree/<KEY-HASH>`.
+The key type defaults to `ed25519`.  The key name defaults to a Sigsum
+log's origin line, i.e., `sigsum.org/v1/tree/<KEY-HASH>`.
 
 ## Sign and verify operations
 
@@ -174,7 +177,7 @@ Signatures can be verified using
 ```
 sigsum-key verify -k KEY-FILE -s SIGNATURE-FILE [-n NAMESPACE] < MSG
 ```
-The `-k `and `-s` options, specifying the public key and the
+The `-k` and `-s` options, specifying the public key and the
 signature, are required. The namespace must match the namespace used
 when the signature was created. The message signed is read from
 standard input.
@@ -189,7 +192,7 @@ $ sigsum-key generate -o example.key
 
 Sign a message using that key.
 ```
-$ echo Hello | sigsum-key sign  -k example.key -o hello.sign
+$ echo Hello | sigsum-key sign -k example.key -o hello.sign
 ```
 
 Verify the signature, with exit code indicating success or failure. On
@@ -249,18 +252,17 @@ of the output file is constructed as follows:
    suffix on the input file name is stripped. Then the suffix
    ".proof" is added.
 
-4. If the --output-dir option is provided, any directory part of
-   the input file name is stripped, and the output is written as a
-   file in the specified output directory.
+4. If the -O option is provided, any directory part of the input file
+   name is stripped, and the output is written as a file in the
+   specified output directory.
 
 When output is written to a named file (i.e., not to standard output),
 the output is first written to a temporary file, which is atomically
 renamed to the specified name only on success.
 
-The tool can log various diagnostic messages, and the level of
-verbosity is controlled with the `--diagnostics` option, which takes
-an argument that can be one of "fatal", "error", "warning", "info", or
-"debug", the default being "info".
+The tool can log various diagnostic messages.  The level of verbosity is
+controlled with the `--diagnostics` option, which takes an argument that
+can be one of "fatal", "error", "warning", "info", or "debug".
 
 ## Creating a request
 
@@ -279,12 +281,12 @@ Any existing output files are overwritten.
 
 ## Submitting a request
 
-To submit one or more the leaf requests, specify a Sigsum policy file
+To submit one or more leaf requests, specify a Sigsum policy file
 using the `-p` option.
 
 If the `-k` option and a signing key was provided, the leaf(s) to be
 submitted are the newly created ones. If no `-k` option was provided,
-each input should instead be a the body of an add-leaf request, which
+each input should instead be the body of an add-leaf request, which
 is parsed and verified. Separating signing and submission is useful if
 the machine with access to the signing key is not directly connected
 to the Internet.
@@ -300,8 +302,8 @@ tried in random order.
 
 If the log(s) used are configured to apply domain-based rate limiting
 (as publicly accessible logs are expected to do), the
-`--token-signing-key` option must be used to specify the private key used
-for signing a submit token, and the `--token-domain` option specifies
+`-a` option must be used to specify the private key used
+for signing a submit token, and the `-d` option specifies
 the domain (without the special "_sigsum_v1" label) where the
 corresponding public key is registered. An appropriate "sigsum-token:"
 header is created and attached to each add-leaf request.
@@ -320,9 +322,6 @@ it is acknowledged by the log. It keeps polling the log until it has
 collected all the pieces for a [Sigsum proof](./sigsum-proof.md),
 i.e., a cosigned tree head, with cosignatures satisfying quorum
 requirements, and an inclusion proof for the submitted leaf.
-
-If submission to the first log fails, or polling for the required proof
-material times out, `sigsum-submit` tries the next log.
 
 On submission success, a Sigsum proof, version 2, is written to
 respective output file, as described above. (The last version
@@ -405,7 +404,7 @@ The `sigsum-verify` tool verifies a Sigsum proof. It accepts both
 version 2 proofs, as created by the current `sigsum-submit`, and
 version 1 proofs, as created by older versions of `sigsum-submit`.
 
-The message to be verified is read from standard input. Like for
+The message to be verified is read from standard input. Similar to
 `sigsum-submit`, by default the message is the SHA256 hash of the
 input data. If the `--raw-hash` options is provided, the input is used
 as is, without hashing, and in this case, it must be either exactly 32
@@ -424,8 +423,8 @@ The proof is considered valid if
    requirement, and
 4. the inclusion proof ties the leaf to the signed tree head.
 
-See [Sigsum proof](./sigsum-proof.md) for more information on the
-meaning of a sigsum proof, and the validation criteria,
+See the [Sigsum proof spec](./sigsum-proof.md) for more information on
+the meaning of a sigsum proof, and the validation criteria.
 
 ## Example
 
@@ -473,24 +472,24 @@ essentially a signature on the log's public key.
 
 To create a token, use `sigsum-token create`. There are two mandatory
 options, `-k` to specify the signing key, i.e., the private half of the
-rate limit keypair, and `--log-key`, to specify the file with the log's
+rate limit keypair, and `-l`, to specify the file with the log's
 public key. If no other options are used, the output is the token in
 the form of a hex string (representing an Ed25519 signature).
 
-If the `--domain` option is used, the argument to this option is the
+If the `-d` option is used, the argument to this option is the
 domain where the corresponding public key is registered, and then the
 command outputs a complete HTTP header line.
 
 Note that when using `sigsum-submit`, you don't need `sigsum-token` to
 create any tokens; `sigsum-submit` creates appropriate tokens for each
-log if you pass the `--token-signing-key` and `--token-domain` options.
+log if you pass the `-a` and `-d` options.
 
 ## Verifying a submit token
 
 The `sigsum-token verify` sub command reads the token to validate from
 standard input, and it handles both raw hex tokens, and complete HTTP
-headers. For a raw token, one of `-k` (public key) or `--domain` is
-required. For a HTTP header, `--key` and `--domain` are optional, but
+headers. For a raw token, one of `-k` (public key) or `-d` (domain name)
+is required. For a HTTP header, `-k` and `-d` are optional, but
 validation fails if they are inconsistent with what's looked up from
 the HTTP header. The `-q` (quiet) option suppresses output on
 validation errors, with result only reflected in the exit code.
@@ -505,6 +504,6 @@ _sigsum_v1 IN TXT "e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130
 
 Create a token, formatted as a HTTP header.
 ```
-$ sigsum-token create -k example.key --log-key poc.key.pub --domain test.example.org
+$ sigsum-token create -k example.key -l poc.key.pub -d test.example.org
 sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e938f1b99dcc9333954c9eab1dfaf89643679a47c7a33fa2182c8f8cb8eb1222f90c55355a8b5b300
 ```
