@@ -263,7 +263,7 @@ func (s *VerifySettings) parse(args []string) {
 	const usage = `
 Verify an Ed25519 signature with a given namespace.  The namespaces
 that are used in the Sigsum system are 'sigsum.org/v1/tree-leaf'
-(signed checksums) and 'sigsum.org/v1/submit-token' (rate limitting).
+(signed checksums) and 'sigsum.org/v1/submit-token' (rate limiting).
 The default behavior is to not use any namespace.
 
 The message to verify is provided on stdin.
@@ -281,7 +281,7 @@ func (s *SignSettings) parse(args []string) {
 	const usage = `
 Create an Ed25519 signature with a given namespace. The namespaces
 that are used in the Sigsum system are 'sigsum.org/v1/tree-leaf'
-(signed checksums) and 'sigsum.org/v1/submit-token' (rate limitting).
+(signed checksums) and 'sigsum.org/v1/submit-token' (rate limiting).
 The default behavior is to not use any namespace.
 
 The message to sign is provided on stdin.

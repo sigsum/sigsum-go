@@ -41,7 +41,7 @@ func TestLogPolicy(t *testing.T) {
 		t.Errorf("verifying treehead for log 2 succeeded, but it's not allowed by policy")
 	}
 	if err := p.VerifyCosignedTreeHead(&logHashes[1], &cths[0]); err == nil {
-		t.Errorf("verifying treehead for log 0 with log hash 1 succeeeded")
+		t.Errorf("verifying treehead for log 0 with log hash 1 succeeded")
 	}
 }
 

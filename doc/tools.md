@@ -13,7 +13,7 @@ Documentation of Sigsum's supported command-line tools.
 # General conventions
 
 There are several tools.  Some of these tools have sub commands, e.g.,
-`sigsum-key genenerate`.  The aim is that each command should address
+`sigsum-key generate`.  The aim is that each command should address
 one task.  For example, `sigsum-submit` is the tool to use to submit new
 items to a Sigsum log and collect proofs of public logging, whereas
 `sigsum-verify` is the tool to do offline verification of such proofs.
