@@ -53,6 +53,11 @@ make-doc:
   stage: documentation
   before_script:
     - apt-get update
-    - apt-get install -y help2man pandoc
+    - apt-get install -y help2man pandoc mandoc man-db
   script:
     - make doc
+    # https://manpages.debian.org/testing/mandoc/mandoc.1.en.html
+    # https://lintian.debian.org/tags/bad-whatis-entry.html
+    - MANPAGER=cat mandoc -T lint doc/*.? || true
+    - MANPAGER=cat mandoc -T lint -W error doc/*.?
+    - lexgrog --debug doc/*.1
