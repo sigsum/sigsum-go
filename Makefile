@@ -1,5 +1,6 @@
-DATE := $(shell date +"%B %Y")
 VERSION := $(shell git describe --tags --always)
+COMMIT := $(shell git rev-parse $(VERSION))
+DATE := $(shell git show -s --format=%cd --date=format:"%B %Y" $(COMMIT))
 
 default: doc
 
