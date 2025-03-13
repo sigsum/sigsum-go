@@ -1,6 +1,13 @@
-VERSION := $(shell git describe --tags --always)
-COMMIT := $(shell git rev-parse $(VERSION))
-DATE := $(shell git show -s --format=%cd --date=format:"%B %Y" $(COMMIT))
+# Populate VERSION and DATE based on the latest git-commit.  The user may
+# override VERSION and DATE by specifying *both* on the command line.
+#
+# Note: these variables are only used for generating man pages.
+VERSION ?= $(shell git describe --tags --always)
+ifeq ($(origin VERSION), file)
+	COMMIT := $(shell git rev-parse $(VERSION))
+	TIMESTAMP := $(shell git show -s --format=%cd --date=format:"%B %Y" $(COMMIT))
+endif
+DATE ?= $(TIMESTAMP)
 
 default: doc
 
