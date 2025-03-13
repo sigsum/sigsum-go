@@ -1,5 +1,25 @@
-DATE := $(shell date +"%B %Y")
-VERSION := $(shell git describe --tags --always)
+# Populate VERSION and DATE based on the latest git-commit.  The user may
+# override VERSION and DATE by specifying *both* on the command line.
+#
+# Note: these variables are only used for generating man pages.
+VERSION ?= $(shell git describe --tags --always)
+ifeq ($(origin VERSION), file)
+	COMMIT := $(shell git rev-parse $(VERSION))
+	# The timestamp git-show extracts is in the *author's timezone*, i.e.,
+	# there's no conversion to the *user's timezone* unless --date=local is
+	# provided.  So, we can be sure we have a deterministic timestamp value.
+	# We're using the timestamp that was explicitly set by the author (%ad).
+	#
+	# %B uses the *user's locale* when printing the month because the date
+	# formatting is done by strftime (see man git-log and man strftime).  To
+	# ensure a deterministic value, we use the standard locale called "C".
+	# https://www.gnu.org/software/libc/manual/html_node/Choosing-Locale.html
+	#
+	# We use LC_ALL because it ensures we override both LANG and LC_TIME.
+	# https://www.gnu.org/software/libc/manual/html_node/Locale-Categories.html
+	TIMESTAMP := $(shell LC_ALL=C git show -s --format=%ad --date=format:"%B %Y" $(COMMIT))
+endif
+DATE ?= $(TIMESTAMP)
 
 default: doc
 
