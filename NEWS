@@ -1,3 +1,18 @@
+NEWS for Sigsum tools, v0.11.1
+
+	This release fixes manpage nits found during Debian packaging.
+
+	Bug fixes:
+
+	* Fix non-deterministic date in sigsum-tools manpage.
+	* Fix invalid manpage NAME sections for all subcommands.
+	* Fix typos in usage messages and manpages.
+	* Fix s/--verbose/--quiet/ in NEWS entry for v0.11.0.
+
+	Incompatible changes:
+
+	* Move sigsum-tools manpage from section 5 to section 7.
+
 NEWS for Sigsum tools, v0.11.0
 
 	The main changes in this version are more efficient batch
