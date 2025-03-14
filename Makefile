@@ -17,7 +17,10 @@ ifeq ($(origin VERSION), file)
 	#
 	# We use LC_ALL because it ensures we override both LANG and LC_TIME.
 	# https://www.gnu.org/software/libc/manual/html_node/Locale-Categories.html
-	TIMESTAMP := $(shell LC_ALL=C git show -s --format=%ad --date=format:"%B %Y" $(COMMIT))
+	#
+	# If the git-commit is signed, the below outputs signature information too.
+	# The use of tail ensures we only grab the final line which is the date.
+	TIMESTAMP := $(shell LC_ALL=C git show -s --format=%ad --date=format:"%B %Y" $(COMMIT) | tail -n1)
 endif
 DATE ?= $(TIMESTAMP)
 
