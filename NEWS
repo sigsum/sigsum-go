@@ -1,3 +1,11 @@
+NEWS for Sigsum tools, v0.11.2
+
+	This release fixes yet another manpage date nit.
+
+	Bug fixes:
+
+	* Fix so that make doc works for signed git tags.
+
 NEWS for Sigsum tools, v0.11.1
 
 	This release fixes manpage nits found during Debian packaging.
