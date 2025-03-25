@@ -13,9 +13,9 @@ if [ "$GOARCH" ] ; then
     # magic is installed.
 
     echo >&2 Cross-compiling for GOARCH=${GOARCH}
-    GOARCH="" GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.15.0
+    GOARCH="" GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.15.1
     go build -o bin/ ../cmd/...
 else
     GOBIN=$(pwd)/bin go install ../cmd/...
-    GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.15.0
+    GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.15.1
 fi
