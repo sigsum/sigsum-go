@@ -41,3 +41,4 @@ check` Makefile target.
   - The [sigsum-general][] mailing list
 
 [sigsum-general]: https://lists.sigsum.org/mailman3/postorius/lists/sigsum-general.lists.sigsum.org/
+
