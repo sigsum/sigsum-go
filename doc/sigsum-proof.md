@@ -100,10 +100,10 @@ To verify the proof, the following steps are required:
    cosignatures out of n known witnesses; more complex policies are
    possible but out of scope for this document.
    
-6. Compute the `leaf_hash` from the `checksum` and the other items on
-   the leaf line, and check that the inclusion proof is valid. In the
-   corner case that `tree_size = 1`, instead check that `leaf_hash =
-   root_hash`.
+6. Compute the `leaf_hash` from the `checksum` together with the
+   keyhash and signature from the leaf line, and check that the
+   inclusion proof is valid. In the corner case that `tree_size = 1`,
+   instead check that `leaf_hash = root_hash`.
 
 ## Use of timestamps
 
