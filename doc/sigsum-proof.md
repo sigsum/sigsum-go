@@ -11,7 +11,7 @@ it.
 To take a step back, the idea is that one party, the *submitter*,
 wants to distribute a message together with proof that the message is
 publicly logged. See
-[design](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/design.md)
+[design](https://git.glasklar.is/nisse/cats-2023/-/blob/main/sigsum-design-cats-2023.pdf)
 for the bigger picture on why that is useful. The submitter interacts
 with a sigsum log server to submit the message, and collect related
 inclusion proof and cosignatures. This is packaged, together with

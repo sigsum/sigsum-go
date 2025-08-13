@@ -1,5 +1,9 @@
 image: golang:1.23
 
+before_script:
+  - apt-get update
+  - apt-get install -y make curl git
+
 stages:
 - build
 - test
@@ -53,7 +57,7 @@ make-doc:
   stage: documentation
   before_script:
     - apt-get update
-    - apt-get install -y help2man pandoc mandoc man-db
+    - apt-get install -y make git help2man pandoc mandoc man-db
   script:
     - make doc
     # https://manpages.debian.org/testing/mandoc/mandoc.1.en.html
