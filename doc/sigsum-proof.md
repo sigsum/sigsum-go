@@ -48,7 +48,7 @@ version=2
 log=KEYHASH
 leaf=KEYHASH SIGNATURE
 
-tree_size=NUMBER
+size=NUMBER
 root_hash=HASH
 signature=SIGNATURE
 cosignature=KEYHASH TIMESTAMP SIGNATURE
@@ -66,9 +66,10 @@ response to the `get-leaves` request, but the checksum is omitted; the
 checksum must be derived from other context.
 
 The last two blocks are verbatim responses from the get-tree-head and
-get-inclusion proof requests (in the corner case that `tree_size` = 1,
-the last part is omitted, since it is implied that `leaf_index` = 0,
-and there is no inclusion path).
+get-inclusion proof requests. In the corner case that `size` <= 1, the
+last part is omitted. A proof with `size` = 0 is always invalid, and
+for `size` = 1, it is implied that `leaf_index` = 0 and there is no
+inclusion path.
 
 # Verifying a proof
 
@@ -102,7 +103,7 @@ To verify the proof, the following steps are required:
    
 6. Compute the `leaf_hash` from the `checksum` together with the
    keyhash and signature from the leaf line, and check that the
-   inclusion proof is valid. In the corner case that `tree_size = 1`,
+   inclusion proof is valid. In the corner case that `size = 1`,
    instead check that `leaf_hash = root_hash`.
 
 ## Use of timestamps
