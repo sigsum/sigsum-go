@@ -10,11 +10,9 @@ import (
 
 // TODO: Also support named policies located in the regular file
 // system. E.g., check the environment variable
-// ${SIGSUM_POLICIES_DIR}, falling back to /etc/sigsum/policies. It's
-// probably convenient to use the same name space for builtin policies
-// and policy files, but we may then need a way to inhibit one or the
-// other during lookup.
+// ${SIGSUM_POLICY_DIR}, falling back to /etc/sigsum/policy.
 // Intention is to have a ByName function that looks in both places.
+// See https://git.glasklar.is/sigsum/project/documentation/-/blob/main/proposals/2025-07-named-policies.md
 
 // Files in /etc/sigsum/policy/ are expected to have the suffix
 // ".sigsum-policy" -- we intentionally use a different suffix for builtin
