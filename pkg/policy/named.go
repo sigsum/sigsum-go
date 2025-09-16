@@ -16,7 +16,13 @@ import (
 // other during lookup.
 // Intention is to have a ByName function that looks in both places.
 
-//go:embed "builtin/*.policy"
+// Files in /etc/sigsum/policy/ are expected to have the suffix
+// ".sigsum-policy" -- we intentionally use a different suffix for builtin
+// policy files since these are only used for embedding into the program,
+// they should not be confused with /etc/sigsum/policy/ files.
+const builtinPolicyFilenameSuffix string = ".builtin-policy"
+
+//go:embed "builtin/*.builtin-policy"
 var builtin embed.FS
 
 func checkName(name string) error {
@@ -31,7 +37,7 @@ func BuiltinByName(name string) (*Policy, error) {
 	if err := checkName(name); err != nil {
 		return nil, err
 	}
-	f, err := builtin.Open(filepath.Join("builtin", name) + ".policy")
+	f, err := builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +53,7 @@ func BuiltinList() []string {
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
 		if e.Type().IsRegular() {
-			if name, found := strings.CutSuffix(e.Name(), ".policy"); found {
+			if name, found := strings.CutSuffix(e.Name(), builtinPolicyFilenameSuffix); found {
 				names = append(names, name)
 			}
 		}
@@ -59,7 +65,7 @@ func BuiltinRead(name string) ([]byte, error) {
 	if err := checkName(name); err != nil {
 		return nil, err
 	}
-	f, err := builtin.Open(filepath.Join("builtin", name) + ".policy")
+	f, err := builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
 	if err != nil {
 		return nil, err
 	}
