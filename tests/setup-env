@@ -18,4 +18,5 @@ if [ "$GOARCH" ] ; then
 else
     GOBIN=$(pwd)/bin go install ../cmd/...
     GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.15.1
+    GOBIN=$(pwd)/bin go install sigsum.org/key-mgmt/cmd/sigsum-agent@v0.2.5
 fi
