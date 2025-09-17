@@ -18,5 +18,6 @@ if [ "$GOARCH" ] ; then
 else
     GOBIN=$(pwd)/bin go install ../cmd/...
     GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.15.1
+    # TODO: what about the crosscompiling case above, how should sigsum-agent be installed in that case?
     GOBIN=$(pwd)/bin go install sigsum.org/key-mgmt/cmd/sigsum-agent@v0.2.5
 fi
