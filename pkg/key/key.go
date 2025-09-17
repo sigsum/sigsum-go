@@ -9,6 +9,7 @@ import (
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/log"
 )
 
 // Expects an Openssh public key (single-line format)
@@ -16,33 +17,62 @@ func ParsePublicKey(ascii string) (crypto.PublicKey, error) {
 	return ssh.ParsePublicEd25519(ascii)
 }
 
+// s is a string on the form sigsum-policy="foo"
+func extractPolicyName(s string) (string, error) {
+	i := strings.IndexRune(s, '=')
+	quotedName := s[i+1:]
+	log.Info("quotedName = %v", quotedName)
+	// First and last character must be quotation marks
+	if quotedName[0] != '"' || quotedName[len(quotedName)-1] != '"' {
+		return "", fmt.Errorf("Failed to extract policy name")
+	}
+	return quotedName[1 : len(quotedName)-1], nil
+}
+
 // Supports two formats:
 //   - Openssh private key
 //   - Openssh public key, in which case ssh-agent is used to
 //     access the corresponding private key.
 //   - (Deprecated) Raw hex-encoded private key (RFC 8032)
-func ParsePrivateKey(ascii string) (crypto.Signer, error) {
+//
+// The second output is a resulting policy name, in case a
+// "sigsum-policy=" option is found in the public key.
+func ParsePrivateKey(ascii string) (crypto.Signer, string, error) {
 	ascii = strings.TrimSpace(ascii)
 	// Accepts public keys only in openssh format, since with raw
 	// hex-encoded keys, we can't distinguish between public and
 	// private keys.
+	policyName := ""
+	if strings.HasPrefix(ascii, "sigsum-policy=") {
+		// extract first part of the string, until first space
+		i := strings.IndexRune(ascii, ' ')
+		firstPart := ascii[:i]
+		ascii = ascii[i+1:]
+		var err error
+		policyName, err = extractPolicyName(firstPart)
+		if err != nil {
+			return nil, "", err
+		}
+		log.Info("policyName = %v", policyName)
+	}
 	if strings.HasPrefix(ascii, "ssh-ed25519 ") {
 		key, err := ssh.ParsePublicEd25519(ascii)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		c, err := ssh.Connect()
 		if err != nil {
-			return nil, fmt.Errorf("only public key available, and no ssh-agent: %v", err)
+			return nil, "", fmt.Errorf("only public key available, and no ssh-agent: %v", err)
 		}
-		return c.NewSigner(&key)
+		signer, err := c.NewSigner(&key)
+		return signer, policyName, err
 	}
 	_, signer, err := ssh.ParsePrivateKeyFile([]byte(ascii))
 	if err == ssh.NoPEMError {
 		// TODO: Delete support for raw keys.
 		signer, err = crypto.SignerFromHex(ascii)
 	}
-	return signer, err
+	return signer, "", err
 }
 
 func ReadPublicKeyFile(fileName string) (crypto.PublicKey, error) {
@@ -99,15 +129,17 @@ func ReadPublicKeysFile(fileName string) (map[crypto.Hash]crypto.PublicKey, erro
 	return parsePublicKeysFile(f, fileName)
 }
 
-func ReadPrivateKeyFile(fileName string) (crypto.Signer, error) {
+// The second output is a resulting policy name, in case a
+// "sigsum-policy=" option is found in the public key.
+func ReadPrivateKeyFile(fileName string) (crypto.Signer, string, error) {
 	contents, err := os.ReadFile(fileName)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	signer, err := ParsePrivateKey(string(contents))
+	signer, policyName, err := ParsePrivateKey(string(contents))
 	if err != nil {
-		return nil, fmt.Errorf("parsing private key file %q failed: %v",
+		return nil, "", fmt.Errorf("parsing private key file %q failed: %v",
 			fileName, err)
 	}
-	return signer, nil
+	return signer, policyName, nil
 }

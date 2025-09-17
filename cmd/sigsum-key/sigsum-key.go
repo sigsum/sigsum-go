@@ -108,7 +108,7 @@ Options:
 	case "sign":
 		var settings SignSettings
 		settings.parse(os.Args)
-		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
+		signer, _, err := key.ReadPrivateKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal(err)
 		}

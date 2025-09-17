@@ -31,6 +31,7 @@ type Settings struct {
 	rawHash      bool
 	keyFile      string
 	policyFile   string
+	policyName   string
 	leafHash     bool
 	diagnostics  string
 	inputFiles   []string
@@ -53,12 +54,15 @@ func main() {
 		log.Fatal("%v", err)
 	}
 
+	var thePolicyName string
 	var source LeafSource
 	if len(settings.keyFile) > 0 {
-		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
+		// TODO: the ReadPrivateKeyFile() has a misleading name, it is not always a private key but sometimes a pubkey file?
+		signer, policyName, err := key.ReadPrivateKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal("reading key file failed: %v", err)
 		}
+		thePolicyName = policyName
 		publicKey := signer.Public()
 		if len(settings.inputFiles) == 0 {
 			source = func(_ LeafSkip, sink LeafSink) {
@@ -116,12 +120,24 @@ func main() {
 		}
 	}
 
+	var thePolicy *policy.Policy
 	if len(settings.policyFile) > 0 {
-		policy, err := policy.ReadPolicyFile(settings.policyFile)
+		var err error
+		thePolicy, err = policy.ReadPolicyFile(settings.policyFile)
 		if err != nil {
 			log.Fatal("Invalid policy file: %v", err)
 		}
-		config := submit.Config{Policy: policy,
+	}
+	if thePolicyName != "" {
+		var err error
+		thePolicy, err = policy.BuiltinByName(thePolicyName)
+		if err != nil {
+			log.Fatal("BuiltinByName failed: %v", err)
+		}
+	}
+	log.Info("thePolicy = %v", thePolicy)
+	if thePolicy != nil {
+		config := submit.Config{Policy: thePolicy,
 			Domain:  settings.tokenDomain,
 			Timeout: settings.timeout,
 		}
@@ -129,7 +145,7 @@ func main() {
 
 		if len(config.Domain) > 0 {
 			var err error
-			config.RateLimitSigner, err = key.ReadPrivateKeyFile(settings.tokenKeyFile)
+			config.RateLimitSigner, _, err = key.ReadPrivateKeyFile(settings.tokenKeyFile)
 			if err != nil {
 				log.Fatal("reading token key file failed: %v", err)
 			}
@@ -157,7 +173,7 @@ func main() {
 				log.Fatal("Parsing proof file %q failed: %v", proofName, err)
 			}
 			if err := sigsumProof.Verify(msg, map[crypto.Hash]crypto.PublicKey{
-				crypto.HashBytes(publicKey[:]): *publicKey}, policy); err != nil {
+				crypto.HashBytes(publicKey[:]): *publicKey}, thePolicy); err != nil {
 				log.Fatal("Existing proof file %q is not valid: %v", proofName, err)
 			}
 			return true
@@ -258,7 +274,8 @@ If a ".req" file already exists, then it is simply overwritten.
 	versionFlag := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octets or a hex string")
 	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key in OpenSSH format to sign checksums; or a corresponding public key where the private part is accessed using the SSH agent protocol", "key-file")
-	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and a quorum rule; omit to only output requests and exit", "policy-file")
+	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy file defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-file")
+	set.FlagLong(&s.policyName, "Policy", 'P', "Trust policy specified as a named policy defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-name")
 	set.FlagLong(&s.leafHash, "leaf-hash", 0, "Output the request's leaf hash without submission and exit")
 	set.FlagLong(&s.outputFile, "output", 'o', "Store output in a file, only works for a single input", "output-file")
 	set.FlagLong(&s.outputDir, "output-dir", 'O', "Store output in a directory [same as corresponding input file]", "output-dir")
