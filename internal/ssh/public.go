@@ -44,8 +44,8 @@ func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
 	keyTypeFieldIdx := 0
 	keyFieldIdx := 1
 	if strings.HasPrefix(fields[0], "sigsum-policy=") {
-	  keyTypeFieldIdx++
-	  keyFieldIdx++
+		keyTypeFieldIdx++
+		keyFieldIdx++
 	}
 	if fields[keyTypeFieldIdx] != "ssh-ed25519" {
 		return crypto.PublicKey{}, fmt.Errorf("unsupported public key type: %v", fields[keyTypeFieldIdx])
