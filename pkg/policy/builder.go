@@ -2,28 +2,59 @@ package policy
 
 import (
 	"fmt"
+
+	"sigsum.org/sigsum-go/pkg/crypto"
 )
+
+type quorumSingle struct {
+	w crypto.Hash
+}
+
+func (q *quorumSingle) IsQuorum(verified map[crypto.Hash]struct{}) bool {
+	_, ok := verified[q.w]
+	return ok
+}
+
+type quorumKofN struct {
+	subQuorums []Quorum
+	k          int
+}
+
+func (q *quorumKofN) IsQuorum(verified map[crypto.Hash]struct{}) bool {
+	c := 0
+	for _, sq := range q.subQuorums {
+		if sq.IsQuorum(verified) {
+			c++
+		}
+	}
+	return c >= q.k
+}
 
 // Represents a policy being built.
 type builder struct {
-	// TODO: Move mappings and update logic here, and delete
-	// methods like Policy.addWitness.
-	policy *Policy
-	names  map[string]Quorum
+	names     map[string]Quorum
+	logs      map[crypto.Hash]Entity
+	witnesses map[crypto.Hash]Entity
+	quorum    Quorum
 }
 
 func newBuilder() *builder {
 	return &builder{
-		policy: newEmptyPolicy(),
-		names:  map[string]Quorum{ConfigNone: &quorumKofN{}},
+		names:     map[string]Quorum{ConfigNone: &quorumKofN{}},
+		logs:      make(map[crypto.Hash]Entity),
+		witnesses: make(map[crypto.Hash]Entity),
 	}
 }
 
 func (b *builder) finish() (*Policy, error) {
-	if b.policy.quorum == nil {
+	if b.quorum == nil {
 		return nil, fmt.Errorf("no quorum defined")
 	}
-	return b.policy, nil
+	return &Policy{
+		logs:      b.logs,
+		witnesses: b.witnesses,
+		quorum:    b.quorum,
+	}, nil
 }
 
 type Setting interface {
@@ -40,8 +71,12 @@ type addLog struct {
 }
 
 func (l *addLog) apply(b *builder) error {
-	_, err := b.policy.addLog(&l.entity)
-	return err
+	h := crypto.HashBytes(l.entity.PublicKey[:])
+	if _, dup := b.logs[h]; dup {
+		return fmt.Errorf("duplicate log: %x\n", l.entity.PublicKey)
+	}
+	b.logs[h] = l.entity
+	return nil
 }
 
 func AddLog(entity *Entity) Setting {
@@ -57,10 +92,11 @@ func (w *addWitness) apply(b *builder) error {
 	if b.ifdef(w.name) {
 		return fmt.Errorf("duplicate name: %q", w.name)
 	}
-	h, err := b.policy.addWitness(&w.entity)
-	if err != nil {
-		return err
+	h := crypto.HashBytes(w.entity.PublicKey[:])
+	if _, dup := b.witnesses[h]; dup {
+		return fmt.Errorf("duplicate witness: %x\n", w.entity.PublicKey)
 	}
+	b.witnesses[h] = w.entity
 	b.names[w.name] = &quorumSingle{h}
 	return nil
 }
@@ -83,7 +119,7 @@ func (g *addGroup) apply(b *builder) error {
 		return fmt.Errorf("duplicate name %q", g.name)
 	}
 	if g.threshold < 1 || g.threshold > len(g.members) {
-		return fmt.Errorf("invalid threshold for group: %q", g.name)
+		return fmt.Errorf("group %q: invalid threshold k = %d for n = %d", g.name, g.threshold, len(g.members))
 	}
 	subQuorums := []Quorum{}
 	// TODO: Warn or fail if there's overlap between group members?
@@ -111,12 +147,12 @@ type setQuorum struct {
 }
 
 func (s *setQuorum) apply(b *builder) error {
-	if b.policy.quorum != nil {
+	if b.quorum != nil {
 		return fmt.Errorf("quorum can only be set once")
 	}
 
 	if q, ok := b.names[s.name]; ok {
-		b.policy.quorum = q
+		b.quorum = q
 	} else {
 		return fmt.Errorf("undefined name %q", s.name)
 	}
