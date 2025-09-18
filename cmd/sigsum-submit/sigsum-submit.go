@@ -130,9 +130,9 @@ func main() {
 	}
 	if thePolicyName != "" {
 		var err error
-		thePolicy, err = policy.BuiltinByName(thePolicyName)
+		thePolicy, err = policy.ByName(thePolicyName)
 		if err != nil {
-			log.Fatal("BuiltinByName failed: %v", err)
+			log.Fatal("policy.ByName failed: %v", err)
 		}
 	}
 	log.Info("thePolicy = %v", thePolicy)
