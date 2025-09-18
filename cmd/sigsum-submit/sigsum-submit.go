@@ -58,7 +58,7 @@ func main() {
 	var source LeafSource
 	if len(settings.keyFile) > 0 {
 		// TODO: the ReadPrivateKeyFile() has a misleading name, it is not always a private key but sometimes a pubkey file?
-		signer, policyName, err := key.ReadPrivateKeyFile(settings.keyFile)
+		signer, policyName, err := key.ReadPrivateKeyFileWithPolicy(settings.keyFile)
 		if err != nil {
 			log.Fatal("reading key file failed: %v", err)
 		}
@@ -145,7 +145,7 @@ func main() {
 
 		if len(config.Domain) > 0 {
 			var err error
-			config.RateLimitSigner, _, err = key.ReadPrivateKeyFile(settings.tokenKeyFile)
+			config.RateLimitSigner, err = key.ReadPrivateKeyFile(settings.tokenKeyFile)
 			if err != nil {
 				log.Fatal("reading token key file failed: %v", err)
 			}

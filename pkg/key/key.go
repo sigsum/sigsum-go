@@ -131,7 +131,7 @@ func ReadPublicKeysFile(fileName string) (map[crypto.Hash]crypto.PublicKey, erro
 
 // The second output is a resulting policy name, in case a
 // "sigsum-policy=" option is found in the public key.
-func ReadPrivateKeyFile(fileName string) (crypto.Signer, string, error) {
+func ReadPrivateKeyFileWithPolicy(fileName string) (crypto.Signer, string, error) {
 	contents, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, "", err
@@ -142,4 +142,9 @@ func ReadPrivateKeyFile(fileName string) (crypto.Signer, string, error) {
 			fileName, err)
 	}
 	return signer, policyName, nil
+}
+
+func ReadPrivateKeyFile(fileName string) (crypto.Signer, error) {
+     signer, _, err := ReadPrivateKeyFileWithPolicy(fileName)
+     return signer, err
 }

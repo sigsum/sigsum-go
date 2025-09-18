@@ -69,7 +69,7 @@ Options:
 	case "create":
 		var settings createSettings
 		settings.parse(os.Args)
-		signer, _, err := key.ReadPrivateKeyFile(settings.keyFile)
+		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
 		if err != nil {
 			log.Fatal(err)
 		}
