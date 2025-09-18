@@ -54,7 +54,7 @@ func main() {
 		log.Fatal("%v", err)
 	}
 
-	var thePolicyName string
+	var policyNameFromPubKey string
 	var source LeafSource
 	if len(settings.keyFile) > 0 {
 		// TODO: the ReadPrivateKeyFile() has a misleading name, it is not always a private key but sometimes a pubkey file?
@@ -62,7 +62,7 @@ func main() {
 		if err != nil {
 			log.Fatal("reading key file failed: %v", err)
 		}
-		thePolicyName = policyName
+		policyNameFromPubKey = policyName
 		publicKey := signer.Public()
 		if len(settings.inputFiles) == 0 {
 			source = func(_ LeafSkip, sink LeafSink) {
@@ -120,22 +120,11 @@ func main() {
 		}
 	}
 
-	var thePolicy *policy.Policy
-	if len(settings.policyFile) > 0 {
-		var err error
-		thePolicy, err = policy.ReadPolicyFile(settings.policyFile)
-		if err != nil {
-			log.Fatal("Invalid policy file: %v", err)
-		}
+	thePolicy, err := policy.Select(settings.policyFile, settings.policyName, policyNameFromPubKey)
+	if err != nil {
+		log.Fatal("getPolicy failed: %v", err)
 	}
-	if thePolicyName != "" {
-		var err error
-		thePolicy, err = policy.ByName(thePolicyName)
-		if err != nil {
-			log.Fatal("policy.ByName failed: %v", err)
-		}
-	}
-	log.Info("thePolicy = %v", thePolicy)
+
 	if thePolicy != nil {
 		config := submit.Config{Policy: thePolicy,
 			Domain:  settings.tokenDomain,

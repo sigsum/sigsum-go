@@ -147,3 +147,38 @@ func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
 	p.quorum = &quorumKofN{subQuorums: subQuorums, k: k}
 	return p, nil
 }
+
+// The policy to use can come from several different places:
+//   - file explicitly specified by the user
+//   - policy name explicitly specified by the user
+//   - policy name extracted from a pubkey
+//
+// This function takes three strings corresponding to the above three cases
+// and determines a policy based on that.
+func Select(policyFile string, policyName string, policyNameFromPubKey string) (*Policy, error) {
+	if policyFile != "" {
+		policy, err := ReadPolicyFile(policyFile)
+		if err != nil {
+			err := fmt.Errorf("Invalid policy file: %v", err)
+			return nil, err
+		}
+		return policy, err
+	}
+	if policyName != "" {
+		policy, err := ByName(policyName)
+		if err != nil {
+			err := fmt.Errorf("policy.ByName failed: %v", err)
+			return nil, err
+		}
+		return policy, err
+	}
+	if policyNameFromPubKey != "" {
+		policy, err := ByName(policyNameFromPubKey)
+		if err != nil {
+			err := fmt.Errorf("policy.ByName failed: %v", err)
+			return nil, err
+		}
+		return policy, err
+	}
+	return nil, nil
+}
