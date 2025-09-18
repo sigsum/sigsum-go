@@ -298,6 +298,12 @@ If a ".req" file already exists, then it is simply overwritten.
 	if len(s.policyFile) > 0 && s.leafHash {
 		log.Fatal("The -p (--policy) and --leaf-hash options are mutually exclusive.")
 	}
+	if len(s.policyName) > 0 && s.leafHash {
+		log.Fatal("The -P (--Policy) and --leaf-hash options are mutually exclusive.")
+	}
+	if len(s.policyName) > 0 && len(s.policyFile) > 0 {
+		log.Fatal("The -P (--Policy) and -p (--policy) options are mutually exclusive.")
+	}
 	for _, f := range s.inputFiles {
 		if len(f) == 0 {
 			log.Fatal("Empty string is not a valid input file name.")
