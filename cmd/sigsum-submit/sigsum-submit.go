@@ -120,13 +120,13 @@ func main() {
 		}
 	}
 
-	thePolicy, err := policy.Select(settings.policyFile, settings.policyName, policyNameFromPubKey)
+	policy, err := policy.Select(settings.policyFile, settings.policyName, policyNameFromPubKey)
 	if err != nil {
 		log.Fatal("getPolicy failed: %v", err)
 	}
 
-	if thePolicy != nil {
-		config := submit.Config{Policy: thePolicy,
+	if policy != nil {
+		config := submit.Config{Policy: policy,
 			Domain:  settings.tokenDomain,
 			Timeout: settings.timeout,
 		}
@@ -162,7 +162,7 @@ func main() {
 				log.Fatal("Parsing proof file %q failed: %v", proofName, err)
 			}
 			if err := sigsumProof.Verify(msg, map[crypto.Hash]crypto.PublicKey{
-				crypto.HashBytes(publicKey[:]): *publicKey}, thePolicy); err != nil {
+				crypto.HashBytes(publicKey[:]): *publicKey}, policy); err != nil {
 				log.Fatal("Existing proof file %q is not valid: %v", proofName, err)
 			}
 			return true
