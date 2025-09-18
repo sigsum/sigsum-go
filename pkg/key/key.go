@@ -9,7 +9,6 @@ import (
 
 	"sigsum.org/sigsum-go/internal/ssh"
 	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/log"
 )
 
 // Expects an Openssh public key (single-line format)
@@ -21,7 +20,6 @@ func ParsePublicKey(ascii string) (crypto.PublicKey, error) {
 func extractPolicyName(s string) (string, error) {
 	i := strings.IndexRune(s, '=')
 	quotedName := s[i+1:]
-	log.Info("quotedName = %v", quotedName)
 	// First and last character must be quotation marks
 	if quotedName[0] != '"' || quotedName[len(quotedName)-1] != '"' {
 		return "", fmt.Errorf("Failed to extract policy name")
@@ -53,7 +51,6 @@ func ParsePrivateKey(ascii string) (crypto.Signer, string, error) {
 		if err != nil {
 			return nil, "", err
 		}
-		log.Info("policyName = %v", policyName)
 	}
 	if strings.HasPrefix(ascii, "ssh-ed25519 ") {
 		key, err := ssh.ParsePublicEd25519(ascii)
