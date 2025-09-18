@@ -86,7 +86,14 @@ func ReadPublicKeyFile(fileName string) (crypto.PublicKey, error) {
 }
 
 func parsePublicKeysFile(f io.Reader, fileName string) (map[crypto.Hash]crypto.PublicKey, error) {
+	keys, _, err := parsePublicKeysFileWithPolicyNames(f, fileName)
+	return keys, err
+}
+
+// This function returns public keys along with a list of any policy names, found in the pubkey files. If there are no policy names then that becomes a list of empty strings.
+func parsePublicKeysFileWithPolicyNames(f io.Reader, fileName string) (map[crypto.Hash]crypto.PublicKey, []string, error) {
 	keys := make(map[crypto.Hash]crypto.PublicKey)
+	var policyNames []string
 	scanner := bufio.NewScanner(f)
 	var n int
 	for scanner.Scan() {
@@ -98,32 +105,45 @@ func parsePublicKeysFile(f io.Reader, fileName string) (map[crypto.Hash]crypto.P
 		if strings.HasPrefix(line, "#") || line == "" {
 			continue
 		}
+		policyName := ""
+		if strings.HasPrefix(line, "sigsum-policy=") {
+			// extract first part of the string, until first space
+			i := strings.IndexRune(line, ' ')
+			firstPart := line[:i]
+			var err error
+			policyName, err = extractPolicyName(firstPart)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
 		key, err := ParsePublicKey(line)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse public key on line %d of file %q: %v", n, fileName, err)
+			return nil, nil, fmt.Errorf("failed to parse public key on line %d of file %q: %v", n, fileName, err)
 		}
 		keyHash := crypto.HashBytes(key[:])
 		if _, has := keys[keyHash]; has {
-			return nil, fmt.Errorf("duplicate public key on line %d of file %q", n, fileName)
+			return nil, nil, fmt.Errorf("duplicate public key on line %d of file %q", n, fileName)
 		}
 		keys[keyHash] = key
+		policyNames = append(policyNames, policyName)
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("failed to read public keys file %q: %v", fileName, err)
+		return nil, nil, fmt.Errorf("failed to read public keys file %q: %v", fileName, err)
 	}
 	if len(keys) == 0 {
-		return nil, fmt.Errorf("no public keys found in file %q", fileName)
+		return nil, nil, fmt.Errorf("no public keys found in file %q", fileName)
 	}
-	return keys, nil
+	return keys, policyNames, nil
 }
 
-func ReadPublicKeysFile(fileName string) (map[crypto.Hash]crypto.PublicKey, error) {
+// This function returns public keys along with a list of any policy names, found in the pubkey files. If there are no policy names then that becomes a list of empty strings.
+func ReadPublicKeysFile(fileName string) (map[crypto.Hash]crypto.PublicKey, []string, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
+		return nil, nil, fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
 	}
 	defer f.Close()
-	return parsePublicKeysFile(f, fileName)
+	return parsePublicKeysFileWithPolicyNames(f, fileName)
 }
 
 // The second output is a resulting policy name, in case a
