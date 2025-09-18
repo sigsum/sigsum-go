@@ -78,11 +78,30 @@ x=4
 	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
 	     -P testpolicy123
 
+x=5
+    echo >&2 "submit $x -- sigsum-submit with policy file specified using -p and in pubkey (name in pubkey should then be ignored)"
+    # Must be exactly 32 bytes
+    printf "%31s\n" "foo-$x" \
+	| SSH_AUTH_SOCK=/tmp/test.socket SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-submit --timeout=5s \
+	     --token-domain test.sigsum.org --token-signing-key test.token.key \
+	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
+	     -p /tmp/testpolicy123.sigsum-policy
+
+x=6
+    echo >&2 "sigsum-submit with policy file specified using both -p and -P -- should fail because those options are mutually exclusive"
+    # Must be exactly 32 bytes
+    printf "%31s\n" "foo-$x" \
+	| SSH_AUTH_SOCK=/tmp/test.socket SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-submit --timeout=5s \
+	     --token-domain test.sigsum.org --token-signing-key test.token.key \
+	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
+	     -p /tmp/testpolicy123.sigsum-policy -P testpolicy123 2> stderr.txt || echo "Expected failure"
+    grep "The -P (--Policy) and -p (--policy) options are mutually exclusive" stderr.txt
+
 ./bin/sigsum-key generate -o test.submit2.key
 ./bin/sigsum-key generate -o test.submit3.key
 cat test.agent.key.pub test.submit*.key.pub > test.verify-keys.pub
 
-for x in $(seq 4); do
+for x in $(seq 5); do
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub --policy test.policy "test.$x.proof"
