@@ -145,6 +145,6 @@ func ReadPrivateKeyFileWithPolicy(fileName string) (crypto.Signer, string, error
 }
 
 func ReadPrivateKeyFile(fileName string) (crypto.Signer, error) {
-     signer, _, err := ReadPrivateKeyFileWithPolicy(fileName)
-     return signer, err
+	signer, _, err := ReadPrivateKeyFileWithPolicy(fileName)
+	return signer, err
 }
