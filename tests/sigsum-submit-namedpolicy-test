@@ -4,6 +4,7 @@ set -e
 
 ./bin/sigsum-key generate -o test.log.key
 ./bin/sigsum-key generate -o test.agent.key
+./bin/sigsum-key generate -o test.other.key
 
 # Create pubkey with policy to be used in tests
 printf 'sigsum-policy="testpolicy123" ' > tmp-policy-start
@@ -12,6 +13,14 @@ cat tmp-policy-start test.agent.key.pub > test.agent.key.withpolicy.pub
 # Create pubkey with dummy policy
 printf 'sigsum-policy="dummypolicy" ' > tmp-policy-start
 cat tmp-policy-start test.agent.key.pub > test.agent.key.withdummypolicy.pub
+
+# Create other pubkey with dummy policy
+printf 'sigsum-policy="dummypolicy" ' > tmp-policy-start
+cat tmp-policy-start test.other.key.pub > test.other.key.withdummypolicy.pub
+
+# Create other pubkey with correct policy
+printf 'sigsum-policy="testpolicy123" ' > tmp-policy-start
+cat tmp-policy-start test.other.key.pub > test.other.key.withpolicy.pub
 
 # Reading private key files still supports raw hex.
 printf '%064x' 1 > test.token.key
@@ -100,14 +109,68 @@ x=6
 ./bin/sigsum-key generate -o test.submit2.key
 ./bin/sigsum-key generate -o test.submit3.key
 cat test.agent.key.pub test.submit*.key.pub > test.verify-keys.pub
+cat test.agent.key.withpolicy.pub test.other.key.withdummypolicy.pub > test.verify-keys-ambiguous.pub
+cat test.agent.key.withpolicy.pub test.other.key.withpolicy.pub > test.verify-keys-withpolicy.pub
 
+echo "Using sigsum-verify with --policy option"
 for x in $(seq 5); do
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub --policy test.policy "test.$x.proof"
 done
 
-# Check that the message is taken into account in validation.
+echo "Using sigsum-verify with --Policy option (named policy)"
+x=1
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub --Policy=testpolicy123 "test.$x.proof"
+
+echo "Using sigsum-verify with -P option (named policy)"
+x=2
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub -P testpolicy123 "test.$x.proof"
+
+echo "Using sigsum-verify without policy option but with policy in pubkey file"
+x=3
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-verify --raw-hash -k test.agent.key.withpolicy.pub "test.$x.proof"
+
+echo "Using sigsum-verify with -P option (named policy) and with policy in pubkey file -- -P option should be used"
+x=4
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-verify --raw-hash -k test.agent.key.withdummypolicy.pub -P testpolicy123 "test.$x.proof"
+
+echo "Using sigsum-verify with policy in pubkey files, two different pubkeys with same policy in both"
+x=5
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-verify --raw-hash -k test.verify-keys-withpolicy.pub "test.$x.proof"
+
+echo "Using sigsum-verify without policy option and no policy in pubkey files (this should fail)"
+x=5
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub "test.$x.proof" 2> stderr.txt || echo "Expected failure"
+grep "a policy must be specified" stderr.txt
+
+echo "Using sigsum-verify without policy option and ambiguous policy names in pubkey files (this should fail)"
+x=5
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-verify --raw-hash -k test.verify-keys-ambiguous.pub "test.$x.proof" 2> stderr.txt || echo "Expected failure"
+grep "conflicting policy names found in pubkeys" stderr.txt
+
+echo "Using sigsum-verify without policy option and with dummy policy in pubkey file (this should fail)"
+x=5
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-verify --raw-hash -k test.agent.key.withdummypolicy.pub "test.$x.proof" 2> stderr.txt || echo "Expected failure"
+grep "Failed to get named policy for name 'dummypolicy'" stderr.txt
+
+echo "Checking that the message is taken into account in validation (expecting failure)."
 if printf "%31s\n" foo-2 \
 	| ./bin/sigsum-verify --key test.agent.key.pub --policy test.policy "test.1.proof" ; then
     false
