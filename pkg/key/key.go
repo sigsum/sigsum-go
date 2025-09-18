@@ -73,16 +73,33 @@ func ParsePrivateKey(ascii string) (crypto.Signer, string, error) {
 }
 
 func ReadPublicKeyFile(fileName string) (crypto.PublicKey, error) {
+	key, _, err := ReadPublicKeyFileWithPolicyName(fileName)
+	return key, err
+}
+
+func ReadPublicKeyFileWithPolicyName(fileName string) (crypto.PublicKey, string, error) {
 	contents, err := os.ReadFile(fileName)
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return crypto.PublicKey{}, "", err
 	}
-	key, err := ParsePublicKey(string(contents))
+	s := string(contents)
+	policyName := ""
+	if strings.HasPrefix(s, "sigsum-policy=") {
+		// extract first part of the string, until first space
+		i := strings.IndexRune(s, ' ')
+		firstPart := s[:i]
+		var err error
+		policyName, err = extractPolicyName(firstPart)
+		if err != nil {
+			return crypto.PublicKey{}, "", err
+		}
+	}
+	key, err := ParsePublicKey(s)
 	if err != nil {
-		return crypto.PublicKey{}, fmt.Errorf("parsing public key file %q failed: %v",
+		return crypto.PublicKey{}, "", fmt.Errorf("parsing public key file %q failed: %v",
 			fileName, err)
 	}
-	return key, nil
+	return key, policyName, nil
 }
 
 func parsePublicKeysFile(f io.Reader, fileName string) (map[crypto.Hash]crypto.PublicKey, error) {
