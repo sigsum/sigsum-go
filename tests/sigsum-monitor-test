@@ -27,7 +27,7 @@ trap cleanup EXIT
 # Give log server some time to get ready.
 sleep 2
 
-echo "log $(./bin/sigsum-key hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
 echo "quorum none" >> test.policy
 
 ./bin/sigsum-monitor -p test.policy --interval=2s test.submit.key.pub > test.monitor.out &
