@@ -5,6 +5,7 @@ TESTS = ssh-agent-test \
 	token-record-test token-create-raw-test token-create-header-test \
 	sigsum-submit-test sigsum-submit-batch-test \
 	sigsum-submit-namedpolicy-test \
+	sigsum-monitor-test sigsum-monitor-namedpolicy-test \
 	witness-add-checkpoint-test \
 	sigsum-submit-witness-test
 all:
