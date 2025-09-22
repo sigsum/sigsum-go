@@ -15,8 +15,8 @@ import (
 // (The plan is to later add a third argument "policyNameFromPubKey")
 func SelectPolicy(policyFile string, policyName string) (*policy.Policy, error) {
 	if policyFile != "" && policyName != "" {
-			err := fmt.Errorf("both policyFile and policyName were specified, this is not allowed")
-			return nil, err
+		err := fmt.Errorf("both policyFile and policyName were specified, this is not allowed")
+		return nil, err
 	}
 	if policyFile != "" {
 		policy, err := policy.ReadPolicyFile(policyFile)
