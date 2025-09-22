@@ -136,7 +136,9 @@ func TestWitnessPolicy(t *testing.T) {
 
 func TestOneOfNWitnessPolicy(t *testing.T) {
 	td := newTestData(t, 6)
-	// Policy with 1-of-n everywhere, i.e., any witness is accepted.
+	// Policy with 1-of-n everywhere. Despite the hierarchy, this
+	// boils down to requiring at least one cosignature, by any of
+	// the six witnesses.
 	//
 	//        q
 	//       / \
@@ -166,7 +168,9 @@ func TestOneOfNWitnessPolicy(t *testing.T) {
 		&td.logHash, &types.CosignedTreeHead{SignedTreeHead: td.sth}); err == nil {
 		t.Errorf("1-of-n policy, no cosignatures: Expected error, got none")
 	}
-	// Exhaustive test, one bit per witness is 64 cases.
+	// Exhaustive test, representing witness j using bit j of i.
+	// There are a total of 64 cases, with the failing no-witness
+	// case (corresponding to i == 0) handled above.
 	for i := 1; i < 64; i++ {
 		present := make(map[crypto.Hash]types.Cosignature)
 		for j := 0; j < 6; j++ {
@@ -202,7 +206,8 @@ func TestTwoOfNWitnessPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Exhaustive test, one bit per witness is 64 cases.
+	// Exhaustive test, representing witness j using bit j of i.
+	// There are a total of 64 cases.
 	for i := 0; i < 64; i++ {
 		present := make(map[crypto.Hash]types.Cosignature)
 		for j := 0; j < 6; j++ {
