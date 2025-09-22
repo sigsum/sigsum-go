@@ -21,6 +21,7 @@ import (
 
 type Settings struct {
 	policyFile  string
+	policyName  string
 	keys        []string
 	diagnostics string
 	interval    time.Duration
@@ -49,10 +50,6 @@ func main() {
 	if err := log.SetLevelFromString(settings.diagnostics); err != nil {
 		log.Fatal("%v", err)
 	}
-	policy, err := policy.ReadPolicyFile(settings.policyFile)
-	if err != nil {
-		log.Fatal("failed to create policy: %v", err)
-	}
 	config := monitor.Config{
 		QueryInterval: settings.interval,
 		Callbacks:     callbacks{},
@@ -66,6 +63,13 @@ func main() {
 			}
 			config.SubmitKeys[crypto.HashBytes(pub[:])] = pub
 		}
+	}
+	policy, err := policy.Select(settings.policyFile, settings.policyName)
+	if err != nil {
+		log.Fatal("failed to select policy: %v", err)
+	}
+	if policy == nil {
+		log.Fatal("a policy must be specified")
 	}
 	// TODO: Read state from disk. Also store the list of submit
 	// keys, and discard state if keys are added, since whenever
@@ -94,7 +98,8 @@ cosignatures are not verified and no state is kept between runs.
 	s.diagnostics = "info"
 	s.interval = 10 * time.Minute
 
-	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and the end-user's quorum rule", "policy-file").Mandatory()
+	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy file defining logs, witnesses, and the end-user's quorum rule", "policy-file")
+	set.FlagLong(&s.policyName, "Policy", 'P', "Trust policy specified as a named policy defining logs, witnesses, and the end-user's quorum rule", "policy-name")
 	set.FlagLong(&s.interval, "interval", 'i', "How often to fetch the latest entries", "interval")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "Available levels: fatal, error, warning, info, debug", "log-level")
 	set.FlagLong(&help, "help", 0, "Show usage message and exit")
@@ -110,6 +115,9 @@ cosignatures are not verified and no state is kept between runs.
 	if versionFlag {
 		version.DisplayVersion("sigsum-monitor")
 		os.Exit(0)
+	}
+	if len(s.policyName) > 0 && len(s.policyFile) > 0 {
+		log.Fatal("The -P (--Policy) and -p (--policy) options are mutually exclusive.")
 	}
 
 	if err != nil {

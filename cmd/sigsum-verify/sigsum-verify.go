@@ -21,6 +21,7 @@ type Settings struct {
 	proofFile  string
 	submitKey  string
 	policyFile string
+	policyName string
 }
 
 func main() {
@@ -44,9 +45,12 @@ func main() {
 	if err := pr.FromASCII(f); err != nil {
 		log.Fatalf("invalid proof: %v", err)
 	}
-	policy, err := policy.ReadPolicyFile(settings.policyFile)
+	policy, err := policy.Select(settings.policyFile, settings.policyName)
 	if err != nil {
-		log.Fatalf("failed to create policy: %v", err)
+		log.Fatalf("policy.Select failed: %v", err)
+	}
+	if policy == nil {
+		log.Fatalf("a policy must be specified, either in pubkey files or using -p or -P")
 	}
 	if err := pr.Verify(&msg, submitKeys, policy); err != nil {
 		log.Fatalf("sigsum proof failed to verify: %v", err)
@@ -65,7 +69,8 @@ policy.  The message to be verified is read on stdin.
 	versionFlag := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octets or a hex string")
 	set.FlagLong(&s.submitKey, "key", 'k', "Submitter public keys, one per line in OpenSSH format", "key-file").Mandatory()
-	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and a quorum rule", "policy-file").Mandatory()
+	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy file defining logs, witnesses, and a quorum rule", "policy-file")
+	set.FlagLong(&s.policyName, "Policy", 'P', "Trust policy specified as a named policy defining logs, witnesses, and a quorum rule", "policy-name")
 	set.FlagLong(&help, "help", 0, "Show usage message and exit")
 	set.FlagLong(&versionFlag, "version", 'v', "Show software version and exit")
 	err := set.Getopt(args, nil)
@@ -84,6 +89,9 @@ policy.  The message to be verified is read on stdin.
 		fmt.Printf("err: %v\n", err)
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(1)
+	}
+	if len(s.policyName) > 0 && len(s.policyFile) > 0 {
+		log.Fatal("The -P (--Policy) and -p (--policy) options are mutually exclusive.")
 	}
 	if set.NArgs() != 1 {
 		log.Fatalf("no proof given on command line")

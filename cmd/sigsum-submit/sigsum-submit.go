@@ -31,6 +31,7 @@ type Settings struct {
 	rawHash      bool
 	keyFile      string
 	policyFile   string
+	policyName   string
 	leafHash     bool
 	diagnostics  string
 	inputFiles   []string
@@ -116,11 +117,11 @@ func main() {
 		}
 	}
 
-	if len(settings.policyFile) > 0 {
-		policy, err := policy.ReadPolicyFile(settings.policyFile)
-		if err != nil {
-			log.Fatal("Invalid policy file: %v", err)
-		}
+	policy, err := policy.Select(settings.policyFile, settings.policyName)
+	if err != nil {
+		log.Fatal("getPolicy failed: %v", err)
+	}
+	if policy != nil {
 		config := submit.Config{Policy: policy,
 			Domain:  settings.tokenDomain,
 			Timeout: settings.timeout,
@@ -258,7 +259,8 @@ If a ".req" file already exists, then it is simply overwritten.
 	versionFlag := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octets or a hex string")
 	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key in OpenSSH format to sign checksums; or a corresponding public key where the private part is accessed using the SSH agent protocol", "key-file")
-	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and a quorum rule; omit to only output requests and exit", "policy-file")
+	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy file defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-file")
+	set.FlagLong(&s.policyName, "Policy", 'P', "Trust policy specified as a named policy defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-name")
 	set.FlagLong(&s.leafHash, "leaf-hash", 0, "Output the request's leaf hash without submission and exit")
 	set.FlagLong(&s.outputFile, "output", 'o', "Store output in a file, only works for a single input", "output-file")
 	set.FlagLong(&s.outputDir, "output-dir", 'O', "Store output in a directory [same as corresponding input file]", "output-dir")
@@ -291,6 +293,12 @@ If a ".req" file already exists, then it is simply overwritten.
 	}
 	if len(s.policyFile) > 0 && s.leafHash {
 		log.Fatal("The -p (--policy) and --leaf-hash options are mutually exclusive.")
+	}
+	if len(s.policyName) > 0 && s.leafHash {
+		log.Fatal("The -P (--Policy) and --leaf-hash options are mutually exclusive.")
+	}
+	if len(s.policyName) > 0 && len(s.policyFile) > 0 {
+		log.Fatal("The -P (--Policy) and -p (--policy) options are mutually exclusive.")
 	}
 	for _, f := range s.inputFiles {
 		if len(f) == 0 {
