@@ -43,7 +43,7 @@ func ByName(name string) (*Policy, error) {
 		return nil, err
 	}
 	// Try first from file, then try builtin
-	p, err1 := FromPolicyDirByName(name)
+	p, err1 := readFromPolicyDir(name)
 	if err1 == nil {
 		return p, nil
 	}
@@ -56,7 +56,7 @@ func ByName(name string) (*Policy, error) {
 	return nil, err
 }
 
-func FromPolicyDirByName(name string) (*Policy, error) {
+func readFromPolicyDir(name string) (*Policy, error) {
 	if err := checkName(name); err != nil {
 		return nil, err
 	}
