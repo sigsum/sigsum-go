@@ -4,6 +4,7 @@ TESTS = ssh-agent-test \
 	help-msg-test version-msg-test \
 	token-record-test token-create-raw-test token-create-header-test \
 	sigsum-submit-test sigsum-submit-batch-test \
+	sigsum-monitor-test \
 	witness-add-checkpoint-test \
 	sigsum-submit-witness-test
 all:
