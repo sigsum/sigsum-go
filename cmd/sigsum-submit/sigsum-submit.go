@@ -204,6 +204,16 @@ func main() {
 	}
 }
 
+func countTrue(b ...bool) int {
+	n := 0
+	for _, v := range b {
+		if v {
+			n++
+		}
+	}
+	return n
+}
+
 func (s *Settings) parse(args []string) {
 	const usage = `
 Sign checksums and submit them for logging with add-leaf requests.
@@ -291,7 +301,7 @@ If a ".req" file already exists, then it is simply overwritten.
 	if len(s.outputFile) > 0 && len(s.outputDir) > 0 {
 		log.Fatal("The -o and the --output-dir options are mutually exclusive.")
 	}
-	if (len(s.policyFile) > 0 && s.leafHash) || (len(s.policyName) > 0 && s.leafHash) || (len(s.policyName) > 0 && len(s.policyFile) > 0) {
+	if countTrue(len(s.policyName) > 0, len(s.policyFile) > 0, s.leafHash) > 1 {
 		log.Fatal("The -P, -p, and --leaf-hash options are mutually exclusive.")
 	}
 	for _, f := range s.inputFiles {
