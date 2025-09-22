@@ -99,7 +99,7 @@ cosignatures are not verified and no state is kept between runs.
 	s.interval = 10 * time.Minute
 
 	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy file defining logs, witnesses, and the end-user's quorum rule", "policy-file")
-	set.FlagLong(&s.policyName, "Policy", 'P', "Trust policy specified as a named policy defining logs, witnesses, and the end-user's quorum rule", "policy-name")
+	set.FlagLong(&s.policyName, "named-policy", 'P', "Trust policy specified as a named policy defining logs, witnesses, and the end-user's quorum rule", "policy-name")
 	set.FlagLong(&s.interval, "interval", 'i', "How often to fetch the latest entries", "interval")
 	set.FlagLong(&s.diagnostics, "diagnostics", 0, "Available levels: fatal, error, warning, info, debug", "log-level")
 	set.FlagLong(&help, "help", 0, "Show usage message and exit")
@@ -117,7 +117,7 @@ cosignatures are not verified and no state is kept between runs.
 		os.Exit(0)
 	}
 	if len(s.policyName) > 0 && len(s.policyFile) > 0 {
-		log.Fatal("The -P (--Policy) and -p (--policy) options are mutually exclusive.")
+		log.Fatal("The -P (--named-policy) and -p (--policy) options are mutually exclusive.")
 	}
 
 	if err != nil {
