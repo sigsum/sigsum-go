@@ -50,8 +50,7 @@ search_output() {
 }
 for x in $(seq 5); do
     echo >&2 "submit $x"
-    echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-signing-key test.token.key -o tmp-proof -k test.submit.key --policy test.policy
-    rm tmp-proof
+    echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-signing-key test.token.key > /dev/null -k test.submit.key --policy test.policy
     echo >&2 "waiting on monitor $x"
     search_output "$(echo "msg $x" | go run ./sha256-n/sha256-n.go 2)" || die "Monitor not finding leaf $x"
 done
