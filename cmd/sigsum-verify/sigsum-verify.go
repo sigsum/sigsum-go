@@ -9,10 +9,10 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/ui"
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
-	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/proof"
 )
 
@@ -45,7 +45,7 @@ func main() {
 	if err := pr.FromASCII(f); err != nil {
 		log.Fatalf("invalid proof: %v", err)
 	}
-	policy, err := policy.Select(settings.policyFile, settings.policyName)
+	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
 	if err != nil {
 		log.Fatalf("failed to select policy: %v", err)
 	}

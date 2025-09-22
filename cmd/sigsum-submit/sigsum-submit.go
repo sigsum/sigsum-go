@@ -15,11 +15,11 @@ import (
 	"github.com/dchest/safefile"
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/ui"
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/log"
-	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/submit"
@@ -117,7 +117,7 @@ func main() {
 		}
 	}
 
-	policy, err := policy.Select(settings.policyFile, settings.policyName)
+	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
 	if err != nil {
 		log.Fatal("failed to select policy: %v", err)
 	}

@@ -10,12 +10,12 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/ui"
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/log"
 	"sigsum.org/sigsum-go/pkg/monitor"
-	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -64,7 +64,7 @@ func main() {
 			config.SubmitKeys[crypto.HashBytes(pub[:])] = pub
 		}
 	}
-	policy, err := policy.Select(settings.policyFile, settings.policyName)
+	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
 	if err != nil {
 		log.Fatal("failed to select policy: %v", err)
 	}
