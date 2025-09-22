@@ -111,7 +111,7 @@ func TestWitnessPolicy(t *testing.T) {
 		{"only two cosignatures", []int{0, 1, 4}, -1, false},
 		{"three cosignature", []int{0, 1, 2}, -1, true},
 		{"other three cosignature", []int{1, 2, 3}, -1, true},
-		{"all cosignatures", []int{0, 1, 2, 3, 4}, 4, true},
+		{"all cosignatures", []int{0, 1, 2, 3, 4}, -1, true},
 		{"all cosignatures, one invalid", []int{0, 1, 2, 3, 4}, 2, true},
 		{"three cosignatures, but one invalid", []int{0, 2, 3, 4}, 2, false},
 	} {
