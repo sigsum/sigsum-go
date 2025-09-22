@@ -1,10 +1,22 @@
 # Sigsum policy file
 
-Documentation of how to specifying sigsum policy. 
+## Introduction
 
-## What is a "policy"
+This document specifies the Sigsum policy file format. The policy can
+be used and enforced by several of the Sigsum roles, but the most
+important use is for verifying a [sigsum proof](./sigsum-proof.md),
+e.g., using the `sigsum-verify` tool. In addition, a policy file is
+also used by monitors, submitters, and log servers.
 
-A sigsum policy includes three pieces of information.
+While the design is tailored for use with Sigsum, the main semantics
+can be applied also to other transparency logs that rely on witness
+cosigning. Please see Appendix A below for further recommendations on
+this.
+
+
+## What is a "policy"?
+
+A Sigsum policy includes three pieces of information.
 
  * A set of known logs.
 
@@ -14,11 +26,9 @@ A sigsum policy includes three pieces of information.
    witnesses that have cosigned a tree head is strong enough to
    consider the tree head to be valid.
 
-The policy can be used and enforced by several of the sigsum roles,
-but the most important use is for verifying a [sigsum
-proof](./sigsum-proof.md). The policy says that a tree head is
-considered valid if it is signed by any one of the listed logs, and it is
-cosigned according to the defined quorum rule.
+The policy says that a tree head is considered valid if it is signed
+by any one of the listed logs, and it is cosigned according to the
+defined quorum rule.
 
 Both logs and witnesses are identified primarily by their respective
 public key. Each log or witness may also have an associated URL; this
@@ -70,9 +80,11 @@ from at least two of the `X-witnesses`, and from at least one of the
 
 ## Policy file syntax and structure
 
+### Structure
+
 The policy file is line based, where each line consist of items
-separated by white space. Comments are written with "#" and extend to
-the end of the line.
+separated by ASCII space and tab characters. Comments are written with
+"#" and extend to the end of the line.
 
 Public keys are written in raw hex representation. (The `sigsum-key
 to-hex` command can be used to convert a public key in OpenSSH format to
@@ -96,6 +108,9 @@ entry to a log, any of the logs that has an associated URL can be
 used. (The `sigsum-submit` tool tries them in randomized order, until
 logging succeeds).
 
+Duplicate logs, i.e., multiple log lines with the same public key, are
+not allowed.
+
 ### Defining a witness
 
 A witness is defined by a line
@@ -106,6 +121,9 @@ Since only logs and possibly monitors interact directly with
 witnesses, most policy files will not need any witness URLs. The name
 is used to refer to this witness when defining the quorum, or when
 defining witness groups.
+
+Duplicate witnesses, i.e., multiple witness lines with the same public
+key, are not allowed.
 
 ### Defining the quorum
 
@@ -126,13 +144,7 @@ To define more interesting quorums, the name can also refer to a witness
 group, the next topic. In either case, the name must be properly
 defined on a line preceding the quorum definition.
 
-A policy file must include exactly one quorum line. TODO: Make quorum
-line syntactically optional, i.e., don't fail when parsing a policy
-with no quorum; only fail later if the policy is used to verify a tree
-head, e.g., the `policy.VerifyCosignedTreeHead` would fail.
-Potentially useful for log server policy, since a log server needs
-public keys and urls for witnesses, but has no need for a quorum to
-verify its own tree heads.
+A policy file must include exactly one quorum line.
 
 ### Defining a witness group
 
@@ -150,9 +162,61 @@ that tree head, each group member being either a witness or another group.
 In this terminology, for a single witness, "witnessing" is the same as
 cosigning.
 
+The `any` variant is a shorthand for k = 1, and the `all` variant is a
+shorthand for k = n.
+
 Like for the quorum definition, a group definition can only refer to
 names defined on preceding lines. (This also rules out circular group
 definitions).
 
-The `any` variant is a shorthand for k = 1, and the `all` variant is a
-shorthand for k = n.
+Each defined name can be listed as a member at most once. This ensures
+that each witness can contribute to a group, or to the quorum in
+particular, in only one way.
+
+### Use of non-ASCII characters
+
+The policy file syntax is based on ASCII characters. The only allowed
+control characters are tab (0x09) and newline (0x0a). Non-ASCII
+characters may appear in names, URLs and comments. Using UTF-8 for any
+non-ASCII text is strongly recommended, but a policy file parser may
+treat the items as opaque octet strings, with no attempt to reject
+invalid utf-8 or inappropriate unicode characters.
+
+
+## Appendix A: Use with non-Sigsum logs
+
+This policy file format can be used for non-Sigsum logs. One important
+usecase is to specify the quorum for verifying a
+[cosigned](https://github.com/C2SP/C2SP/blob/main/tlog-cosignature.md)
+[checkpoint](https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md).
+
+The Sigsum project would suggest for this case to:
+
+* Apply each policy file to a single log origin line, configured
+  separately.
+
+* Avoid using log URLs (since it is expected that such URLs are usable
+  with the Sigsum log API).
+
+* Use witness names corresponding to the key names used in the
+  corresponding checkpoint cosignature lines. This policy file syntax
+  is liberal enough that all valid [key
+  names](https://github.com/C2SP/C2SP/blob/main/signed-note.md#format)
+  are valid witness names.
+
+Further issues may be discovered, and a shared policy specification
+may be developed in the future under the [C2SP
+umbrella](https://github.com/C2SP/C2SP/tree/main).
+
+
+## Appendix B: Use on constrained devices
+
+It is desirable to be able to apply Sigsum policy as part of Sigsum
+proof verification on constrained devices. A constrained device will
+likely have to enforce some limits on policy complexity. It is
+recommended that an implementations of Sigsum policy at least supports
+up to 32 logs, 32 witnesses, and 32 groups.
+
+For a constrained device it would also be helpful with a "compiled"
+binary representation of the policy, that is compact, easy to parse,
+and easy to apply; this may be subject to future specification.
