@@ -21,10 +21,10 @@ import (
 // policy files since these are only used for embedding into the program,
 // they should not be confused with /etc/sigsum/policy/ files.
 const (
-	builtinPolicyFilenameSuffix    = ".builtin-policy"
-	installedPolicyFilenameSuffix  = ".sigsum-policy"
-	defaultPolicyFileDirectory     = "/etc/sigsum/policy"
-	policyFileDirectoryEnvVariable = "SIGSUM_POLICY_DIR"
+	builtinPolicyFilenameSuffix   = ".builtin-policy"
+	installedPolicyFilenameSuffix = ".sigsum-policy"
+	defaultPolicyDirectory        = "/etc/sigsum/policy"
+	policyDirectoryEnvVariable    = "SIGSUM_POLICY_DIR"
 )
 
 //go:embed "builtin/*.builtin-policy"
@@ -60,9 +60,9 @@ func readFromPolicyDir(name string) (*Policy, error) {
 	if err := checkName(name); err != nil {
 		return nil, err
 	}
-	directory := os.Getenv(policyFileDirectoryEnvVariable)
+	directory := os.Getenv(policyDirectoryEnvVariable)
 	if len(directory) == 0 {
-		directory = defaultPolicyFileDirectory
+		directory = defaultPolicyDirectory
 	}
 	filePath := directory + "/" + name + installedPolicyFilenameSuffix
 	p, err := ReadPolicyFile(filePath)
