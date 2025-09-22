@@ -47,7 +47,7 @@ func main() {
 	}
 	policy, err := policy.Select(settings.policyFile, settings.policyName)
 	if err != nil {
-		log.Fatalf("policy.Select failed: %v", err)
+		log.Fatal("failed to select policy: %v", err)
 	}
 	if policy == nil {
 		log.Fatalf("a policy must be specified, either in pubkey files or using -p or -P")

@@ -119,7 +119,7 @@ func main() {
 
 	policy, err := policy.Select(settings.policyFile, settings.policyName)
 	if err != nil {
-		log.Fatal("getPolicy failed: %v", err)
+		log.Fatal("failed to select policy: %v", err)
 	}
 	if policy != nil {
 		config := submit.Config{Policy: policy,
