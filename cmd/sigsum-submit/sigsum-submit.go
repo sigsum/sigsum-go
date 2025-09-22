@@ -260,7 +260,7 @@ If a ".req" file already exists, then it is simply overwritten.
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octets or a hex string")
 	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key in OpenSSH format to sign checksums; or a corresponding public key where the private part is accessed using the SSH agent protocol", "key-file")
 	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy file defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-file")
-	set.FlagLong(&s.policyName, "named-policy", 'P', "Trust policy specified as a named policy defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-name")
+	set.FlagLong(&s.policyName, "named-policy", 'P', "Use a named trust policy defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-name")
 	set.FlagLong(&s.leafHash, "leaf-hash", 0, "Output the request's leaf hash without submission and exit")
 	set.FlagLong(&s.outputFile, "output", 'o', "Store output in a file, only works for a single input", "output-file")
 	set.FlagLong(&s.outputDir, "output-dir", 'O', "Store output in a directory [same as corresponding input file]", "output-dir")

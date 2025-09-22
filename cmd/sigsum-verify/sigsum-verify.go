@@ -70,7 +70,7 @@ policy.  The message to be verified is read on stdin.
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octets or a hex string")
 	set.FlagLong(&s.submitKey, "key", 'k', "Submitter public keys, one per line in OpenSSH format", "key-file").Mandatory()
 	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy file defining logs, witnesses, and a quorum rule", "policy-file")
-	set.FlagLong(&s.policyName, "named-policy", 'P', "Trust policy specified as a named policy defining logs, witnesses, and a quorum rule", "policy-name")
+	set.FlagLong(&s.policyName, "named-policy", 'P', "Use a named trust policy defining logs, witnesses, and a quorum rule", "policy-name")
 	set.FlagLong(&help, "help", 0, "Show usage message and exit")
 	set.FlagLong(&versionFlag, "version", 'v', "Show software version and exit")
 	err := set.Getopt(args, nil)
