@@ -47,10 +47,10 @@ func ByName(name string) (*Policy, error) {
 	}
 	p, err2 := BuiltinByName(name)
 	if err2 == nil {
-		log.Info("Found builtin policy '%v'", name)
+		log.Info("Found builtin policy '%q'", name)
 		return p, nil
 	}
-	err := fmt.Errorf("Failed to get named policy for name '%v', errors '%v' and '%v'", name, err1, err2)
+	err := fmt.Errorf("failed to get named policy for name '%q', errors '%v' and '%v'", name, err1, err2)
 	return nil, err
 }
 
@@ -65,7 +65,7 @@ func readFromPolicyDir(name string) (*Policy, error) {
 	filePath := directory + "/" + name + installedPolicyFilenameSuffix
 	p, err := ReadPolicyFile(filePath)
 	if err == nil {
-		log.Info("Successfully read policy from file %v", filePath)
+		log.Info("Successfully read policy from file %q", filePath)
 	}
 	return p, err
 }
