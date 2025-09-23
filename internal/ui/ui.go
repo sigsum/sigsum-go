@@ -19,20 +19,10 @@ func SelectPolicy(policyFile string, policyName string) (*policy.Policy, error) 
 		return nil, err
 	}
 	if policyFile != "" {
-		policy, err := policy.ReadPolicyFile(policyFile)
-		if err != nil {
-			err := fmt.Errorf("Invalid policy file: %v", err)
-			return nil, err
-		}
-		return policy, err
+		return policy.ReadPolicyFile(policyFile)
 	}
 	if policyName != "" {
-		policy, err := policy.ByName(policyName)
-		if err != nil {
-			err := fmt.Errorf("policy.ByName failed: %v", err)
-			return nil, err
-		}
-		return policy, err
+		return policy.ByName(policyName)
 	}
 	// The user has not specified any policy
 	return nil, nil
