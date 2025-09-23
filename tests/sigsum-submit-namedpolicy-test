@@ -65,14 +65,10 @@ x=4
 	     --token-domain test.sigsum.org --token-signing-key test.token.key \
 	     --raw-hash -o "test.$x.proof" --signing-key test.submit.key --named-policy testpolicy123
 
-./bin/sigsum-key generate -o test.submit2.key
-./bin/sigsum-key generate -o test.submit3.key
-cat test.submit*.key.pub > test.verify-keys.pub
-
 for x in $(seq 4); do
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
-	| ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub --policy test.policy "test.$x.proof"
+	| ./bin/sigsum-verify --raw-hash -k test.submit.key.pub --policy test.policy "test.$x.proof"
 done
 
 # Check that the message is taken into account in validation.
