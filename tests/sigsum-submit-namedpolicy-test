@@ -16,8 +16,12 @@ echo "startup=empty" > test.log.sth.startup
 
 SIGSUM_PID=$!
 
+TMP_POLICY_DIR=$(mktemp -d)
+
 cleanup () {
     kill ${SIGSUM_PID}
+    rm -f ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy
+    rmdir ${TMP_POLICY_DIR}
 }
 
 trap cleanup EXIT
@@ -27,7 +31,7 @@ sleep 2
 
 echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
 echo "quorum none" >> test.policy
-cp test.policy /tmp/testpolicy123.sigsum-policy
+cp test.policy ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy
 
 x=1
     echo >&2 "submit $x -- sigsum-submit with policy specified using -p"
@@ -49,7 +53,7 @@ x=3
     echo >&2 "submit $x -- sigsum-submit with policy specified using -P"
     # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
-	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-submit --diagnostics=warning --timeout=5s \
+	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --diagnostics=warning --timeout=5s \
 	     --token-domain test.sigsum.org --token-signing-key test.token.key \
 	     --raw-hash -o "test.$x.proof" --signing-key test.submit.key -P testpolicy123
 
@@ -57,7 +61,7 @@ x=4
     echo >&2 "submit $x -- sigsum-submit with policy specified using --named-policy"
     # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
-	| SIGSUM_POLICY_DIR=/tmp ./bin/sigsum-submit --diagnostics=warning --timeout=5s \
+	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --diagnostics=warning --timeout=5s \
 	     --token-domain test.sigsum.org --token-signing-key test.token.key \
 	     --raw-hash -o "test.$x.proof" --signing-key test.submit.key --named-policy testpolicy123
 
