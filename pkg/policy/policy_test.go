@@ -45,25 +45,36 @@ func TestLogPolicy(t *testing.T) {
 	}
 }
 
-func TestWitnessPolicy(t *testing.T) {
+type testData struct {
+	sth           types.SignedTreeHead
+	logPub        crypto.PublicKey
+	logHash       crypto.Hash
+	witnessKeys   []crypto.PublicKey
+	witnessHashes []crypto.Hash
+	cosignatures  []types.Cosignature
+}
+
+func newTestData(t *testing.T, count int) testData {
 	th := types.TreeHead{Size: 3}
 	logPub, logSigner, err := crypto.NewKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
-	logHash := crypto.HashBytes(logPub[:])
-	origin := types.SigsumCheckpointOrigin(&logPub)
 
 	sth, err := th.Sign(logSigner)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var witnessKeys []crypto.PublicKey
-	var witnessHashes []crypto.Hash
-	var cosignatures []types.Cosignature
+	td := testData{
+		sth:     sth,
+		logPub:  logPub,
+		logHash: crypto.HashBytes(logPub[:]),
+	}
 
-	for i := 0; i < 5; i++ {
+	origin := types.SigsumCheckpointOrigin(&logPub)
+
+	for i := 0; i < count; i++ {
 		pub, s, err := crypto.NewKeyPair()
 		if err != nil {
 			t.Fatal(err)
@@ -73,13 +84,19 @@ func TestWitnessPolicy(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		cosignatures = append(cosignatures, cosignature)
-		witnessKeys = append(witnessKeys, pub)
-		witnessHashes = append(witnessHashes, crypto.HashBytes(pub[:]))
+		td.cosignatures = append(td.cosignatures, cosignature)
+		td.witnessKeys = append(td.witnessKeys, pub)
+		td.witnessHashes = append(td.witnessHashes, crypto.HashBytes(pub[:]))
 	}
+	return td
+}
+
+func TestWitnessPolicy(t *testing.T) {
+	td := newTestData(t, 6)
+
 	// Four known witnesses, at least 3 cosignatures required.
-	p, err := NewKofNPolicy([]crypto.PublicKey{logPub},
-		witnessKeys[:4], 3)
+	p, err := NewKofNPolicy([]crypto.PublicKey{td.logPub},
+		td.witnessKeys[:4], 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,25 +111,130 @@ func TestWitnessPolicy(t *testing.T) {
 		{"only two cosignatures", []int{0, 1, 4}, -1, false},
 		{"three cosignature", []int{0, 1, 2}, -1, true},
 		{"other three cosignature", []int{1, 2, 3}, -1, true},
-		{"all cosignatures", []int{0, 1, 2, 3, 4}, 4, true},
+		{"all cosignatures", []int{0, 1, 2, 3, 4}, -1, true},
 		{"all cosignatures, one invalid", []int{0, 1, 2, 3, 4}, 2, true},
 		{"three cosignatures, but one invalid", []int{0, 2, 3, 4}, 2, false},
 	} {
 		present := make(map[crypto.Hash]types.Cosignature)
 		for _, i := range s.w {
-			cs := cosignatures[i]
+			cs := td.cosignatures[i]
 			if i == s.invalidate {
 				cs.Signature[3] ^= 1
 			}
-			present[witnessHashes[i]] = cs
+			present[td.witnessHashes[i]] = cs
 		}
-		err := p.VerifyCosignedTreeHead(&logHash,
-			&types.CosignedTreeHead{SignedTreeHead: sth, Cosignatures: present})
+		err := p.VerifyCosignedTreeHead(&td.logHash,
+			&types.CosignedTreeHead{SignedTreeHead: td.sth, Cosignatures: present})
 		if s.expectValid && err != nil {
 			t.Errorf("%s: Failed on valid cth: %v", s.desc, err)
 		}
 		if !s.expectValid && err == nil {
 			t.Errorf("%s: Expected error, but got none", s.desc)
+		}
+	}
+}
+
+func TestOneOfNWitnessPolicy(t *testing.T) {
+	td := newTestData(t, 6)
+	// Policy with 1-of-n everywhere. Despite the hierarchy, this
+	// boils down to requiring at least one cosignature, by any of
+	// the six witnesses.
+	//
+	//        q
+	//       / \
+	//     g0   g2
+	//    / |   /|\
+	//   w0 w1 w4|w5
+	//          g1
+	//          / \
+	//         w2 w3
+	p, err := NewPolicy(
+		AddLog(&Entity{PublicKey: td.logPub}),
+		AddWitness("w0", &Entity{PublicKey: td.witnessKeys[0]}),
+		AddWitness("w1", &Entity{PublicKey: td.witnessKeys[1]}),
+		AddGroup("g0", 1, []string{"w0", "w1"}),
+		AddWitness("w2", &Entity{PublicKey: td.witnessKeys[2]}),
+		AddWitness("w3", &Entity{PublicKey: td.witnessKeys[3]}),
+		AddGroup("g1", 1, []string{"w2", "w3"}),
+		AddWitness("w4", &Entity{PublicKey: td.witnessKeys[4]}),
+		AddWitness("w5", &Entity{PublicKey: td.witnessKeys[5]}),
+		AddGroup("g2", 1, []string{"g1", "w4", "w5"}),
+		AddGroup("q", 1, []string{"g0", "g2"}),
+		SetQuorum("q"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.VerifyCosignedTreeHead(
+		&td.logHash, &types.CosignedTreeHead{SignedTreeHead: td.sth}); err == nil {
+		t.Errorf("1-of-n policy, no cosignatures: Expected error, got none")
+	}
+	// Exhaustive test, representing witness j using bit j of i.
+	// There are a total of 64 cases, with the failing no-witness
+	// case (corresponding to i == 0) handled above.
+	for i := 1; i < 64; i++ {
+		present := make(map[crypto.Hash]types.Cosignature)
+		for j := 0; j < 6; j++ {
+			if (i & (1 << j)) > 0 {
+				present[td.witnessHashes[j]] = td.cosignatures[j]
+			}
+		}
+		if err := p.VerifyCosignedTreeHead(
+			&td.logHash, &types.CosignedTreeHead{
+				SignedTreeHead: td.sth,
+				Cosignatures:   present,
+			}); err != nil {
+			t.Errorf("1-of-n policy, failed for case %d: %v", i, err)
+		}
+	}
+}
+func TestTwoOfNWitnessPolicy(t *testing.T) {
+	td := newTestData(t, 6)
+	// Similar policy with 2-of-n everywhere.
+	p, err := NewPolicy(
+		AddLog(&Entity{PublicKey: td.logPub}),
+		AddWitness("w0", &Entity{PublicKey: td.witnessKeys[0]}),
+		AddWitness("w1", &Entity{PublicKey: td.witnessKeys[1]}),
+		AddGroup("g0", 2, []string{"w0", "w1"}),
+		AddWitness("w2", &Entity{PublicKey: td.witnessKeys[2]}),
+		AddWitness("w3", &Entity{PublicKey: td.witnessKeys[3]}),
+		AddGroup("g1", 2, []string{"w2", "w3"}),
+		AddWitness("w4", &Entity{PublicKey: td.witnessKeys[4]}),
+		AddWitness("w5", &Entity{PublicKey: td.witnessKeys[5]}),
+		AddGroup("g2", 2, []string{"g1", "w4", "w5"}),
+		AddGroup("q", 2, []string{"g0", "g2"}),
+		SetQuorum("q"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Exhaustive test, representing witness j using bit j of i.
+	// There are a total of 64 cases.
+	for i := 0; i < 64; i++ {
+		present := make(map[crypto.Hash]types.Cosignature)
+		for j := 0; j < 6; j++ {
+			if (i & (1 << j)) > 0 {
+				present[td.witnessHashes[j]] = td.cosignatures[j]
+			}
+		}
+		// Expected answer: We must have both groups g0 and
+		// g2. For g0, we have must have both w0 and w1. For
+		// g2, we have this truth table:
+		truth := [16]bool{
+			false, false, false, false, // both w4 and w5 missing
+			false, false, false, true, // w4, valid if both w2, w3
+			false, false, false, true, // w5, valid if both w2, w3
+			true, true, true, true, // both of w4 and w5
+		}
+		expectValid := (i&3) == 3 && truth[i>>2]
+		err := p.VerifyCosignedTreeHead(
+			&td.logHash, &types.CosignedTreeHead{
+				SignedTreeHead: td.sth,
+				Cosignatures:   present,
+			})
+		if expectValid && err != nil {
+			t.Errorf("2-of-n policy, failed for case %d: %v", i, err)
+		}
+		if !expectValid && err == nil {
+			t.Errorf("2-of-n policy, expect error for case %d, got none", i)
 		}
 	}
 }
