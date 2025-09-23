@@ -50,7 +50,7 @@ func main() {
 		log.Fatalf("failed to select policy: %v", err)
 	}
 	if policy == nil {
-		log.Fatalf("a policy must be specified, either in pubkey files or using -p or -P")
+		log.Fatalf("a policy must be specified")
 	}
 	if err := pr.Verify(&msg, submitKeys, policy); err != nil {
 		log.Fatalf("sigsum proof failed to verify: %v", err)
