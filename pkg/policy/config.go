@@ -135,5 +135,9 @@ func ReadPolicyFile(name string) (*Policy, error) {
 		return nil, err
 	}
 	defer f.Close()
-	return ParseConfig(f)
+	policy, err := ParseConfig(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse policy file %q: %v", name, err)
+	}
+	return policy, nil
 }
