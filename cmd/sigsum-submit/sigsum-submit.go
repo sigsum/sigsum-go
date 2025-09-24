@@ -15,11 +15,11 @@ import (
 	"github.com/dchest/safefile"
 	"github.com/pborman/getopt/v2"
 
+	"sigsum.org/sigsum-go/internal/ui"
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 	"sigsum.org/sigsum-go/pkg/log"
-	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/proof"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/submit"
@@ -31,6 +31,7 @@ type Settings struct {
 	rawHash      bool
 	keyFile      string
 	policyFile   string
+	policyName   string
 	leafHash     bool
 	diagnostics  string
 	inputFiles   []string
@@ -116,11 +117,11 @@ func main() {
 		}
 	}
 
-	if len(settings.policyFile) > 0 {
-		policy, err := policy.ReadPolicyFile(settings.policyFile)
-		if err != nil {
-			log.Fatal("Invalid policy file: %v", err)
-		}
+	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
+	if err != nil {
+		log.Fatal("failed to select policy: %v", err)
+	}
+	if policy != nil {
 		config := submit.Config{Policy: policy,
 			Domain:  settings.tokenDomain,
 			Timeout: settings.timeout,
@@ -203,6 +204,16 @@ func main() {
 	}
 }
 
+func countTrue(b ...bool) int {
+	n := 0
+	for _, v := range b {
+		if v {
+			n++
+		}
+	}
+	return n
+}
+
 func (s *Settings) parse(args []string) {
 	const usage = `
 Sign checksums and submit them for logging with add-leaf requests.
@@ -258,7 +269,8 @@ If a ".req" file already exists, then it is simply overwritten.
 	versionFlag := false
 	set.FlagLong(&s.rawHash, "raw-hash", 0, "Input has already been hashed and formatted as 32 octets or a hex string")
 	set.FlagLong(&s.keyFile, "signing-key", 'k', "Private key in OpenSSH format to sign checksums; or a corresponding public key where the private part is accessed using the SSH agent protocol", "key-file")
-	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy defining logs, witnesses, and a quorum rule; omit to only output requests and exit", "policy-file")
+	set.FlagLong(&s.policyFile, "policy", 'p', "Trust policy file defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-file")
+	set.FlagLong(&s.policyName, "named-policy", 'P', "Use a named trust policy defining logs, witnesses, and a quorum rule; omit policy to only output requests and exit", "policy-name")
 	set.FlagLong(&s.leafHash, "leaf-hash", 0, "Output the request's leaf hash without submission and exit")
 	set.FlagLong(&s.outputFile, "output", 'o', "Store output in a file, only works for a single input", "output-file")
 	set.FlagLong(&s.outputDir, "output-dir", 'O', "Store output in a directory [same as corresponding input file]", "output-dir")
@@ -289,8 +301,8 @@ If a ".req" file already exists, then it is simply overwritten.
 	if len(s.outputFile) > 0 && len(s.outputDir) > 0 {
 		log.Fatal("The -o and the --output-dir options are mutually exclusive.")
 	}
-	if len(s.policyFile) > 0 && s.leafHash {
-		log.Fatal("The -p (--policy) and --leaf-hash options are mutually exclusive.")
+	if countTrue(len(s.policyName) > 0, len(s.policyFile) > 0, s.leafHash) > 1 {
+		log.Fatal("The -P, -p, and --leaf-hash options are mutually exclusive.")
 	}
 	for _, f := range s.inputFiles {
 		if len(f) == 0 {
