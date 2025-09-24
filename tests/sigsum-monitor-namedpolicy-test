@@ -53,7 +53,7 @@ search_output() {
     done
     return 1
 }
-for x in $(seq 5); do
+for x in $(seq 1 3); do
     echo >&2 "submit $x"
     echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-signing-key test.token.key -o tmp-proof -k test.submit.key --policy test.policy
     rm tmp-proof
@@ -72,7 +72,45 @@ cat tmp-policy-start test.submit.key.pub > test.submit.key.withpolicy.pub
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor --interval=2s test.submit.key.withpolicy.pub > test.monitor.out &
 MONITOR_PID=$!
 
-for x in $(seq 6 10); do
+for x in $(seq 4 6); do
+    echo >&2 "submit $x"
+    echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-signing-key test.token.key -o tmp-proof -k test.submit.key --policy test.policy
+    rm tmp-proof
+    echo >&2 "waiting on monitor $x"
+    search_output "$(echo "msg $x" | go run ./sha256-n/sha256-n.go 2)" || die "Monitor not finding leaf $x"
+done
+
+# Do the same test again, but this time specifying policy both using -P and inside the pubkey file -- then -P should be used
+
+kill ${MONITOR_PID}
+
+# Create pubkey with nonextistent dummy policy
+printf 'sigsum-policy="dummypolicy" ' > tmp-policy-start
+cat tmp-policy-start test.submit.key.pub > test.submit.key.withdummypolicy.pub
+
+SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor -P testpolicy123 --interval=2s test.submit.key.withdummypolicy.pub > test.monitor.out &
+MONITOR_PID=$!
+
+for x in $(seq 7 9); do
+    echo >&2 "submit $x"
+    echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-signing-key test.token.key -o tmp-proof -k test.submit.key --policy test.policy
+    rm tmp-proof
+    echo >&2 "waiting on monitor $x"
+    search_output "$(echo "msg $x" | go run ./sha256-n/sha256-n.go 2)" || die "Monitor not finding leaf $x"
+done
+
+# Do the same test again, this time specifying policy both using --named-policy and inside the pubkey file -- then --named-policy should be used
+
+kill ${MONITOR_PID}
+
+# Create pubkey with nonextistent dummy policy
+printf 'sigsum-policy="dummypolicy" ' > tmp-policy-start
+cat tmp-policy-start test.submit.key.pub > test.submit.key.withdummypolicy.pub
+
+SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor --named-policy testpolicy123 --interval=2s test.submit.key.withdummypolicy.pub > test.monitor.out &
+MONITOR_PID=$!
+
+for x in $(seq 10 12); do
     echo >&2 "submit $x"
     echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-signing-key test.token.key -o tmp-proof -k test.submit.key --policy test.policy
     rm tmp-proof
