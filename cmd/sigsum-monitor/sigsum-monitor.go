@@ -54,22 +54,31 @@ func main() {
 		QueryInterval: settings.interval,
 		Callbacks:     callbacks{},
 	}
+	var policyNamesFromPubKeys []string
 	if len(settings.keys) > 0 {
 		config.SubmitKeys = make(map[crypto.Hash]crypto.PublicKey)
 		for _, f := range settings.keys {
-			pub, err := key.ReadPublicKeyFile(f)
+			pub, policyName, err := key.ReadPublicKeyFileWithPolicyName(f)
 			if err != nil {
 				log.Fatal("Failed reading key: %v", err)
 			}
 			config.SubmitKeys[crypto.HashBytes(pub[:])] = pub
+			policyNamesFromPubKeys = append(policyNamesFromPubKeys, policyName)
 		}
 	}
-	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
+	// Require all names in policyNamesFromPubKeys to be identical
+	policyNameFromPubKeys := policyNamesFromPubKeys[0]
+	for _, name := range policyNamesFromPubKeys {
+		if name != policyNameFromPubKeys {
+			log.Fatal("conflicting policy names found in pubkeys: '%q' != '%q'", name, policyNameFromPubKeys)
+		}
+	}
+	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName, policyNameFromPubKeys)
 	if err != nil {
 		log.Fatal("failed to select policy: %v", err)
 	}
 	if policy == nil {
-		log.Fatal("a policy must be specified")
+		log.Fatal("a policy must be specified, either in pubkey file or using -p or -P")
 	}
 	// TODO: Read state from disk. Also store the list of submit
 	// keys, and discard state if keys are added, since whenever

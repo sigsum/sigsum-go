@@ -8,12 +8,11 @@ import (
 // The trust policy to use can come from different places:
 //   - file explicitly specified by the user
 //   - policy name explicitly specified by the user
-//   - (in future, not implemented yet) policy name extracted from a pubkey
+//   - policy name extracted from a pubkey
 //
-// This function takes strings corresponding to the above cases
+// This function takes three strings corresponding to the above three cases
 // and determines a policy based on that.
-// (The plan is to later add a third argument "policyNameFromPubKey")
-func SelectPolicy(policyFile string, policyName string) (*policy.Policy, error) {
+func SelectPolicy(policyFile string, policyName string, policyNameFromPubKey string) (*policy.Policy, error) {
 	if policyFile != "" && policyName != "" {
 		err := fmt.Errorf("both policyFile and policyName were specified, this is not allowed")
 		return nil, err
@@ -23,6 +22,9 @@ func SelectPolicy(policyFile string, policyName string) (*policy.Policy, error) 
 	}
 	if policyName != "" {
 		return policy.ByName(policyName)
+	}
+	if policyNameFromPubKey != "" {
+		return policy.ByName(policyNameFromPubKey)
 	}
 	// The user has not specified any policy
 	return nil, nil

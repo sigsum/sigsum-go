@@ -41,10 +41,16 @@ func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
 	if len(fields) < 2 {
 		return crypto.PublicKey{}, fmt.Errorf("invalid public key, splitting line failed")
 	}
-	if fields[0] != "ssh-ed25519" {
+	keyTypeFieldIdx := 0
+	keyFieldIdx := 1
+	if strings.HasPrefix(fields[0], "sigsum-policy=") {
+		keyTypeFieldIdx++
+		keyFieldIdx++
+	}
+	if fields[keyTypeFieldIdx] != "ssh-ed25519" {
 		return crypto.PublicKey{}, fmt.Errorf("unsupported public key type: %v", fields[0])
 	}
-	blob, err := base64.StdEncoding.DecodeString(fields[1])
+	blob, err := base64.StdEncoding.DecodeString(fields[keyFieldIdx])
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}

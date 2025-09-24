@@ -54,12 +54,14 @@ func main() {
 		log.Fatal("%v", err)
 	}
 
+	var policyNameFromPubKey string
 	var source LeafSource
 	if len(settings.keyFile) > 0 {
-		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
+		signer, policyName, err := key.ReadKeyFileWithPolicy(settings.keyFile)
 		if err != nil {
 			log.Fatal("reading key file failed: %v", err)
 		}
+		policyNameFromPubKey = policyName
 		publicKey := signer.Public()
 		if len(settings.inputFiles) == 0 {
 			source = func(_ LeafSkip, sink LeafSink) {
@@ -117,7 +119,7 @@ func main() {
 		}
 	}
 
-	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
+	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName, policyNameFromPubKey)
 	if err != nil {
 		log.Fatal("failed to select policy: %v", err)
 	}
