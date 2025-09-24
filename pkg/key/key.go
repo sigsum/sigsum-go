@@ -22,7 +22,7 @@ func extractPolicyName(s string) (string, error) {
 	quotedName := s[i+1:]
 	// First and last character must be quotation marks
 	if quotedName[0] != '"' || quotedName[len(quotedName)-1] != '"' {
-		return "", fmt.Errorf("Failed to extract policy name")
+		return "", fmt.Errorf("failed to extract policy name")
 	}
 	return quotedName[1 : len(quotedName)-1], nil
 }
