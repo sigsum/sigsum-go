@@ -7,20 +7,20 @@ set -e
 ./bin/sigsum-key generate -o test.other.key
 
 # Create pubkey with policy to be used in tests
-printf 'sigsum-policy="testpolicy123" ' > tmp-policy-start
-cat tmp-policy-start test.agent.key.pub > test.agent.key.withpolicy.pub
+printf 'sigsum-policy="testpolicy123" ' > test.tmp-policy-start
+cat test.tmp-policy-start test.agent.key.pub > test.agent.key.withpolicy.pub
 
 # Create pubkey with dummy policy
-printf 'sigsum-policy="dummypolicy" ' > tmp-policy-start
-cat tmp-policy-start test.agent.key.pub > test.agent.key.withdummypolicy.pub
+printf 'sigsum-policy="dummypolicy" ' > test.tmp-policy-start
+cat test.tmp-policy-start test.agent.key.pub > test.agent.key.withdummypolicy.pub
 
 # Create other pubkey with dummy policy
-printf 'sigsum-policy="dummypolicy" ' > tmp-policy-start
-cat tmp-policy-start test.other.key.pub > test.other.key.withdummypolicy.pub
+printf 'sigsum-policy="dummypolicy" ' > test.tmp-policy-start
+cat test.tmp-policy-start test.other.key.pub > test.other.key.withdummypolicy.pub
 
 # Create other pubkey with correct policy
-printf 'sigsum-policy="testpolicy123" ' > tmp-policy-start
-cat tmp-policy-start test.other.key.pub > test.other.key.withpolicy.pub
+printf 'sigsum-policy="testpolicy123" ' > test.tmp-policy-start
+cat test.tmp-policy-start test.other.key.pub > test.other.key.withpolicy.pub
 
 # Reading private key files still supports raw hex.
 printf '%064x' 1 > test.token.key
@@ -111,8 +111,8 @@ x=6
 	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
 	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
 	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
-	     -p ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy -P testpolicy123 2> stderr.txt || echo "Expected failure"
-    grep "The -P, -p, and --leaf-hash options are mutually exclusive" stderr.txt
+	     -p ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy -P testpolicy123 2> test.stderr.txt || echo "Expected failure"
+    grep "The -P, -p, and --leaf-hash options are mutually exclusive" test.stderr.txt
 
 ./bin/sigsum-key generate -o test.submit2.key
 ./bin/sigsum-key generate -o test.submit3.key
@@ -161,22 +161,22 @@ echo "Using sigsum-verify without policy option and no policy in pubkey files (t
 x=5
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
-	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub "test.$x.proof" 2> stderr.txt || echo "Expected failure"
-grep "a policy must be specified" stderr.txt
+	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub "test.$x.proof" 2> test.stderr.txt || echo "Expected failure"
+grep "a policy must be specified" test.stderr.txt
 
 echo "Using sigsum-verify without policy option and ambiguous policy names in pubkey files (this should fail)"
 x=5
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
-	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys-ambiguous.pub "test.$x.proof" 2> stderr.txt || echo "Expected failure"
-grep "conflicting policy names found in pubkeys" stderr.txt
+	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys-ambiguous.pub "test.$x.proof" 2> test.stderr.txt || echo "Expected failure"
+grep "conflicting policy names found in pubkeys" test.stderr.txt
 
 echo "Using sigsum-verify without policy option and with dummy policy in pubkey file (this should fail)"
 x=5
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
-	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.agent.key.withdummypolicy.pub "test.$x.proof" 2> stderr.txt || echo "Expected failure"
-grep "failed to select policy: failed to get named policy for name" stderr.txt
+	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.agent.key.withdummypolicy.pub "test.$x.proof" 2> test.stderr.txt || echo "Expected failure"
+grep "failed to select policy: failed to get named policy for name" test.stderr.txt
 
 echo "Checking that the message is taken into account in validation (expecting failure)."
 if printf "%31s\n" foo-2 \

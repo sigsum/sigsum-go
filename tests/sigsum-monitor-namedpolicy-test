@@ -66,8 +66,8 @@ done
 kill ${MONITOR_PID}
 
 # Create pubkey with policy
-printf 'sigsum-policy="testpolicy123" ' > tmp-policy-start
-cat tmp-policy-start test.submit.key.pub > test.submit.key.withpolicy.pub
+printf 'sigsum-policy="testpolicy123" ' > test.tmp-policy-start
+cat test.tmp-policy-start test.submit.key.pub > test.submit.key.withpolicy.pub
 
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor --interval=2s test.submit.key.withpolicy.pub > test.monitor.out &
 MONITOR_PID=$!
@@ -85,8 +85,8 @@ done
 kill ${MONITOR_PID}
 
 # Create pubkey with nonextistent dummy policy
-printf 'sigsum-policy="dummypolicy" ' > tmp-policy-start
-cat tmp-policy-start test.submit.key.pub > test.submit.key.withdummypolicy.pub
+printf 'sigsum-policy="dummypolicy" ' > test.tmp-policy-start
+cat test.tmp-policy-start test.submit.key.pub > test.submit.key.withdummypolicy.pub
 
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor -P testpolicy123 --interval=2s test.submit.key.withdummypolicy.pub > test.monitor.out &
 MONITOR_PID=$!
@@ -104,8 +104,8 @@ done
 kill ${MONITOR_PID}
 
 # Create pubkey with nonextistent dummy policy
-printf 'sigsum-policy="dummypolicy" ' > tmp-policy-start
-cat tmp-policy-start test.submit.key.pub > test.submit.key.withdummypolicy.pub
+printf 'sigsum-policy="dummypolicy" ' > test.tmp-policy-start
+cat test.tmp-policy-start test.submit.key.pub > test.submit.key.withdummypolicy.pub
 
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor --named-policy testpolicy123 --interval=2s test.submit.key.withdummypolicy.pub > test.monitor.out &
 MONITOR_PID=$!
