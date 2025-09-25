@@ -36,7 +36,7 @@ func main() {
 	policyNameFromPubKeys := policyNamesFromPubKeys[0]
 	for _, name := range policyNamesFromPubKeys {
 		if name != policyNameFromPubKeys {
-			log.Fatalf("conflicting policy names found in pubkeys: '%v' != '%v'", name, policyNameFromPubKeys)
+			log.Fatalf("Conflicting policy names found in pubkeys: '%v' != '%v'", name, policyNameFromPubKeys)
 		}
 	}
 	msg, err := readMessage(os.Stdin, settings.rawHash)
@@ -57,7 +57,7 @@ func main() {
 		log.Fatalf("failed to select policy: %v", err)
 	}
 	if policy == nil {
-		log.Fatalf("a policy must be specified, either in pubkey file or using -p or -P")
+		log.Fatalf("A policy must be specified, either in pubkey file or using -p or -P")
 	}
 	if err := pr.Verify(&msg, submitKeys, policy); err != nil {
 		log.Fatalf("sigsum proof failed to verify: %v", err)

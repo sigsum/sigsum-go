@@ -70,15 +70,15 @@ func main() {
 	policyNameFromPubKeys := policyNamesFromPubKeys[0]
 	for _, name := range policyNamesFromPubKeys {
 		if name != policyNameFromPubKeys {
-			log.Fatal("conflicting policy names found in pubkeys: '%q' != '%q'", name, policyNameFromPubKeys)
+			log.Fatal("Conflicting policy names found in pubkeys: '%q' != '%q'", name, policyNameFromPubKeys)
 		}
 	}
 	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName, policyNameFromPubKeys)
 	if err != nil {
-		log.Fatal("failed to select policy: %v", err)
+		log.Fatal("Failed to select policy: %v", err)
 	}
 	if policy == nil {
-		log.Fatal("a policy must be specified, either in pubkey file or using -p or -P")
+		log.Fatal("A policy must be specified, either in pubkey file or using -p or -P")
 	}
 	// TODO: Read state from disk. Also store the list of submit
 	// keys, and discard state if keys are added, since whenever
