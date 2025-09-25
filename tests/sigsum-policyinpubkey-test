@@ -169,7 +169,7 @@ x=5
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys-ambiguous.pub "test.$x.proof" 2> test.stderr.txt || echo "Expected failure"
-grep "Conflicting policy names found in pubkeys" test.stderr.txt
+grep "conflicting policy names found in pubkeys" test.stderr.txt
 
 echo "Using sigsum-verify without policy option and with dummy policy in pubkey file (this should fail)"
 x=5

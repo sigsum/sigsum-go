@@ -28,16 +28,9 @@ func main() {
 	log.SetFlags(0)
 	var settings Settings
 	settings.parse(os.Args)
-	submitKeys, policyNamesFromPubKeys, err := key.ReadPublicKeysFile(settings.submitKey)
+	submitKeys, policyNameFromPubKeys, err := key.ReadPublicKeysFile(settings.submitKey)
 	if err != nil {
 		log.Fatal(err)
-	}
-	// Require all names in policyNamesFromPubKeys to be identical
-	policyNameFromPubKeys := policyNamesFromPubKeys[0]
-	for _, name := range policyNamesFromPubKeys {
-		if name != policyNameFromPubKeys {
-			log.Fatalf("Conflicting policy names found in pubkeys: '%v' != '%v'", name, policyNameFromPubKeys)
-		}
 	}
 	msg, err := readMessage(os.Stdin, settings.rawHash)
 	if err != nil {
