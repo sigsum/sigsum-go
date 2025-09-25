@@ -16,15 +16,9 @@ func ParsePublicKey(ascii string) (crypto.PublicKey, error) {
 	return ssh.ParsePublicEd25519(ascii)
 }
 
-// s is a string on the form sigsum-policy="foo"
-func extractPolicyName(s string) (string, error) {
-	i := strings.IndexRune(s, '=')
-	quotedName := s[i+1:]
-	// First and last character must be quotation marks
-	if quotedName[0] != '"' || quotedName[len(quotedName)-1] != '"' {
-		return "", fmt.Errorf("failed to extract policy name")
-	}
-	return quotedName[1 : len(quotedName)-1], nil
+// Expects an Openssh public key (single-line format)
+func ParsePublicKeyWithPolicyName(ascii string) (crypto.PublicKey, string, error) {
+	return ssh.ParsePublicEd25519WithPolicyName(ascii)
 }
 
 // Supports two formats:
@@ -40,23 +34,8 @@ func ParsePrivateKey(ascii string) (crypto.Signer, string, error) {
 	// Accepts public keys only in openssh format, since with raw
 	// hex-encoded keys, we can't distinguish between public and
 	// private keys.
-	policyName := ""
-	if strings.HasPrefix(ascii, "sigsum-policy=") {
-		// Extract first part of the string, until first space
-		i := strings.IndexRune(ascii, ' ')
-		firstPart := ascii[:i]
-		ascii = ascii[i+1:]
-		var err error
-		policyName, err = extractPolicyName(firstPart)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-	if strings.HasPrefix(ascii, "ssh-ed25519 ") {
-		key, err := ssh.ParsePublicEd25519(ascii)
-		if err != nil {
-			return nil, "", err
-		}
+	key, policyName, err := ssh.ParsePublicEd25519WithPolicyName(ascii)
+	if err == nil {
 		c, err := ssh.Connect()
 		if err != nil {
 			return nil, "", fmt.Errorf("only public key available, and no ssh-agent: %v", err)
@@ -64,6 +43,7 @@ func ParsePrivateKey(ascii string) (crypto.Signer, string, error) {
 		signer, err := c.NewSigner(&key)
 		return signer, policyName, err
 	}
+	// ParsePublicEd25519 failed, assume private key case
 	_, signer, err := ssh.ParsePrivateKeyFile([]byte(ascii))
 	if err == ssh.NoPEMError {
 		// TODO: Delete support for raw keys.
@@ -82,19 +62,7 @@ func ReadPublicKeyFileWithPolicyName(fileName string) (crypto.PublicKey, string,
 	if err != nil {
 		return crypto.PublicKey{}, "", err
 	}
-	s := string(contents)
-	policyName := ""
-	if strings.HasPrefix(s, "sigsum-policy=") {
-		// extract first part of the string, until first space
-		i := strings.IndexRune(s, ' ')
-		firstPart := s[:i]
-		var err error
-		policyName, err = extractPolicyName(firstPart)
-		if err != nil {
-			return crypto.PublicKey{}, "", err
-		}
-	}
-	key, err := ParsePublicKey(s)
+	key, policyName, err := ParsePublicKeyWithPolicyName(string(contents))
 	if err != nil {
 		return crypto.PublicKey{}, "", fmt.Errorf("parsing public key file %q failed: %v",
 			fileName, err)
@@ -124,18 +92,7 @@ func parsePublicKeysFileWithPolicyNames(f io.Reader, fileName string) (map[crypt
 		if strings.HasPrefix(line, "#") || line == "" {
 			continue
 		}
-		policyName := ""
-		if strings.HasPrefix(line, "sigsum-policy=") {
-			// extract first part of the string, until first space
-			i := strings.IndexRune(line, ' ')
-			firstPart := line[:i]
-			var err error
-			policyName, err = extractPolicyName(firstPart)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-		key, err := ParsePublicKey(line)
+		key, policyName, err := ParsePublicKeyWithPolicyName(line)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to parse public key on line %d of file %q: %v", n, fileName, err)
 		}
