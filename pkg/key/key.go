@@ -150,9 +150,6 @@ func ReadKeyFileWithPolicy(fileName string) (crypto.Signer, string, error) {
 	return signer, policyName, nil
 }
 
-// TODO: The ReadPrivateKeyFile function has a misleading name, since
-// the key file that is read is not always a private key file but
-// sometimes a pubkey? Should the function be renamed to ReadKeyFile?
 func ReadPrivateKeyFile(fileName string) (crypto.Signer, error) {
 	signer, _, err := ReadKeyFileWithPolicy(fileName)
 	return signer, err
