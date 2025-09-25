@@ -33,17 +33,6 @@ func parsePublicEd25519(blob []byte) (crypto.PublicKey, error) {
 	return ret, nil
 }
 
-// s is a string on the form sigsum-policy="foo"
-func extractPolicyName(s string) (string, error) {
-	i := strings.IndexRune(s, '=')
-	quotedName := s[i+1:]
-	// First and last character must be quotation marks
-	if quotedName[0] != '"' || quotedName[len(quotedName)-1] != '"' {
-		return "", fmt.Errorf("failed to extract policy name")
-	}
-	return quotedName[1 : len(quotedName)-1], nil
-}
-
 func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
 	key, _, err := ParsePublicEd25519WithPolicyName(asciiKey)
 	return key, err
@@ -59,12 +48,17 @@ func ParsePublicEd25519WithPolicyName(asciiKey string) (crypto.PublicKey, string
 		return crypto.PublicKey{}, "", fmt.Errorf("invalid public key, splitting line failed")
 	}
 	policyName := ""
-	if strings.HasPrefix(fields[0], "sigsum-policy=") {
-		var err error
-		policyName, err = extractPolicyName(fields[0])
-		if err != nil {
-			return crypto.PublicKey{}, "", err
+	// Check for policy name option on the form
+	// sigsum-policy="foo", following the format of option
+	// specifications found in the "AUTHORIZED_KEYS FILE FORMAT"
+	// section of the sshd man page
+	quotedPolicyName, found := strings.CutPrefix(fields[0], "sigsum-policy=")
+	if found {
+		// First and last character must be quotation marks
+		if quotedPolicyName[0] != '"' || quotedPolicyName[len(quotedPolicyName)-1] != '"' {
+			return crypto.PublicKey{}, "", fmt.Errorf("failed to extract policy name")
 		}
+		policyName = quotedPolicyName[1 : len(quotedPolicyName)-1]
 		// Remove the "sigsum-policy=" field
 		fields = fields[1:]
 	}
