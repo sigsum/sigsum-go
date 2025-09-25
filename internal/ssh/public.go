@@ -55,8 +55,11 @@ func ParsePublicEd25519WithPolicyName(asciiKey string) (crypto.PublicKey, string
 	quotedPolicyName, found := strings.CutPrefix(fields[0], "sigsum-policy=")
 	if found {
 		// First and last character must be quotation marks
+		if len(quotedPolicyName) < 3 {
+			return crypto.PublicKey{}, "", fmt.Errorf("failed to extract policy name from string '%q'", fields[0])
+		}
 		if quotedPolicyName[0] != '"' || quotedPolicyName[len(quotedPolicyName)-1] != '"' {
-			return crypto.PublicKey{}, "", fmt.Errorf("failed to extract policy name")
+			return crypto.PublicKey{}, "", fmt.Errorf("failed to extract policy name from string '%q'", fields[0])
 		}
 		policyName = quotedPolicyName[1 : len(quotedPolicyName)-1]
 		// Remove the "sigsum-policy=" field
