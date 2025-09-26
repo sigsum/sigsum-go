@@ -56,58 +56,43 @@ echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" 
 echo "quorum none" >> test.policy
 cp test.policy "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
 
+common_options="--timeout=5s --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning --raw-hash"
+
 x=1
     echo >&2 "submit $x -- sigsum-submit with policy name specified in pubkey"
-    # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
-	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
-	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
-	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withpolicy.pub
+	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit $common_options \
+	     -o "test.$x.proof" --signing-key test.agent.key.withpolicy.pub
 
 x=2
     echo >&2 "submit $x -- sigsum-submit with policy name specified using --named-policy="
-    # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
-	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
-	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
-	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.pub \
-	     --named-policy=testpolicy123
+	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit $common_options \
+	     -o "test.$x.proof" --signing-key test.agent.key.pub --named-policy=testpolicy123
 
 x=3
     echo >&2 "submit $x -- sigsum-submit with policy name specified using -P"
-    # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
-	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
-	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
-	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withpolicy.pub \
-	     -P testpolicy123
+	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit $common_options \
+	     -o "test.$x.proof" --signing-key test.agent.key.withpolicy.pub -P testpolicy123
 
 x=4
     echo >&2 "submit $x -- sigsum-submit with policy name specified using -P and in pubkey (name in pubkey should then be ignored)"
-    # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
-	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
-	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
-	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
-	     -P testpolicy123
+	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit $common_options \
+	     -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub -P testpolicy123
 
 x=5
     echo >&2 "submit $x -- sigsum-submit with policy file specified using -p and in pubkey (name in pubkey should then be ignored)"
-    # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
-	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
-	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
-	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
-	     -p "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
+	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit $common_options \
+	     -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub -p "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
 
 x=6
     echo >&2 "sigsum-submit with policy file specified using both -p and -P -- should fail because those options are mutually exclusive"
-    # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
-	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
-	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
-	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
-	     -p "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy -P testpolicy123 2> test.stderr.txt || echo "Expected failure"
+	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit $common_options \
+	     -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub -p "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy -P testpolicy123 2> test.stderr.txt || echo "Expected failure"
     grep "The -P, -p, and --leaf-hash options are mutually exclusive" test.stderr.txt
 
 ./bin/sigsum-key generate -o test.submit2.key
