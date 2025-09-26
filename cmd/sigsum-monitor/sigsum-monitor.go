@@ -73,7 +73,12 @@ func main() {
 			log.Fatal("Conflicting policy names found in pubkeys: '%q' != '%q'", name, policyNameFromPubKeys)
 		}
 	}
-	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName, policyNameFromPubKeys)
+	policyParams := ui.PolicySelectionParams{
+		PolicyFile:           settings.policyFile,
+		PolicyName:           settings.policyName,
+		PolicyNameFromPubKey: policyNameFromPubKeys,
+	}
+	policy, err := ui.SelectPolicy(policyParams)
 	if err != nil {
 		log.Fatal("Failed to select policy: %v", err)
 	}

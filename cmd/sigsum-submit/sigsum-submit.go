@@ -119,7 +119,12 @@ func main() {
 		}
 	}
 
-	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName, policyNameFromPubKey)
+	policyParams := ui.PolicySelectionParams{
+		PolicyFile:           settings.policyFile,
+		PolicyName:           settings.policyName,
+		PolicyNameFromPubKey: policyNameFromPubKey,
+	}
+	policy, err := ui.SelectPolicy(policyParams)
 	if err != nil {
 		log.Fatal("failed to select policy: %v", err)
 	}
