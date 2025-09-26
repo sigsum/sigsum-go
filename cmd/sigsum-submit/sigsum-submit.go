@@ -57,11 +57,12 @@ func main() {
 	var policyNameFromPubKey string
 	var source LeafSource
 	if len(settings.keyFile) > 0 {
-		signer, policyName, err := key.ReadKeyFileWithPolicy(settings.keyFile)
+		var signer crypto.Signer
+		var err error
+		signer, policyNameFromPubKey, err = key.ReadKeyFileWithPolicy(settings.keyFile)
 		if err != nil {
 			log.Fatal("reading key file failed: %v", err)
 		}
-		policyNameFromPubKey = policyName
 		publicKey := signer.Public()
 		if len(settings.inputFiles) == 0 {
 			source = func(_ LeafSkip, sink LeafSink) {
