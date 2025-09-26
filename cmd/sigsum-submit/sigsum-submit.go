@@ -119,7 +119,7 @@ func main() {
 		}
 	}
 
-	policy, err := ui.SelectPolicy(ui.PolicySelectionParams{
+	policy, err := ui.SelectPolicy(ui.PolicyParams{
 		PolicyFile:           settings.policyFile,
 		PolicyName:           settings.policyName,
 		PolicyNameFromPubKey: policyNameFromPubKey,

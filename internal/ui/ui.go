@@ -5,7 +5,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/policy"
 )
 
-type PolicySelectionParams struct {
+type PolicyParams struct {
 	PolicyFile           string // Typically from -p (--policy) option
 	PolicyName           string // Typically from -P (--named-policy) option
 	PolicyNameFromPubKey string // Policy name found in pubkey file
@@ -18,7 +18,7 @@ type PolicySelectionParams struct {
 //
 // This function takes a struct with three strings corresponding to
 // the above three cases and determines a policy based on that.
-func SelectPolicy(params PolicySelectionParams) (*policy.Policy, error) {
+func SelectPolicy(params PolicyParams) (*policy.Policy, error) {
 	if params.PolicyFile != "" && params.PolicyName != "" {
 		err := fmt.Errorf("both policyFile and policyName were specified, this is not allowed")
 		return nil, err
