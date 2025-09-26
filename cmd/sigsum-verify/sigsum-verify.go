@@ -46,9 +46,9 @@ func main() {
 		log.Fatalf("invalid proof: %v", err)
 	}
 	policy, err := ui.SelectPolicy(ui.PolicyParams{
-		PolicyFile:           settings.policyFile,
-		PolicyName:           settings.policyName,
-		PolicyNameFromPubKey: policyNameFromPubKeys,
+		File:           settings.policyFile,
+		Name:           settings.policyName,
+		NameFromPubKey: policyNameFromPubKeys,
 	})
 	if err != nil {
 		log.Fatalf("failed to select policy: %v", err)
