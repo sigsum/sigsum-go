@@ -84,12 +84,11 @@ func main() {
 	if config.SubmitKeys, policyNameFromPubKeys, err = readPublicKeyFiles(settings.keys); err != nil {
 		log.Fatal("Failed reading public key files: %v", err)
 	}
-	policyParams := ui.PolicySelectionParams{
+	policy, err := ui.SelectPolicy(ui.PolicySelectionParams{
 		PolicyFile:           settings.policyFile,
 		PolicyName:           settings.policyName,
 		PolicyNameFromPubKey: policyNameFromPubKeys,
-	}
-	policy, err := ui.SelectPolicy(policyParams)
+	})
 	if err != nil {
 		log.Fatal("Failed to select policy: %v", err)
 	}

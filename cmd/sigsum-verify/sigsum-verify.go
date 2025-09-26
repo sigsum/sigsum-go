@@ -45,12 +45,11 @@ func main() {
 	if err := pr.FromASCII(f); err != nil {
 		log.Fatalf("invalid proof: %v", err)
 	}
-	policyParams := ui.PolicySelectionParams{
+	policy, err := ui.SelectPolicy(ui.PolicySelectionParams{
 		PolicyFile:           settings.policyFile,
 		PolicyName:           settings.policyName,
 		PolicyNameFromPubKey: policyNameFromPubKeys,
-	}
-	policy, err := ui.SelectPolicy(policyParams)
+	})
 	if err != nil {
 		log.Fatalf("failed to select policy: %v", err)
 	}
