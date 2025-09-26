@@ -38,17 +38,17 @@ TMP_SOCKET_DIR=$(mktemp -d)
 TMP_SOCKET=${TMP_SOCKET_DIR}/test.socket
 
 # Start sigsum-agent
-./bin/sigsum-agent --key-file test.agent.key --socket-name=${TMP_SOCKET} &
+./bin/sigsum-agent --key-file test.agent.key --socket-name="${TMP_SOCKET}" &
 
 SIGSUM_AGENT_PID=$!
 
 cleanup () {
     kill ${SIGSUM_PID}
     kill ${SIGSUM_AGENT_PID}
-    rm -f ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy
-    rmdir ${TMP_POLICY_DIR}
-    rm -f ${TMP_SOCKET}
-    rmdir ${TMP_SOCKET_DIR}
+    rm -f "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
+    rmdir "${TMP_POLICY_DIR}"
+    rm -f "${TMP_SOCKET}"
+    rmdir "${TMP_SOCKET_DIR}"
 }
 
 trap cleanup EXIT
@@ -58,7 +58,7 @@ sleep 2
 
 echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
 echo "quorum none" >> test.policy
-cp test.policy ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy
+cp test.policy "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
 
 x=1
     echo >&2 "submit $x -- sigsum-submit with policy name specified in pubkey"
@@ -102,7 +102,7 @@ x=5
 	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
 	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
 	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
-	     -p ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy
+	     -p "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
 
 x=6
     echo >&2 "sigsum-submit with policy file specified using both -p and -P -- should fail because those options are mutually exclusive"
@@ -111,7 +111,7 @@ x=6
 	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
 	     --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning \
 	     --raw-hash -o "test.$x.proof" --signing-key test.agent.key.withdummypolicy.pub \
-	     -p ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy -P testpolicy123 2> test.stderr.txt || echo "Expected failure"
+	     -p "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy -P testpolicy123 2> test.stderr.txt || echo "Expected failure"
     grep "The -P, -p, and --leaf-hash options are mutually exclusive" test.stderr.txt
 
 ./bin/sigsum-key generate -o test.submit2.key
