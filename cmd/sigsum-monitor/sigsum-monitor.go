@@ -44,6 +44,31 @@ func (_ callbacks) Alert(logKeyHash crypto.Hash, e error) {
 	log.Fatal("Alert log %x: %v\n", logKeyHash, e)
 }
 
+func readPublicKeyFiles(fileNames []string) (map[crypto.Hash]crypto.PublicKey, string, error) {
+	var pubkeys map[crypto.Hash]crypto.PublicKey
+	var policyNames []string
+	policyName := ""
+	if len(fileNames) > 0 {
+		pubkeys = make(map[crypto.Hash]crypto.PublicKey)
+		for _, f := range fileNames {
+			pub, policyName, err := key.ReadPublicKeyFileWithPolicyName(f)
+			if err != nil {
+				return nil, "", fmt.Errorf("failed reading key: %v", err)
+			}
+			pubkeys[crypto.HashBytes(pub[:])] = pub
+			policyNames = append(policyNames, policyName)
+		}
+		// Require all policyNames to be identical
+		policyName = policyNames[0]
+		for _, name := range policyNames {
+			if name != policyName {
+				return nil, "", fmt.Errorf("conflicting policy names found in pubkeys: '%q' != '%q'", name, policyName)
+			}
+		}
+	}
+	return pubkeys, policyName, nil
+}
+
 func main() {
 	var settings Settings
 	settings.parse(os.Args)
@@ -54,24 +79,10 @@ func main() {
 		QueryInterval: settings.interval,
 		Callbacks:     callbacks{},
 	}
-	var policyNamesFromPubKeys []string
-	if len(settings.keys) > 0 {
-		config.SubmitKeys = make(map[crypto.Hash]crypto.PublicKey)
-		for _, f := range settings.keys {
-			pub, policyName, err := key.ReadPublicKeyFileWithPolicyName(f)
-			if err != nil {
-				log.Fatal("Failed reading key: %v", err)
-			}
-			config.SubmitKeys[crypto.HashBytes(pub[:])] = pub
-			policyNamesFromPubKeys = append(policyNamesFromPubKeys, policyName)
-		}
-	}
-	// Require all names in policyNamesFromPubKeys to be identical
-	policyNameFromPubKeys := policyNamesFromPubKeys[0]
-	for _, name := range policyNamesFromPubKeys {
-		if name != policyNameFromPubKeys {
-			log.Fatal("Conflicting policy names found in pubkeys: '%q' != '%q'", name, policyNameFromPubKeys)
-		}
+	var policyNameFromPubKeys string
+	var err error
+	if config.SubmitKeys, policyNameFromPubKeys, err = readPublicKeyFiles(settings.keys); err != nil {
+		log.Fatal("Failed reading public key files: %v", err)
 	}
 	policyParams := ui.PolicySelectionParams{
 		PolicyFile:           settings.policyFile,
