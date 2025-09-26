@@ -54,6 +54,12 @@ func getPolicy(field string) (string, error) {
 			return "", fmt.Errorf("failed to extract policy name from string '%q' - quotation marks not found", field)
 		}
 		policyName = quotedPolicyName[1 : len(quotedPolicyName)-1]
+		forbiddenCharacters := "\"'\\"
+		for _, c := range forbiddenCharacters {
+			if strings.ContainsRune(policyName, c) {
+				return "", fmt.Errorf("failed to extract policy name from string '%q' - character '%q' not allowed", field, c)
+			}
+		}
 	}
 	return policyName, nil
 }
