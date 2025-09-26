@@ -38,6 +38,26 @@ func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
 	return key, err
 }
 
+// This function checks for policy name option on the form
+// sigsum-policy="foo", following the format of option
+// specifications found in the "AUTHORIZED_KEYS FILE FORMAT"
+// section of the sshd man page
+func getPolicy(field string) (string, error) {
+	policyName := ""
+	quotedPolicyName, found := strings.CutPrefix(field, "sigsum-policy=")
+	if found {
+		// First and last character must be quotation marks
+		if len(quotedPolicyName) < 3 {
+			return "", fmt.Errorf("failed to extract policy name from string '%q' - too short", field)
+		}
+		if quotedPolicyName[0] != '"' || quotedPolicyName[len(quotedPolicyName)-1] != '"' {
+			return "", fmt.Errorf("failed to extract policy name from string '%q' - quotation marks not found", field)
+		}
+		policyName = quotedPolicyName[1 : len(quotedPolicyName)-1]
+	}
+	return policyName, nil
+}
+
 // Returns public key and policy name, in case a "sigsum-policy=" option is found
 func ParsePublicEd25519WithPolicyName(asciiKey string) (crypto.PublicKey, string, error) {
 	// Split into fields, recognizing exclusively ascii space and TAB
@@ -47,22 +67,11 @@ func ParsePublicEd25519WithPolicyName(asciiKey string) (crypto.PublicKey, string
 	if len(fields) < 2 {
 		return crypto.PublicKey{}, "", fmt.Errorf("invalid public key, splitting line failed")
 	}
-	policyName := ""
-	// Check for policy name option on the form
-	// sigsum-policy="foo", following the format of option
-	// specifications found in the "AUTHORIZED_KEYS FILE FORMAT"
-	// section of the sshd man page
-	quotedPolicyName, found := strings.CutPrefix(fields[0], "sigsum-policy=")
-	if found {
-		// First and last character must be quotation marks
-		if len(quotedPolicyName) < 3 {
-			return crypto.PublicKey{}, "", fmt.Errorf("failed to extract policy name from string '%q'", fields[0])
-		}
-		if quotedPolicyName[0] != '"' || quotedPolicyName[len(quotedPolicyName)-1] != '"' {
-			return crypto.PublicKey{}, "", fmt.Errorf("failed to extract policy name from string '%q'", fields[0])
-		}
-		policyName = quotedPolicyName[1 : len(quotedPolicyName)-1]
-		// Remove the "sigsum-policy=" field
+	policyName, err := getPolicy(fields[0])
+	if err != nil {
+		return crypto.PublicKey{}, "", err
+	}
+	if policyName != "" {
 		fields = fields[1:]
 	}
 	if fields[0] != "ssh-ed25519" {
