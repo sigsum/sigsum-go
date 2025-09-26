@@ -7,20 +7,16 @@ set -e
 ./bin/sigsum-key generate -o test.other.key
 
 # Create pubkey with policy to be used in tests
-printf 'sigsum-policy="testpolicy123" ' > test.tmp-policy-start
-cat test.tmp-policy-start test.agent.key.pub > test.agent.key.withpolicy.pub
+echo "sigsum-policy=\"testpolicy123\" $(cat test.agent.key.pub)" > test.agent.key.withpolicy.pub
 
 # Create pubkey with dummy policy
-printf 'sigsum-policy="dummypolicy" ' > test.tmp-policy-start
-cat test.tmp-policy-start test.agent.key.pub > test.agent.key.withdummypolicy.pub
+echo "sigsum-policy=\"dummypolicy\" $(cat test.agent.key.pub)" > test.agent.key.withdummypolicy.pub
 
 # Create other pubkey with dummy policy
-printf 'sigsum-policy="dummypolicy" ' > test.tmp-policy-start
-cat test.tmp-policy-start test.other.key.pub > test.other.key.withdummypolicy.pub
+echo "sigsum-policy=\"dummypolicy\" $(cat test.other.key.pub)" > test.other.key.withdummypolicy.pub
 
 # Create other pubkey with correct policy
-printf 'sigsum-policy="testpolicy123" ' > test.tmp-policy-start
-cat test.tmp-policy-start test.other.key.pub > test.other.key.withpolicy.pub
+echo "sigsum-policy=\"testpolicy123\" $(cat test.other.key.pub)" > test.other.key.withpolicy.pub
 
 # Reading private key files still supports raw hex.
 printf '%064x' 1 > test.token.key
