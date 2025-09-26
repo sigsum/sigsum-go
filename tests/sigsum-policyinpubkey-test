@@ -116,65 +116,65 @@ cat test.agent.key.pub test.submit*.key.pub > test.verify-keys.pub
 cat test.agent.key.withpolicy.pub test.other.key.withdummypolicy.pub > test.verify-keys-ambiguous.pub
 cat test.agent.key.withpolicy.pub test.other.key.withpolicy.pub > test.verify-keys-withpolicy.pub
 
-echo "Using sigsum-verify with --policy option"
+# Using sigsum-verify with --policy option
 for x in $(seq 5); do
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub --policy test.policy "test.$x.proof"
 done
 
-echo "Using sigsum-verify with --named-policy option (named policy)"
+# Using sigsum-verify with --named-policy option (named policy)
 x=1
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub --named-policy=testpolicy123 "test.$x.proof"
 
-echo "Using sigsum-verify with -P option (named policy)"
+# Using sigsum-verify with -P option (named policy)
 x=2
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub -P testpolicy123 "test.$x.proof"
 
-echo "Using sigsum-verify without policy option but with policy in pubkey file"
+# Using sigsum-verify without policy option but with policy in pubkey file
 x=3
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.agent.key.withpolicy.pub "test.$x.proof"
 
-echo "Using sigsum-verify with -P option (named policy) and with policy in pubkey file -- -P option should be used"
+# Using sigsum-verify with -P option (named policy) and with policy in pubkey file -- -P option should be used
 x=4
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.agent.key.withdummypolicy.pub -P testpolicy123 "test.$x.proof"
 
-echo "Using sigsum-verify with policy in pubkey files, two different pubkeys with same policy in both"
+# Using sigsum-verify with policy in pubkey files, two different pubkeys with same policy in both
 x=5
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys-withpolicy.pub "test.$x.proof"
 
-echo "Using sigsum-verify without policy option and no policy in pubkey files (this should fail)"
+# Using sigsum-verify without policy option and no policy in pubkey files (this should fail)
 x=5
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub "test.$x.proof" 2> test.stderr.txt || echo "Expected failure"
 grep "A policy must be specified" test.stderr.txt
 
-echo "Using sigsum-verify without policy option and ambiguous policy names in pubkey files (this should fail)"
+# Using sigsum-verify without policy option and ambiguous policy names in pubkey files (this should fail)
 x=5
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.verify-keys-ambiguous.pub "test.$x.proof" 2> test.stderr.txt || echo "Expected failure"
 grep "conflicting policy names found in pubkeys" test.stderr.txt
 
-echo "Using sigsum-verify without policy option and with dummy policy in pubkey file (this should fail)"
+# Using sigsum-verify without policy option and with dummy policy in pubkey file (this should fail)
 x=5
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash -k test.agent.key.withdummypolicy.pub "test.$x.proof" 2> test.stderr.txt || echo "Expected failure"
 grep "failed to select policy: failed to get named policy for name" test.stderr.txt
 
-echo "Checking that the message is taken into account in validation (expecting failure)."
+# Checking that the message is taken into account in validation (expecting failure)
 if printf "%31s\n" foo-2 \
 	| ./bin/sigsum-verify --key test.agent.key.pub --policy test.policy "test.1.proof" ; then
     false
