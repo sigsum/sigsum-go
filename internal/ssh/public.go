@@ -43,22 +43,26 @@ func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
 // specifications found in the "AUTHORIZED_KEYS FILE FORMAT"
 // section of the sshd man page
 func getPolicy(field string) (string, error) {
-	policyName := ""
 	quotedPolicyName, found := strings.CutPrefix(field, "sigsum-policy=")
-	if found {
-		// First and last character must be quotation marks
-		if len(quotedPolicyName) < 3 {
-			return "", fmt.Errorf("failed to extract policy name from string '%q' - too short", field)
-		}
-		if quotedPolicyName[0] != '"' || quotedPolicyName[len(quotedPolicyName)-1] != '"' {
-			return "", fmt.Errorf("failed to extract policy name from string '%q' - quotation marks not found", field)
-		}
-		policyName = quotedPolicyName[1 : len(quotedPolicyName)-1]
-		if strings.ContainsAny(policyName, "\"'\\ \n") {
-			return "", fmt.Errorf("failed to extract policy name from string '%q' - name contains forbidden character", field)
-		}
+	if !found {
+		return "", nil
 	}
-	return policyName, nil
+	// First and last character must be quotation marks
+	if len(quotedPolicyName) < 3 {
+		return "", fmt.Errorf("failed to extract policy name from string '%q' - too short", field)
+	}
+	name, found := strings.CutPrefix(quotedPolicyName, "\"")
+	if !found {
+		return "", fmt.Errorf("failed to extract policy name from string '%q' - initial quotation mark not found", field)
+	}
+	name, found = strings.CutSuffix(name, "\"")
+	if !found {
+		return "", fmt.Errorf("failed to extract policy name from string '%q' - final quotation mark not found", field)
+	}
+	if strings.ContainsAny(name, "\"'\\ \n") {
+		return "", fmt.Errorf("failed to extract policy name from string '%q' - name contains forbidden character", field)
+	}
+	return name, nil
 }
 
 // Returns public key and policy name, in case a "sigsum-policy=" option is found
