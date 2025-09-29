@@ -45,25 +45,25 @@ func (_ callbacks) Alert(logKeyHash crypto.Hash, e error) {
 }
 
 func readPublicKeyFiles(fileNames []string) (map[crypto.Hash]crypto.PublicKey, string, error) {
-	var pubkeys map[crypto.Hash]crypto.PublicKey
 	var policyNames []string
 	policyName := ""
-	if len(fileNames) > 0 {
-		pubkeys = make(map[crypto.Hash]crypto.PublicKey)
-		for _, f := range fileNames {
-			pub, policyName, err := key.ReadPublicKeyFileWithPolicyName(f)
-			if err != nil {
-				return nil, "", fmt.Errorf("failed reading key: %v", err)
-			}
-			pubkeys[crypto.HashBytes(pub[:])] = pub
-			policyNames = append(policyNames, policyName)
+	if len(fileNames) == 0 {
+		return nil, "", nil
+	}
+	pubkeys := make(map[crypto.Hash]crypto.PublicKey)
+	for _, f := range fileNames {
+		pub, policyName, err := key.ReadPublicKeyFileWithPolicyName(f)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed reading key: %v", err)
 		}
-		// Require all policyNames to be identical
-		policyName = policyNames[0]
-		for _, name := range policyNames {
-			if name != policyName {
-				return nil, "", fmt.Errorf("conflicting policy names found in pubkeys: '%q' != '%q'", name, policyName)
-			}
+		pubkeys[crypto.HashBytes(pub[:])] = pub
+		policyNames = append(policyNames, policyName)
+	}
+	// Require all policyNames to be identical
+	policyName = policyNames[0]
+	for _, name := range policyNames {
+		if name != policyName {
+			return nil, "", fmt.Errorf("conflicting policy names found in pubkeys: '%q' != '%q'", name, policyName)
 		}
 	}
 	return pubkeys, policyName, nil
