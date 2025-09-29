@@ -56,19 +56,17 @@ echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" 
 echo "quorum none" >> test.policy
 cp test.policy "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
 
-# shellcheck disable=SC2068 # shellcheck SC2068 warns about $@ below
-
 do_submit () {
     # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
 	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
 		       --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning --raw-hash \
-		       -o "test.$x.proof" $@
+		       -o "test.$x.proof" "$@"
 }
 
 x=1
 echo >&2 "submit $x -- sigsum-submit with policy name specified in pubkey"
-do_submit --signing-key test.agent.key.withpolicy.pub "" ""
+do_submit --signing-key test.agent.key.withpolicy.pub
 
 x=2
     echo >&2 "submit $x -- sigsum-submit with policy name specified using --named-policy="
@@ -104,12 +102,10 @@ for x in $(seq 5); do
 	| ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub --policy test.policy "test.$x.proof"
 done
 
-# shellcheck disable=SC2068 # shellcheck SC2068 warns about $@ below
-
 do_verify () {
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
-	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash $@ "test.$x.proof"
+	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash "$@" "test.$x.proof"
 }
 
 # Using sigsum-verify with --named-policy option (named policy)
