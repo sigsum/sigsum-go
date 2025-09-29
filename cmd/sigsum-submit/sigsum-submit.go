@@ -59,7 +59,7 @@ func main() {
 	if len(settings.keyFile) > 0 {
 		var signer crypto.Signer
 		var err error
-		signer, policyNameFromPubKey, err = key.ReadKeyFileWithPolicy(settings.keyFile)
+		signer, policyNameFromPubKey, err = key.ReadPrivateKeyFileWithPolicy(settings.keyFile)
 		if err != nil {
 			log.Fatal("reading key file failed: %v", err)
 		}
