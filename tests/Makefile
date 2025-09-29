@@ -7,7 +7,7 @@ TESTS = ssh-agent-test \
 	sigsum-submit-namedpolicy-test \
 	sigsum-monitor-test \
 	sigsum-monitor-namedpolicy-test \
-	sigsum-policyinpubkey-test \
+	policyinpubkey-test \
 	witness-add-checkpoint-test \
 	sigsum-submit-witness-test
 all:
