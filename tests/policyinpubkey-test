@@ -44,7 +44,7 @@ cleanup () {
     rm -f "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
     rmdir "${TMP_POLICY_DIR}"
     rm -f "${TMP_SOCKET}"
-    rmdir "${TMP_SOCKET_DIR}"
+    rmdir ${TMP_SOCKET_DIR}
 }
 
 trap cleanup EXIT
