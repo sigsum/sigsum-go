@@ -61,7 +61,7 @@ func main() {
 		var err error
 		signer, policyNameFromPubKey, err = key.ReadPrivateKeyFileWithPolicy(settings.keyFile)
 		if err != nil {
-			log.Fatal("reading key file failed: %v", err)
+			log.Fatal("Reading key file failed: %v", err)
 		}
 		publicKey := signer.Public()
 		if len(settings.inputFiles) == 0 {
@@ -85,7 +85,7 @@ func main() {
 					}
 					signature, err := types.SignLeafMessage(signer, msg[:])
 					if err != nil {
-						log.Fatal("signing failed: %v", err)
+						log.Fatal("Signing failed: %v", err)
 					}
 					sink(inputFile, &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
 				}
@@ -126,7 +126,7 @@ func main() {
 		NameFromPubKey: policyNameFromPubKey,
 	})
 	if err != nil {
-		log.Fatal("failed to select policy: %v", err)
+		log.Fatal("Failed to select policy: %v", err)
 	}
 	if policy != nil {
 		config := submit.Config{Policy: policy,
@@ -139,7 +139,7 @@ func main() {
 			var err error
 			config.RateLimitSigner, err = key.ReadPrivateKeyFile(settings.tokenKeyFile)
 			if err != nil {
-				log.Fatal("reading token key file failed: %v", err)
+				log.Fatal("Reading token key file failed: %v", err)
 			}
 			// Warn if corresponding public key isn't registered for the domain.
 			if err := checkTokenDomain(ctx, config.Domain, config.RateLimitSigner.Public()); err != nil {

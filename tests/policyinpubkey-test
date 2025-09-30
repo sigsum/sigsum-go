@@ -141,7 +141,7 @@ grep "conflicting policy names found in pubkeys" test.stderr.txt
 # Using sigsum-verify without policy option and with dummy policy in pubkey file (this should fail)
 x=5
 do_verify -k test.agent.key.withdummypolicy.pub 2> test.stderr.txt || echo "Expected failure"
-grep "failed to select policy: failed to get named policy for name" test.stderr.txt
+grep "Failed to select policy: failed to get named policy for name" test.stderr.txt
 
 # Checking that the message is taken into account in validation (expecting failure)
 if printf "%31s\n" foo-2 \

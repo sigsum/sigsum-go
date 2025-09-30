@@ -39,11 +39,11 @@ func main() {
 
 	f, err := os.Open(settings.proofFile)
 	if err != nil {
-		log.Fatalf("opening file %q failed: %v", settings.proofFile, err)
+		log.Fatalf("Opening file %q failed: %v", settings.proofFile, err)
 	}
 	var pr proof.SigsumProof
 	if err := pr.FromASCII(f); err != nil {
-		log.Fatalf("invalid proof: %v", err)
+		log.Fatalf("Invalid proof: %v", err)
 	}
 	policy, err := ui.SelectPolicy(ui.PolicyParams{
 		File:           settings.policyFile,
@@ -51,13 +51,13 @@ func main() {
 		NameFromPubKey: policyNameFromPubKeys,
 	})
 	if err != nil {
-		log.Fatalf("failed to select policy: %v", err)
+		log.Fatalf("Failed to select policy: %v", err)
 	}
 	if policy == nil {
 		log.Fatalf("A policy must be specified, either in pubkey file or using -p or -P")
 	}
 	if err := pr.Verify(&msg, submitKeys, policy); err != nil {
-		log.Fatalf("sigsum proof failed to verify: %v", err)
+		log.Fatalf("Sigsum proof failed to verify: %v", err)
 	}
 }
 
@@ -98,7 +98,7 @@ policy.  The message to be verified is read on stdin.
 		log.Fatal("The -P (--named-policy) and -p (--policy) options are mutually exclusive.")
 	}
 	if set.NArgs() != 1 {
-		log.Fatalf("no proof given on command line")
+		log.Fatalf("No proof given on command line")
 	}
 	s.proofFile = set.Arg(0)
 }
