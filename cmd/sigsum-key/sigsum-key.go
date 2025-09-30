@@ -90,7 +90,7 @@ Options:
 		settings.parse(os.Args)
 		pub, signer, err := crypto.NewKeyPair()
 		if err != nil {
-			log.Fatalf("generating key failed: %v\n", err)
+			log.Fatalf("Generating key failed: %v\n", err)
 		}
 		writeKeyFiles(settings.outputFile, &pub, signer)
 	case "verify":
@@ -103,7 +103,7 @@ Options:
 		signature := readSignatureFile(settings.signatureFile)
 		msg := readMessage(settings.namespace)
 		if !crypto.Verify(&publicKey, msg, &signature) {
-			log.Fatalf("signature is not valid\n")
+			log.Fatalf("Signature is not valid\n")
 		}
 	case "sign":
 		var settings SignSettings
@@ -115,7 +115,7 @@ Options:
 		msg := readMessage(settings.namespace)
 		signature, err := signer.Sign(msg)
 		if err != nil {
-			log.Fatalf("signing failed: %v", err)
+			log.Fatalf("Signing failed: %v", err)
 		}
 		writeSignatureFile(settings.outputFile, &signature)
 
@@ -156,7 +156,7 @@ the default behavior using the -k and -o options.
 		settings.parse(os.Args)
 		publicKey, err := key.ParsePublicKey(readInput(settings.keyFile))
 		if err != nil {
-			log.Fatalf("invalid key: %v", err)
+			log.Fatalf("Invalid key: %v", err)
 		}
 		name := settings.name
 		if name == "" {
@@ -180,7 +180,7 @@ the default behavior using the -k and -o options.
 		settings.parse(os.Args, "Public key in hex format", "Public key in OpenSSH format", usage)
 		pub, err := crypto.PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
 		if err != nil {
-			log.Fatalf("invalid key: %v", err)
+			log.Fatalf("Invalid key: %v", err)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
 			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&pub))
@@ -356,13 +356,13 @@ func withOutput(outputFile string, mode os.FileMode, f func(io.Writer) error) {
 		file, err = os.OpenFile(outputFile,
 			os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
 		if err != nil {
-			log.Fatalf("failed to open file '%v': %v", outputFile, err)
+			log.Fatalf("Failed to open file '%v': %v", outputFile, err)
 		}
 		defer file.Close()
 	}
 	err := f(file)
 	if err != nil {
-		log.Fatalf("writing output failed: %v", err)
+		log.Fatalf("Writing output failed: %v", err)
 	}
 }
 
@@ -391,7 +391,7 @@ func writeSignatureFile(outputFile string, signature *crypto.Signature) {
 func readSignatureFile(fileName string) crypto.Signature {
 	contents, err := os.ReadFile(fileName)
 	if err != nil {
-		log.Fatalf("reading file %q failed: %v", fileName, err)
+		log.Fatalf("Reading file %q failed: %v", fileName, err)
 	}
 	signature, err := crypto.SignatureFromHex(strings.TrimSpace(string(contents)))
 	if err != nil {

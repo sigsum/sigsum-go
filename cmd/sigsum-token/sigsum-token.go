@@ -80,7 +80,7 @@ Options:
 
 		signature, err := token.MakeToken(signer, &logKey)
 		if err != nil {
-			log.Fatalf("signing failed: %v", err)
+			log.Fatalf("Signing failed: %v", err)
 		}
 		withOutput(settings.outputFile, func(w io.Writer) error {
 			if len(settings.domain) > 0 {
@@ -238,12 +238,12 @@ func withOutput(outputFile string, f func(io.Writer) error) {
 		file, err = os.OpenFile(outputFile,
 			os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatalf("failed to open file '%v': %v", outputFile, err)
+			log.Fatalf("Failed to open file '%v': %v", outputFile, err)
 		}
 		defer file.Close()
 	}
 	err := f(file)
 	if err != nil {
-		log.Fatalf("writing output failed: %v", err)
+		log.Fatalf("Writing output failed: %v", err)
 	}
 }
