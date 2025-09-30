@@ -30,6 +30,10 @@ make-check-386:
     paths:
     - ./tests/test.*
 
+make-shellcheck:
+  stage: test
+  script: cd tests && make shellcheck
+
 # Succeeds if no changes are suggested by gofmt -d .
 gofmt:
   stage: test

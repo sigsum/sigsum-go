@@ -15,6 +15,9 @@ all:
 check:
 	./run-tests $(TESTS)
 
+shellcheck:
+	shellcheck $(TESTS)
+
 clean:
 	rm -rf bin test.*
 
