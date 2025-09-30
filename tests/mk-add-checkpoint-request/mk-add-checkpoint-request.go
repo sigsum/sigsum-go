@@ -37,7 +37,7 @@ func main() {
 		log.Fatalf("reading key from stdin failed: %v", err)
 	}
 	ascii := string(data)
-	signer, err := key.ParsePrivateKey(ascii)
+	signer, _, err := key.ParsePrivateKey(ascii)
 	if err != nil {
 		log.Fatalf("parsing public key failed: %v", err)
 	}

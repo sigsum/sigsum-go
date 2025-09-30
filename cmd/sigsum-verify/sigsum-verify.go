@@ -28,7 +28,7 @@ func main() {
 	log.SetFlags(0)
 	var settings Settings
 	settings.parse(os.Args)
-	submitKeys, err := key.ReadPublicKeysFile(settings.submitKey)
+	submitKeys, policyNameFromPubKeys, err := key.ReadPublicKeysFile(settings.submitKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,12 +45,16 @@ func main() {
 	if err := pr.FromASCII(f); err != nil {
 		log.Fatalf("invalid proof: %v", err)
 	}
-	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
+	policy, err := ui.SelectPolicy(ui.PolicyParams{
+		File:           settings.policyFile,
+		Name:           settings.policyName,
+		NameFromPubKey: policyNameFromPubKeys,
+	})
 	if err != nil {
 		log.Fatalf("failed to select policy: %v", err)
 	}
 	if policy == nil {
-		log.Fatalf("a policy must be specified")
+		log.Fatalf("A policy must be specified, either in pubkey file or using -p or -P")
 	}
 	if err := pr.Verify(&msg, submitKeys, policy); err != nil {
 		log.Fatalf("sigsum proof failed to verify: %v", err)

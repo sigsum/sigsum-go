@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("parsing public key failed: %v", err)
 	}
-	signer, err := key.ParsePrivateKey(ascii)
+	signer, _, err := key.ParsePrivateKey(ascii)
 	if err != nil {
 		log.Fatalf("parsing key failed: %v", err)
 	}
