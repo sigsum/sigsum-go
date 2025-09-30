@@ -238,7 +238,7 @@ func withOutput(outputFile string, f func(io.Writer) error) {
 		file, err = os.OpenFile(outputFile,
 			os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatalf("Failed to open file '%v': %v", outputFile, err)
+			log.Fatalf("Failed to open file %q: %v", outputFile, err)
 		}
 		defer file.Close()
 	}
