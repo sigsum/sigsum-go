@@ -115,7 +115,7 @@ func parsePublicKeysFileWithPolicyNames(f io.Reader, fileName string) (map[crypt
 	policyName := policyNames[0]
 	for _, name := range policyNames {
 		if name != policyName {
-			return nil, "", fmt.Errorf("conflicting policy names found in pubkeys: '%q' != '%q'", name, policyName)
+			return nil, "", fmt.Errorf("conflicting policy names found in pubkeys: %q != %q", name, policyName)
 		}
 	}
 	return keys, policyName, nil
