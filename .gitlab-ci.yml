@@ -2,7 +2,7 @@ image: golang:1.23
 
 before_script:
   - apt-get update
-  - apt-get install -y make curl git
+  - apt-get install -y make curl git shellcheck
 
 stages:
 - build
@@ -32,9 +32,6 @@ make-check-386:
 
 make-shellcheck:
   stage: test
-  before_script:
-    - apt-get update
-    - apt-get install -y shellcheck
   script: cd tests && make shellcheck
 
 # Succeeds if no changes are suggested by gofmt -d .
