@@ -1,0 +1,152 @@
+#! /bin/sh
+
+set -e
+
+./bin/sigsum-key generate -o test.log.key
+./bin/sigsum-key generate -o test.agent.key
+./bin/sigsum-key generate -o test.other.key
+
+# Create pubkey with policy to be used in tests
+echo "sigsum-policy=\"testpolicy123\" $(cat test.agent.key.pub)" > test.agent.key.withpolicy.pub
+
+# Create pubkey with dummy policy
+echo "sigsum-policy=\"dummypolicy\" $(cat test.agent.key.pub)" > test.agent.key.withdummypolicy.pub
+
+# Create other pubkey with dummy policy
+echo "sigsum-policy=\"dummypolicy\" $(cat test.other.key.pub)" > test.other.key.withdummypolicy.pub
+
+# Create other pubkey with correct policy
+echo "sigsum-policy=\"testpolicy123\" $(cat test.other.key.pub)" > test.other.key.withpolicy.pub
+
+# Reading private key files still supports raw hex.
+printf '%064x' 1 > test.token.key
+
+# Start sigsum log server
+rm -f test.log.sth
+echo "startup=empty" > test.log.sth.startup
+./bin/sigsum-log-primary --key-file test.log.key \
+    --interval=1s --log-level=error --backend=ephemeral --sth-file test.log.sth &
+
+SIGSUM_PID=$!
+
+TMP_POLICY_DIR=$(mktemp -d)
+TMP_SOCKET_DIR=$(mktemp -d)
+TMP_SOCKET=${TMP_SOCKET_DIR}/test.socket
+
+# Start sigsum-agent
+./bin/sigsum-agent --key-file test.agent.key --socket-name="${TMP_SOCKET}" &
+
+SIGSUM_AGENT_PID=$!
+
+cleanup () {
+    kill "${SIGSUM_PID}"
+    kill "${SIGSUM_AGENT_PID}"
+    rm -f "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
+    rmdir "${TMP_POLICY_DIR}"
+    rm -f "${TMP_SOCKET}"
+    rmdir "${TMP_SOCKET_DIR}"
+}
+
+trap cleanup EXIT
+
+# Give log server some time to get ready.
+sleep 2
+
+echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "quorum none" >> test.policy
+cp test.policy "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
+
+do_submit () {
+    # Must be exactly 32 bytes
+    printf "%31s\n" "foo-$x" \
+	| SSH_AUTH_SOCK=${TMP_SOCKET} SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-submit --timeout=5s \
+		       --token-domain test.sigsum.org --token-signing-key test.token.key --diagnostics=warning --raw-hash \
+		       -o "test.$x.proof" "$@"
+}
+
+x=1
+echo >&2 "submit $x -- sigsum-submit with policy name specified in pubkey"
+do_submit --signing-key test.agent.key.withpolicy.pub
+
+x=2
+    echo >&2 "submit $x -- sigsum-submit with policy name specified using --named-policy="
+    do_submit --signing-key test.agent.key.pub --named-policy=testpolicy123
+
+x=3
+    echo >&2 "submit $x -- sigsum-submit with policy name specified using -P"
+    do_submit --signing-key test.agent.key.withpolicy.pub -P testpolicy123
+
+x=4
+    echo >&2 "submit $x -- sigsum-submit with policy name specified using -P and in pubkey (name in pubkey should then be ignored)"
+    do_submit --signing-key test.agent.key.withdummypolicy.pub -P testpolicy123
+
+x=5
+    echo >&2 "submit $x -- sigsum-submit with policy file specified using -p and in pubkey (name in pubkey should then be ignored)"
+    do_submit --signing-key test.agent.key.withdummypolicy.pub -p "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
+
+x=6
+    echo >&2 "sigsum-submit with policy file specified using both -p and -P -- should fail because those options are mutually exclusive"
+    do_submit --signing-key test.agent.key.withdummypolicy.pub -p "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy -P testpolicy123 2> test.stderr.txt || echo "Expected failure"
+    grep "The -P, -p, and --leaf-hash options are mutually exclusive" test.stderr.txt
+
+./bin/sigsum-key generate -o test.submit2.key
+./bin/sigsum-key generate -o test.submit3.key
+cat test.agent.key.pub test.submit*.key.pub > test.verify-keys.pub
+cat test.agent.key.withpolicy.pub test.other.key.withdummypolicy.pub > test.verify-keys-ambiguous.pub
+cat test.agent.key.withpolicy.pub test.other.key.withpolicy.pub > test.verify-keys-withpolicy.pub
+
+# Using sigsum-verify with --policy option
+for x in $(seq 5); do
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| ./bin/sigsum-verify --raw-hash -k test.verify-keys.pub --policy test.policy "test.$x.proof"
+done
+
+do_verify () {
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-verify --raw-hash "$@" "test.$x.proof"
+}
+
+# Using sigsum-verify with --named-policy option (named policy)
+x=1
+    do_verify -k test.verify-keys.pub --named-policy=testpolicy123
+
+# Using sigsum-verify with -P option (named policy)
+x=2
+    do_verify -k test.verify-keys.pub -P testpolicy123
+
+# Using sigsum-verify without policy option but with policy in pubkey file
+x=3
+    do_verify -k test.agent.key.withpolicy.pub
+
+# Using sigsum-verify with -P option (named policy) and with policy in pubkey file -- -P option should be used
+x=4
+    do_verify -k test.agent.key.withdummypolicy.pub -P testpolicy123
+
+# Using sigsum-verify with policy in pubkey files, two different pubkeys with same policy in both
+x=5
+    do_verify -k test.verify-keys-withpolicy.pub
+
+# Using sigsum-verify without policy option and no policy in pubkey files (this should fail)
+x=5
+do_verify -k test.verify-keys.pub 2> test.stderr.txt || echo "Expected failure"
+grep "A policy must be specified" test.stderr.txt
+
+# Using sigsum-verify without policy option and ambiguous policy names in pubkey files (this should fail)
+x=5
+do_verify -k test.verify-keys-ambiguous.pub 2> test.stderr.txt || echo "Expected failure"
+grep "conflicting policy names found in pubkeys" test.stderr.txt
+
+# Using sigsum-verify without policy option and with dummy policy in pubkey file (this should fail)
+x=5
+do_verify -k test.agent.key.withdummypolicy.pub 2> test.stderr.txt || echo "Expected failure"
+grep "failed to select policy: failed to get named policy for name" test.stderr.txt
+
+# Checking that the message is taken into account in validation (expecting failure)
+if printf "%31s\n" foo-2 \
+	| ./bin/sigsum-verify --key test.agent.key.pub --policy test.policy "test.1.proof" ; then
+    false
+else
+    true
+fi

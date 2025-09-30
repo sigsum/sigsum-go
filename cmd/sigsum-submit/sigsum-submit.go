@@ -54,9 +54,12 @@ func main() {
 		log.Fatal("%v", err)
 	}
 
+	var policyNameFromPubKey string
 	var source LeafSource
 	if len(settings.keyFile) > 0 {
-		signer, err := key.ReadPrivateKeyFile(settings.keyFile)
+		var signer crypto.Signer
+		var err error
+		signer, policyNameFromPubKey, err = key.ReadPrivateKeyFileWithPolicy(settings.keyFile)
 		if err != nil {
 			log.Fatal("reading key file failed: %v", err)
 		}
@@ -117,7 +120,11 @@ func main() {
 		}
 	}
 
-	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
+	policy, err := ui.SelectPolicy(ui.PolicyParams{
+		File:           settings.policyFile,
+		Name:           settings.policyName,
+		NameFromPubKey: policyNameFromPubKey,
+	})
 	if err != nil {
 		log.Fatal("failed to select policy: %v", err)
 	}

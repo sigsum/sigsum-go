@@ -14,8 +14,10 @@ if [ "$GOARCH" ] ; then
 
     echo >&2 Cross-compiling for GOARCH=${GOARCH}
     GOARCH="" GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.15.1
+    GOARCH="" GOBIN=$(pwd)/bin go install sigsum.org/key-mgmt/cmd/sigsum-agent@v0.2.5
     go build -o bin/ ../cmd/...
 else
     GOBIN=$(pwd)/bin go install ../cmd/...
     GOBIN=$(pwd)/bin go install sigsum.org/log-go/cmd/sigsum-log-primary@v0.15.1
+    GOBIN=$(pwd)/bin go install sigsum.org/key-mgmt/cmd/sigsum-agent@v0.2.5
 fi

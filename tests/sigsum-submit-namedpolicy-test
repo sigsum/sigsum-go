@@ -20,8 +20,8 @@ TMP_POLICY_DIR=$(mktemp -d)
 
 cleanup () {
     kill ${SIGSUM_PID}
-    rm -f ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy
-    rmdir ${TMP_POLICY_DIR}
+    rm -f "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
+    rmdir "${TMP_POLICY_DIR}"
 }
 
 trap cleanup EXIT
@@ -31,7 +31,7 @@ sleep 2
 
 echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
 echo "quorum none" >> test.policy
-cp test.policy ${TMP_POLICY_DIR}/testpolicy123.sigsum-policy
+cp test.policy "${TMP_POLICY_DIR}"/testpolicy123.sigsum-policy
 
 x=1
     echo >&2 "submit $x -- sigsum-submit with policy specified using -p"

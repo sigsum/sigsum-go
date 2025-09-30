@@ -44,6 +44,31 @@ func (_ callbacks) Alert(logKeyHash crypto.Hash, e error) {
 	log.Fatal("Alert log %x: %v\n", logKeyHash, e)
 }
 
+func readPublicKeyFiles(fileNames []string) (map[crypto.Hash]crypto.PublicKey, string, error) {
+	var policyNames []string
+	policyName := ""
+	if len(fileNames) == 0 {
+		return nil, "", nil
+	}
+	pubkeys := make(map[crypto.Hash]crypto.PublicKey)
+	for _, f := range fileNames {
+		pub, policyName, err := key.ReadPublicKeyFileWithPolicyName(f)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed reading key: %v", err)
+		}
+		pubkeys[crypto.HashBytes(pub[:])] = pub
+		policyNames = append(policyNames, policyName)
+	}
+	// Require all policyNames to be identical
+	policyName = policyNames[0]
+	for _, name := range policyNames {
+		if name != policyName {
+			return nil, "", fmt.Errorf("conflicting policy names found in pubkeys: '%q' != '%q'", name, policyName)
+		}
+	}
+	return pubkeys, policyName, nil
+}
+
 func main() {
 	var settings Settings
 	settings.parse(os.Args)
@@ -54,22 +79,21 @@ func main() {
 		QueryInterval: settings.interval,
 		Callbacks:     callbacks{},
 	}
-	if len(settings.keys) > 0 {
-		config.SubmitKeys = make(map[crypto.Hash]crypto.PublicKey)
-		for _, f := range settings.keys {
-			pub, err := key.ReadPublicKeyFile(f)
-			if err != nil {
-				log.Fatal("Failed reading key: %v", err)
-			}
-			config.SubmitKeys[crypto.HashBytes(pub[:])] = pub
-		}
+	var policyNameFromPubKeys string
+	var err error
+	if config.SubmitKeys, policyNameFromPubKeys, err = readPublicKeyFiles(settings.keys); err != nil {
+		log.Fatal("Failed reading public key files: %v", err)
 	}
-	policy, err := ui.SelectPolicy(settings.policyFile, settings.policyName)
+	policy, err := ui.SelectPolicy(ui.PolicyParams{
+		File:           settings.policyFile,
+		Name:           settings.policyName,
+		NameFromPubKey: policyNameFromPubKeys,
+	})
 	if err != nil {
-		log.Fatal("failed to select policy: %v", err)
+		log.Fatal("Failed to select policy: %v", err)
 	}
 	if policy == nil {
-		log.Fatal("a policy must be specified")
+		log.Fatal("A policy must be specified, either in pubkey file or using -p or -P")
 	}
 	// TODO: Read state from disk. Also store the list of submit
 	// keys, and discard state if keys are added, since whenever
