@@ -31,7 +31,7 @@ gX4rCMeNlFXpDyZqodB4AAAADm5pc3NlQGJseWdsYW5zAQIDBAUGBw==
 	if pub != signer.Public() {
 		t.Errorf("inconsistent public key, doesn't match signer.Public()")
 	}
-	pubFromFile, err := ParsePublicEd25519(testPub)
+	pubFromFile, _, err := ParsePublicEd25519(testPub)
 	if err != nil {
 		t.Fatalf("failed to parse pubkey file")
 	}
