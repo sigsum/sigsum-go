@@ -28,7 +28,12 @@ func main() {
 	log.SetFlags(0)
 	var settings Settings
 	settings.parse(os.Args)
-	submitKeys, policyNameFromPubKeys, err := key.ReadPublicKeysFile(settings.submitKey)
+	// Care about policy from pubkeys only if no policy option was specified
+	getPolicy := true
+	if settings.policyFile != "" || settings.policyName != "" {
+		getPolicy = false
+	}
+	submitKeys, policyNameFromPubKeys, err := key.ReadPublicKeysFile(settings.submitKey, getPolicy)
 	if err != nil {
 		log.Fatal(err)
 	}
