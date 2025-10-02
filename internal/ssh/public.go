@@ -33,11 +33,6 @@ func parsePublicEd25519(blob []byte) (crypto.PublicKey, error) {
 	return ret, nil
 }
 
-func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, error) {
-	key, _, err := ParsePublicEd25519WithPolicyName(asciiKey)
-	return key, err
-}
-
 // This function checks for policy name option on the form
 // sigsum-policy="foo", following the format of option
 // specifications found in the "AUTHORIZED_KEYS FILE FORMAT"
@@ -66,7 +61,7 @@ func getPolicy(field string) (string, error) {
 }
 
 // Returns public key and policy name, in case a "sigsum-policy=" option is found
-func ParsePublicEd25519WithPolicyName(asciiKey string) (crypto.PublicKey, string, error) {
+func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, string, error) {
 	// Split into fields, recognizing exclusively ascii space and TAB
 	fields := strings.FieldsFunc(asciiKey, func(c rune) bool {
 		return c == ' ' || c == '\t'

@@ -13,12 +13,13 @@ import (
 
 // Expects an Openssh public key (single-line format)
 func ParsePublicKey(ascii string) (crypto.PublicKey, error) {
-	return ssh.ParsePublicEd25519(ascii)
+	key, _, err := ssh.ParsePublicEd25519(ascii)
+	return key, err
 }
 
 // Expects an Openssh public key (single-line format)
 func ParsePublicKeyWithPolicyName(ascii string) (crypto.PublicKey, string, error) {
-	return ssh.ParsePublicEd25519WithPolicyName(ascii)
+	return ssh.ParsePublicEd25519(ascii)
 }
 
 // Supports two formats:
@@ -34,7 +35,7 @@ func ParsePrivateKey(ascii string) (crypto.Signer, string, error) {
 	// Accepts public keys only in openssh format, since with raw
 	// hex-encoded keys, we can't distinguish between public and
 	// private keys.
-	key, policyName, err := ssh.ParsePublicEd25519WithPolicyName(ascii)
+	key, policyName, err := ssh.ParsePublicEd25519(ascii)
 	if err == nil {
 		c, err := ssh.Connect()
 		if err != nil {
