@@ -119,18 +119,27 @@ func parsePublicKeysFile(f io.Reader, fileName string, getPolicy bool) (map[cryp
 	return keys, policyName, nil
 }
 
-// This function returns public keys along with (optionally) a single
-// policy name extracted from the pubkeys file. The getPolicy argument
-// determines if a policy name is to be returned. If getPolicy is true
-// and a policy name is present in any of the pubkeys, then this function
-// requires that the same policy name is given for all pubkeys.
-func ReadPublicKeysFile(fileName string, getPolicy bool) (map[crypto.Hash]crypto.PublicKey, string, error) {
+func ReadPublicKeysFile(fileName string) (map[crypto.Hash]crypto.PublicKey, error) {
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
+	}
+	defer f.Close()
+	keys, _, err := parsePublicKeysFile(f, fileName, false)
+	return keys, err
+}
+
+// This function returns public keys along with a single policy name
+// extracted from the pubkeys file. If a policy name is present in any of
+// the pubkeys, then this function requires that the same policy name is
+// given for all pubkeys.
+func ReadPublicKeysFileWithPolicy(fileName string) (map[crypto.Hash]crypto.PublicKey, string, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
 	}
 	defer f.Close()
-	return parsePublicKeysFile(f, fileName, getPolicy)
+	return parsePublicKeysFile(f, fileName, true)
 }
 
 // The second output is a resulting policy name, in case a

@@ -28,12 +28,15 @@ func main() {
 	log.SetFlags(0)
 	var settings Settings
 	settings.parse(os.Args)
+	var submitKeys map[crypto.Hash]crypto.PublicKey
+	policyNameFromPubKeys := ""
+	var err error
 	// Care about policy from pubkeys only if no policy option was specified
-	getPolicy := true
-	if settings.policyFile != "" || settings.policyName != "" {
-		getPolicy = false
+	if settings.policyFile == "" && settings.policyName == "" {
+		submitKeys, policyNameFromPubKeys, err = key.ReadPublicKeysFileWithPolicy(settings.submitKey)
+	} else {
+		submitKeys, err = key.ReadPublicKeysFile(settings.submitKey)
 	}
-	submitKeys, policyNameFromPubKeys, err := key.ReadPublicKeysFile(settings.submitKey, getPolicy)
 	if err != nil {
 		log.Fatal(err)
 	}
