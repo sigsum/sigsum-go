@@ -42,26 +42,19 @@ type Settings struct {
 	timeout      time.Duration
 }
 
-// TODO: add some explanation here to make it easier to understand
-// what the code is doing.
-//
-// TODO: check if this attempt at explaining is ok:
-//
-// A "source" function is here a function that reads one or more input
-// items from somewhere (the input items may come from stdin or from
-// files), and for each input item some processing is done and results
-// are passed to the "sink" function that is specified as the second
-// input argument to the "source" function. The "source" function also
-// optionally skips some inputs, depending on the "skip" function that it
-// takes as its first argument. A given input item is skipped if the skip
-// function returns true for that item.
-//
-// The input items are either messages to be signed, or leaf requests
-// already containing signatures.
-
-// Empty name for stdin
+// A LeafSink represents the action to take for input leaf requests,
+// either writing them to file, or submitting them to the log.
+// The name argument corresponds to the filename, or an empty string for stdin.
 type LeafSink func(name string, leaf *requests.Leaf)
+
+// The name argument corresponds to the filename, or an empty string for stdin.
 type LeafSkip func(name string, msg *crypto.Hash, publicKey *crypto.PublicKey) bool
+
+// A LeafSource represents the input processing, either reading signed
+// leaf requests from file, or signing leaf requests based on input files
+// to be logged. For each input, the item is first passed to the skip
+// callback, and if skip returns false, it is passed on to the sink
+// callback.
 type LeafSource func(skip LeafSkip, sink LeafSink)
 
 func getLeafSource(settings Settings) (LeafSource, string, error) {
