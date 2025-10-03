@@ -83,10 +83,7 @@ func main() {
 		Callbacks:     callbacks{},
 	}
 	// Care about policy from pubkeys only if no policy option was specified
-	getPolicy := true
-	if settings.policyFile != "" || settings.policyName != "" {
-		getPolicy = false
-	}
+	getPolicy := settings.policyFile == "" && settings.policyName == ""
 	var policyNameFromPubKeys string
 	var err error
 	if config.SubmitKeys, policyNameFromPubKeys, err = readPublicKeyFiles(settings.keys, getPolicy); err != nil {
