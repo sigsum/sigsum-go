@@ -95,8 +95,8 @@ func getLeafRequestSignerSource(keyFile string, inputFiles []string, rawHash boo
 }
 
 // This function prepares a source function that will process leaf requests that already contain signatures.
-func getLeafRequestSource(settings Settings) (LeafSource, string, error) {
-	if len(settings.inputFiles) == 0 {
+func getLeafRequestSource(inputFiles []string) (LeafSource, string, error) {
+	if len(inputFiles) == 0 {
 		// No input files, so we use stdin
 		return func(_ LeafSkip, sink LeafSink) {
 			leaf, err := readLeafRequest(os.Stdin)
@@ -108,7 +108,7 @@ func getLeafRequestSource(settings Settings) (LeafSource, string, error) {
 	}
 	// There are input files, so we use them
 	return func(skip LeafSkip, sink LeafSink) {
-		for _, inputFile := range settings.inputFiles {
+		for _, inputFile := range inputFiles {
 			leaf, err := readLeafRequestFile(inputFile)
 			if err != nil {
 				log.Fatal("Leaf request %q not valid: %v", inputFile, err)
@@ -138,7 +138,7 @@ func main() {
 	if len(settings.keyFile) > 0 {
 		source, policyNameFromPubKey, err = getLeafRequestSignerSource(settings.keyFile, settings.inputFiles, settings.rawHash)
 	} else {
-		source, policyNameFromPubKey, err = getLeafRequestSource(settings)
+		source, policyNameFromPubKey, err = getLeafRequestSource(settings.inputFiles)
 	}
 	if err != nil {
 		log.Fatal("Error: %v", err)
