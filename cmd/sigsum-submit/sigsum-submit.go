@@ -58,16 +58,16 @@ type LeafSkip func(name string, msg *crypto.Hash, publicKey *crypto.PublicKey) b
 type LeafSource func(skip LeafSkip, sink LeafSink)
 
 // This function prepares a source function that uses the given key to sign each message.
-func getLeafRequestSignerSource(settings Settings) (LeafSource, string, error) {
-	signer, policyNameFromPubKey, err := key.ReadPrivateKeyFileWithPolicy(settings.keyFile)
+func getLeafRequestSignerSource(keyFile string, inputFiles []string, rawHash bool) (LeafSource, string, error) {
+	signer, policyNameFromPubKey, err := key.ReadPrivateKeyFileWithPolicy(keyFile)
 	if err != nil {
 		log.Fatal("Reading key file failed: %v", err)
 	}
 	publicKey := signer.Public()
-	if len(settings.inputFiles) == 0 {
+	if len(inputFiles) == 0 {
 		// No input files, so we use stdin
 		return func(_ LeafSkip, sink LeafSink) {
-			msg, err := readMessage(os.Stdin, settings.rawHash)
+			msg, err := readMessage(os.Stdin, rawHash)
 			if err != nil {
 				log.Fatal("Reading message from stdin failed: %v", err)
 			}
@@ -80,8 +80,8 @@ func getLeafRequestSignerSource(settings Settings) (LeafSource, string, error) {
 	}
 	// There are input files, so we use them
 	return func(skip LeafSkip, sink LeafSink) {
-		for _, inputFile := range settings.inputFiles {
-			msg := readMessageFile(inputFile, settings.rawHash)
+		for _, inputFile := range inputFiles {
+			msg := readMessageFile(inputFile, rawHash)
 			if skip(inputFile, &msg, &publicKey) {
 				continue
 			}
@@ -136,7 +136,7 @@ func main() {
 	var policyNameFromPubKey string
 	var err error
 	if len(settings.keyFile) > 0 {
-		source, policyNameFromPubKey, err = getLeafRequestSignerSource(settings)
+		source, policyNameFromPubKey, err = getLeafRequestSignerSource(settings.keyFile, settings.inputFiles, settings.rawHash)
 	} else {
 		source, policyNameFromPubKey, err = getLeafRequestSource(settings)
 	}
