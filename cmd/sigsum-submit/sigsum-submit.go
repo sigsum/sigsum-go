@@ -66,7 +66,7 @@ func getLeafRequestSignerSource(settings Settings) (LeafSource, string, error) {
 	publicKey := signer.Public()
 	if len(settings.inputFiles) == 0 {
 		// No input files, so we use stdin
-		source := func(_ LeafSkip, sink LeafSink) {
+		return func(_ LeafSkip, sink LeafSink) {
 			msg, err := readMessage(os.Stdin, settings.rawHash)
 			if err != nil {
 				log.Fatal("Reading message from stdin failed: %v", err)
@@ -76,11 +76,10 @@ func getLeafRequestSignerSource(settings Settings) (LeafSource, string, error) {
 				log.Fatal("Signing failed: %v", err)
 			}
 			sink("", &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
-		}
-		return source, policyNameFromPubKey, nil
+		}, policyNameFromPubKey, nil
 	}
 	// There are input files, so we use them
-	source := func(skip LeafSkip, sink LeafSink) {
+	return func(skip LeafSkip, sink LeafSink) {
 		for _, inputFile := range settings.inputFiles {
 			msg := readMessageFile(inputFile, settings.rawHash)
 			if skip(inputFile, &msg, &publicKey) {
@@ -92,25 +91,23 @@ func getLeafRequestSignerSource(settings Settings) (LeafSource, string, error) {
 			}
 			sink(inputFile, &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
 		}
-	}
-	return source, policyNameFromPubKey, nil
+	}, policyNameFromPubKey, nil
 }
 
 // This function prepares a source function that will process leaf requests that already contain signatures.
 func getLeafRequestSource(settings Settings) (LeafSource, string, error) {
 	if len(settings.inputFiles) == 0 {
 		// No input files, so we use stdin
-		source := func(_ LeafSkip, sink LeafSink) {
+		return func(_ LeafSkip, sink LeafSink) {
 			leaf, err := readLeafRequest(os.Stdin)
 			if err != nil {
 				log.Fatal("Leaf request on stdin not valid: %v", err)
 			}
 			sink("", &leaf)
-		}
-		return source, "", nil
+		}, "", nil
 	}
 	// There are input files, so we use them
-	source := func(skip LeafSkip, sink LeafSink) {
+	return func(skip LeafSkip, sink LeafSink) {
 		for _, inputFile := range settings.inputFiles {
 			leaf, err := readLeafRequestFile(inputFile)
 			if err != nil {
@@ -125,8 +122,7 @@ func getLeafRequestSource(settings Settings) (LeafSource, string, error) {
 				sink(inputFile, &leaf)
 			}
 		}
-	}
-	return source, "", nil
+	}, "", nil
 }
 
 func main() {
