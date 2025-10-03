@@ -4,6 +4,7 @@ set -e
 
 ./bin/sigsum-key generate -o test.log.key
 ./bin/sigsum-key generate -o test.submit.key
+./bin/sigsum-key generate -o test.other.key
 
 # Reading private key files still supports raw hex.
 printf '%064x' 1 > test.token.key
@@ -66,8 +67,7 @@ done
 kill ${MONITOR_PID}
 
 # Create pubkey with policy
-printf 'sigsum-policy="testpolicy123" ' > test.tmp-policy-start
-cat test.tmp-policy-start test.submit.key.pub > test.submit.key.withpolicy.pub
+echo "sigsum-policy=\"testpolicy123\" $(cat test.submit.key.pub)" > test.submit.key.withpolicy.pub
 
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor --interval=2s test.submit.key.withpolicy.pub > test.monitor.out &
 MONITOR_PID=$!
@@ -85,8 +85,7 @@ done
 kill ${MONITOR_PID}
 
 # Create pubkey with nonextistent dummy policy
-printf 'sigsum-policy="dummypolicy" ' > test.tmp-policy-start
-cat test.tmp-policy-start test.submit.key.pub > test.submit.key.withdummypolicy.pub
+echo "sigsum-policy=\"dummypolicy\" $(cat test.submit.key.pub)" > test.submit.key.withdummypolicy.pub
 
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor -P testpolicy123 --interval=2s test.submit.key.withdummypolicy.pub > test.monitor.out &
 MONITOR_PID=$!
@@ -103,14 +102,28 @@ done
 
 kill ${MONITOR_PID}
 
-# Create pubkey with nonextistent dummy policy
-printf 'sigsum-policy="dummypolicy" ' > test.tmp-policy-start
-cat test.tmp-policy-start test.submit.key.pub > test.submit.key.withdummypolicy.pub
-
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor --named-policy testpolicy123 --interval=2s test.submit.key.withdummypolicy.pub > test.monitor.out &
 MONITOR_PID=$!
 
 for x in $(seq 10 12); do
+    echo >&2 "submit $x"
+    echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-signing-key test.token.key -o tmp-proof -k test.submit.key --policy test.policy
+    rm tmp-proof
+    echo >&2 "waiting on monitor $x"
+    search_output "$(echo "msg $x" | go run ./sha256-n/sha256-n.go 2)" || die "Monitor not finding leaf $x"
+done
+
+# Do the same test again, this time specifying policy using --named-policy and having two different policy names in pubkey files -- then --named-policy should be used and the inconsistency should be ignored
+
+kill ${MONITOR_PID}
+
+# Create another pubkey with a different nonextistent dummy policy
+echo "sigsum-policy=\"dummypolicy-2\" $(cat test.other.key.pub)" > test.other.key.withdummypolicy2.pub
+
+SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-monitor --named-policy testpolicy123 --interval=2s test.submit.key.withdummypolicy.pub test.other.key.withdummypolicy2.pub > test.monitor.out &
+MONITOR_PID=$!
+
+for x in $(seq 13 15); do
     echo >&2 "submit $x"
     echo "msg $x" | ./bin/sigsum-submit --diagnostics=warning --token-domain test.sigsum.org --token-signing-key test.token.key -o tmp-proof -k test.submit.key --policy test.policy
     rm tmp-proof
