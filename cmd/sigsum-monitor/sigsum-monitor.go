@@ -44,7 +44,7 @@ func (_ callbacks) Alert(logKeyHash crypto.Hash, e error) {
 	log.Fatal("Alert log %x: %v\n", logKeyHash, e)
 }
 
-func readPublicKeyFiles(fileNames []string) (map[crypto.Hash]crypto.PublicKey, string, error) {
+func readPublicKeyFiles(fileNames []string, getPolicy bool) (map[crypto.Hash]crypto.PublicKey, string, error) {
 	var policyNames []string
 	policyName := ""
 	if len(fileNames) == 0 {
@@ -58,6 +58,9 @@ func readPublicKeyFiles(fileNames []string) (map[crypto.Hash]crypto.PublicKey, s
 		}
 		pubkeys[crypto.HashBytes(pub[:])] = pub
 		policyNames = append(policyNames, policyName)
+	}
+	if !getPolicy {
+		return pubkeys, "", nil
 	}
 	// Require all policyNames to be identical
 	policyName = policyNames[0]
@@ -79,9 +82,11 @@ func main() {
 		QueryInterval: settings.interval,
 		Callbacks:     callbacks{},
 	}
+	// Care about policy from pubkeys only if no policy option was specified
+	getPolicy := settings.policyFile == "" && settings.policyName == ""
 	var policyNameFromPubKeys string
 	var err error
-	if config.SubmitKeys, policyNameFromPubKeys, err = readPublicKeyFiles(settings.keys); err != nil {
+	if config.SubmitKeys, policyNameFromPubKeys, err = readPublicKeyFiles(settings.keys, getPolicy); err != nil {
 		log.Fatal("Failed reading public key files: %v", err)
 	}
 	policy, err := ui.SelectPolicy(ui.PolicyParams{
