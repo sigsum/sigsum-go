@@ -57,46 +57,47 @@ type LeafSkip func(name string, msg *crypto.Hash, publicKey *crypto.PublicKey) b
 // callback.
 type LeafSource func(skip LeafSkip, sink LeafSink)
 
-func getLeafSource(settings Settings) (LeafSource, string, error) {
-	if len(settings.keyFile) > 0 {
-		// A keyfile is given. In this case the source function should use that key to sign each message.
-		signer, policyNameFromPubKey, err := key.ReadPrivateKeyFileWithPolicy(settings.keyFile)
-		if err != nil {
-			log.Fatal("Reading key file failed: %v", err)
-		}
-		publicKey := signer.Public()
-		if len(settings.inputFiles) == 0 {
-			// No input files, so we use stdin
-			source := func(_ LeafSkip, sink LeafSink) {
-				msg, err := readMessage(os.Stdin, settings.rawHash)
-				if err != nil {
-					log.Fatal("Reading message from stdin failed: %v", err)
-				}
-				signature, err := types.SignLeafMessage(signer, msg[:])
-				if err != nil {
-					log.Fatal("Signing failed: %v", err)
-				}
-				sink("", &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
+// This function prepares a source function that uses the given key to sign each message.
+func getLeafRequestSignerSource(settings Settings) (LeafSource, string, error) {
+	signer, policyNameFromPubKey, err := key.ReadPrivateKeyFileWithPolicy(settings.keyFile)
+	if err != nil {
+		log.Fatal("Reading key file failed: %v", err)
+	}
+	publicKey := signer.Public()
+	if len(settings.inputFiles) == 0 {
+		// No input files, so we use stdin
+		source := func(_ LeafSkip, sink LeafSink) {
+			msg, err := readMessage(os.Stdin, settings.rawHash)
+			if err != nil {
+				log.Fatal("Reading message from stdin failed: %v", err)
 			}
-			return source, policyNameFromPubKey, nil
-		}
-		// There are input files, so we use them
-		source := func(skip LeafSkip, sink LeafSink) {
-			for _, inputFile := range settings.inputFiles {
-				msg := readMessageFile(inputFile, settings.rawHash)
-				if skip(inputFile, &msg, &publicKey) {
-					continue
-				}
-				signature, err := types.SignLeafMessage(signer, msg[:])
-				if err != nil {
-					log.Fatal("Signing failed: %v", err)
-				}
-				sink(inputFile, &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
+			signature, err := types.SignLeafMessage(signer, msg[:])
+			if err != nil {
+				log.Fatal("Signing failed: %v", err)
 			}
+			sink("", &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
 		}
 		return source, policyNameFromPubKey, nil
 	}
-	// No keyfile was given. In this case the source function should process leaf requests that already contain signatures.
+	// There are input files, so we use them
+	source := func(skip LeafSkip, sink LeafSink) {
+		for _, inputFile := range settings.inputFiles {
+			msg := readMessageFile(inputFile, settings.rawHash)
+			if skip(inputFile, &msg, &publicKey) {
+				continue
+			}
+			signature, err := types.SignLeafMessage(signer, msg[:])
+			if err != nil {
+				log.Fatal("Signing failed: %v", err)
+			}
+			sink(inputFile, &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
+		}
+	}
+	return source, policyNameFromPubKey, nil
+}
+
+// This function prepares a source function that will process leaf requests that already contain signatures.
+func getLeafRequestSource(settings Settings) (LeafSource, string, error) {
 	if len(settings.inputFiles) == 0 {
 		// No input files, so we use stdin
 		source := func(_ LeafSkip, sink LeafSink) {
@@ -135,7 +136,14 @@ func main() {
 		log.Fatal("%v", err)
 	}
 
-	source, policyNameFromPubKey, err := getLeafSource(settings)
+	var source LeafSource
+	var policyNameFromPubKey string
+	var err error
+	if len(settings.keyFile) > 0 {
+		source, policyNameFromPubKey, err = getLeafRequestSignerSource(settings)
+	} else {
+		source, policyNameFromPubKey, err = getLeafRequestSource(settings)
+	}
 	if err != nil {
 		log.Fatal("Error: %v", err)
 	}
