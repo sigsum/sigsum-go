@@ -36,11 +36,13 @@ is required for operations interacting with the log or witness, but
 no URLs are needed if the policy is used only for offline
 verification.
 
-Witnesses also have a name. These names are used only for referencing
-the witnesses in the definition of the quorum (directly, or indirectly
-via group definitions); they have no meaning outside of the policy
-file itself. We will look at an example policy, before specifying the
-contents of the policy file in detail.
+Witnesses (and groups, described below) are named. These names are
+used only for defining the quorum and group membership; they have no
+meaning outside of the policy file itself. Witnesses and groups share
+a single name space, and the special name `none` is predefined.
+
+We will look at an example policy, before specifying the contents of
+the policy file in detail.
 
 ## Example policy
 
@@ -63,7 +65,7 @@ group X-and-Y all X-witnesses Y-witnesses
 quorum X-and-Y
 ```
 This policy file lists a single log and six witnesses. The witnesses
-are divided into two groups, e.g, because the `X-witnesses` are
+are divided into two groups, e.g., because the `X-witnesses` are
 operated by one organization, and the
 `Y-witnesses` are operated by a separate organization.
 
@@ -82,13 +84,17 @@ from at least two of the `X-witnesses`, and from at least one of the
 
 ### Structure
 
-The policy file is line based, where each line consist of items
-separated by ASCII space and tab characters. Comments are written with
-"#" and extend to the end of the line.
+The policy file is line based, where each line is terminated by ASCII
+newline, and the items on each line are separated by "whitespace",
+which in this specification means sequences of ASCII space and tab
+characters *only*. Leading and trailing whitespace is allowed. Comment
+lines are written with "#" at the start of the line (possibly preceded
+by whitespace).
 
-Public keys are written in raw hex representation. (The `sigsum-key
-to-hex` command can be used to convert a public key in OpenSSH format to
-raw hex, and `sigsum-key from-hex` for the opposite conversion.)
+Public keys are written in raw hex representation, case insensitive.
+(The `sigsum-key to-hex` command can be used to convert a public key
+in OpenSSH format to raw hex, and `sigsum-key from-hex` for the
+opposite conversion.)
 
 Lines defining witnesses and logs can appear in any order; the order
 does not imply any preference or priority. A line defining a group can
@@ -169,18 +175,19 @@ Like for the quorum definition, a group definition can only refer to
 names defined on preceding lines. (This also rules out circular group
 definitions).
 
-Each defined name can be listed as a member at most once. This ensures
-that each witness can contribute to a group, or to the quorum in
-particular, in only one way.
+Each defined name can be listed as a group member at most once. This
+ensures that each witness can contribute to a group, or to the quorum
+in particular, in only one way.
 
-### Use of non-ASCII characters
+### Character set
 
 The policy file syntax is based on ASCII characters. The only allowed
 control characters are tab (0x09) and newline (0x0a). Non-ASCII
-characters may appear in names, URLs and comments. Using UTF-8 for any
-non-ASCII text is strongly recommended, but a policy file parser may
-treat the items as opaque octet strings, with no attempt to reject
-invalid utf-8 or inappropriate unicode characters.
+characters may appear in names, URLs and comments. I.e., the allowed
+octet values are 0x09, 0x0a, 0x20 -- 0x7e, 0x80 -- 0xff. Using UTF-8
+for any non-ASCII text is strongly recommended, but a policy file
+parser must treat items as opaque octet strings, e.g., no unicode
+normalization applied to names.
 
 
 ## Appendix A: Use with non-Sigsum logs
