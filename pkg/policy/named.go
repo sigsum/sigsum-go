@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sigsum.org/sigsum-go/pkg/log"
+	"slices"
 	"strings"
 )
 
@@ -34,52 +35,111 @@ func checkName(name string) error {
 	return nil
 }
 
-func ByName(name string) (*Policy, error) {
+// This function returns either the policy or, if raw is true, the corresponding file contents
+func byName(name string, raw bool) (*Policy, []byte, error) {
 	if err := checkName(name); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// If there is a file for this policy in the policy directory
 	// then that should be used. If no such file is found, then a
 	// builtin policy should be used.
-	p, err1 := readFromPolicyDir(name)
+	p, data, err1 := readFromPolicyDir(name, raw)
 	if err1 == nil {
-		return p, nil
+		return p, data, nil
 	}
-	p, err2 := BuiltinByName(name)
+	p, data, err2 := builtinByName(name, raw)
 	if err2 == nil {
 		log.Info("Found builtin policy '%q'", name)
-		return p, nil
+		return p, data, nil
 	}
 	err := fmt.Errorf("failed to get named policy for name '%q', errors '%v' and '%v'", name, err1, err2)
-	return nil, err
+	return nil, nil, err
 }
 
-func readFromPolicyDir(name string) (*Policy, error) {
+func ByName(name string) (*Policy, error) {
+	p, _, err := byName(name, false)
+	return p, err
+}
+
+func RawByName(name string) ([]byte, error) {
+	_, data, err := byName(name, true)
+	return data, err
+}
+
+// This function returns either the policy or, if raw is true, the corresponding file contents
+func readFromPolicyDir(name string, raw bool) (*Policy, []byte, error) {
 	if err := checkName(name); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	directory := os.Getenv(policyDirectoryEnvVariable)
 	if len(directory) == 0 {
 		directory = defaultPolicyDirectory
 	}
 	filePath := directory + "/" + name + installedPolicyFilenameSuffix
-	p, err := ReadPolicyFile(filePath)
-	if err == nil {
-		log.Info("Successfully read policy from file %q", filePath)
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, nil, err
 	}
-	return p, err
+	defer f.Close()
+	if raw {
+		fileContents, err := io.ReadAll(f)
+		return nil, fileContents, err
+	}
+	policy, err := ParseConfig(f)
+	return policy, nil, err
 }
 
-func BuiltinByName(name string) (*Policy, error) {
+func listFromPolicyDir() []string {
+	directory := os.Getenv(policyDirectoryEnvVariable)
+	if len(directory) == 0 {
+		directory = defaultPolicyDirectory
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		return nil
+	}
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.Type().IsRegular() {
+			if name, found := strings.CutSuffix(e.Name(), installedPolicyFilenameSuffix); found {
+				names = append(names, name)
+			}
+		}
+	}
+	return names
+}
+
+func List() []string {
+	builtin := BuiltinList()
+	installed := listFromPolicyDir()
+	all := append(builtin, installed...)
+	// Use Sort() and Compact() to remove duplicates
+	slices.Sort(all)
+	all = slices.Compact(all)
+	return all
+}
+
+// This function returns either the policy or, if raw is true, the corresponding file contents
+func builtinByName(name string, raw bool) (*Policy, []byte, error) {
 	if err := checkName(name); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	f, err := builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer f.Close()
-	return ParseConfig(f)
+	if raw {
+		fileContents, err := io.ReadAll(f)
+		return nil, fileContents, err
+	}
+	policy, err := ParseConfig(f)
+	return policy, nil, err
+}
+
+func BuiltinByName(name string) (*Policy, error) {
+	p, _, err := builtinByName(name, false)
+	return p, err
 }
 
 func BuiltinList() []string {
@@ -99,13 +159,6 @@ func BuiltinList() []string {
 }
 
 func BuiltinRead(name string) ([]byte, error) {
-	if err := checkName(name); err != nil {
-		return nil, err
-	}
-	f, err := builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return io.ReadAll(f)
+	_, data, err := builtinByName(name, true)
+	return data, err
 }
