@@ -1,0 +1,45 @@
+#! /bin/sh
+
+set -e
+
+# Check that the number of policies listed is as expected when there are only builtin policies
+n=$(./bin/sigsum-policy list | wc -l)
+if [ "$n" != 1 ] ; then
+    false
+fi
+
+# Check that certain expected policy names are listed
+./bin/sigsum-policy list | grep "sigsum-test1-2025"
+
+TMP_POLICY_DIR=$(mktemp -d)
+
+cleanup () {
+    rm -f "${TMP_POLICY_DIR}"/testpolicy1.sigsum-policy
+    rm -f "${TMP_POLICY_DIR}"/testpolicy2.sigsum-policy
+    rm -f "${TMP_POLICY_DIR}"/abc-test.sigsum-policy
+    rm -f "${TMP_POLICY_DIR}"/sigsum-test1-2025.sigsum-policy
+    rmdir "${TMP_POLICY_DIR}"
+}
+
+trap cleanup EXIT
+
+echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "quorum none" >> test.policy
+cp test.policy "${TMP_POLICY_DIR}"/testpolicy1.sigsum-policy
+cp test.policy "${TMP_POLICY_DIR}"/testpolicy2.sigsum-policy
+cp test.policy "${TMP_POLICY_DIR}"/abc-test.sigsum-policy
+cp test.policy "${TMP_POLICY_DIR}"/sigsum-test1-2025.sigsum-policy # override builtin policy
+
+# Check that the number of policies listed is as expected when there are installed policies in addition to the builtin policies
+n=$(SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy list | wc -l)
+if [ "$n" != 4 ] ; then
+    false
+fi
+
+echo "Checking that we can override the \"sigsum-test1-2025\" builtin policy"
+./bin/sigsum-policy show sigsum-test1-2025 > test.builtin.sigsum-policy
+SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy show sigsum-test1-2025 > test.other.sigsum-policy
+# There should be a diff
+diff -q test.builtin.sigsum-policy test.other.sigsum-policy && false
+# The test.other.sigsum-policy file should be the one from TMP_POLICY_DIR
+diff test.other.sigsum-policy "${TMP_POLICY_DIR}"/sigsum-test1-2025.sigsum-policy
