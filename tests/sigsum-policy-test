@@ -2,14 +2,11 @@
 
 set -e
 
-# Check that the number of policies listed is as expected when there are only builtin policies
-n=$(SIGSUM_POLICY_DIR=/dev/null ./bin/sigsum-policy list | wc -l)
-if [ "$n" != 1 ] ; then
-    false
-fi
-
-# Check that certain expected policy names are listed
-SIGSUM_POLICY_DIR=/dev/null ./bin/sigsum-policy list | grep "sigsum-test1-2025"
+# Check that the listed policies are as expected when there are only builtin policies
+echo "sigsum-test1-2025" > test.policies.expected
+# Note: this test will need to be updated by appending any additional builtin policy names to test.policies.expected here
+sort test.policies.expected > test.policies.expected.sorted
+SIGSUM_POLICY_DIR=/dev/null ./bin/sigsum-policy list | sort | diff test.policies.expected.sorted -
 
 TMP_POLICY_DIR=$(mktemp -d)
 
