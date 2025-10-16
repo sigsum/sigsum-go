@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
+func sortedInPlace(a []string) []string {
+	slices.Sort(a)
+	return a
+}
+
 func TestBuiltinList(t *testing.T) {
-	got := BuiltinList()
-	want := []string{"sigsum-test1-2025", "sigsum-test2-2025"}
-	// Sort to make the test work regardless of ordering
-	slices.Sort(got)
-	slices.Sort(want)
-	if !slices.Equal(got, want) {
+	if got, want := sortedInPlace(BuiltinList()), []string{"sigsum-test1-2025", "sigsum-test2-2025"}; !slices.Equal(got, want) {
 		t.Errorf("bad builtin list: got %v, want %v", got, want)
 	}
 }
