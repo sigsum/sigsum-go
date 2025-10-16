@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sigsum.org/sigsum-go/pkg/log"
 	"strings"
 )
@@ -27,9 +28,11 @@ const (
 var builtin embed.FS
 
 func checkName(name string) error {
-	// Reject names involving directories
-	if strings.ContainsRune(name, filepath.Separator) {
-		return fmt.Errorf("invalid policy name %q, must not contain %v", name, filepath.Separator)
+	// Reject names that do not match regexp (see named policy proposal)
+	const expr = "^[a-z0-9][a-z0-9-]+$"
+	re := regexp.MustCompile(expr)
+	if !re.MatchString(name) {
+		return fmt.Errorf("invalid policy name %q, does not match regexp %q", name, expr)
 	}
 	return nil
 }
