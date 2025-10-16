@@ -6,7 +6,12 @@ import (
 )
 
 func TestBuiltinList(t *testing.T) {
-	if got, want := BuiltinList(), []string{"sigsum-test1-2025", "sigsum-test2-2025"}; !slices.Equal(got, want) {
+	got := BuiltinList()
+	want := []string{"sigsum-test1-2025", "sigsum-test2-2025"}
+	// Sort to make the test work regardless of ordering
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
 		t.Errorf("bad builtin list: got %v, want %v", got, want)
 	}
 }
