@@ -35,58 +35,54 @@ func checkName(name string) error {
 	return nil
 }
 
-// This function returns either the policy or, if raw is true, the corresponding file contents
-func byName(name string, raw bool) (*Policy, []byte, error) {
+func openByName(name string) (io.ReadCloser, error) {
 	if err := checkName(name); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	// If there is a file for this policy in the policy directory
 	// then that should be used. If no such file is found, then a
 	// builtin policy should be used.
-	p, data, err1 := readFromPolicyDir(name, raw)
+	f, err1 := openFromPolicyDir(name)
 	if err1 == nil {
-		return p, data, nil
+		return f, nil
 	}
-	p, data, err2 := builtinByName(name, raw)
+	f, err2 := openBuiltinByName(name)
 	if err2 == nil {
 		log.Info("Found builtin policy '%q'", name)
-		return p, data, nil
+		return f, nil
 	}
 	err := fmt.Errorf("failed to get named policy for name '%q', errors '%v' and '%v'", name, err1, err2)
-	return nil, nil, err
+	return nil, err
 }
 
 func ByName(name string) (*Policy, error) {
-	p, _, err := byName(name, false)
-	return p, err
+	f, err := openByName(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ParseConfig(f)
 }
 
-func RawByName(name string) ([]byte, error) {
-	_, data, err := byName(name, true)
-	return data, err
+func ReadByName(name string) ([]byte, error) {
+	f, err := openByName(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(f)
 }
 
-// This function returns either the policy or, if raw is true, the corresponding file contents
-func readFromPolicyDir(name string, raw bool) (*Policy, []byte, error) {
+func openFromPolicyDir(name string) (io.ReadCloser, error) {
 	if err := checkName(name); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	directory := os.Getenv(policyDirectoryEnvVariable)
 	if len(directory) == 0 {
 		directory = defaultPolicyDirectory
 	}
 	filePath := directory + "/" + name + installedPolicyFilenameSuffix
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer f.Close()
-	if raw {
-		fileContents, err := io.ReadAll(f)
-		return nil, fileContents, err
-	}
-	policy, err := ParseConfig(f)
-	return policy, nil, err
+	return os.Open(filePath)
 }
 
 func listFromPolicyDir() []string {
@@ -119,27 +115,20 @@ func List() []string {
 	return all
 }
 
-// This function returns either the policy or, if raw is true, the corresponding file contents
-func builtinByName(name string, raw bool) (*Policy, []byte, error) {
+func openBuiltinByName(name string) (io.ReadCloser, error) {
 	if err := checkName(name); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	f, err := builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer f.Close()
-	if raw {
-		fileContents, err := io.ReadAll(f)
-		return nil, fileContents, err
-	}
-	policy, err := ParseConfig(f)
-	return policy, nil, err
+	return builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
 }
 
 func BuiltinByName(name string) (*Policy, error) {
-	p, _, err := builtinByName(name, false)
-	return p, err
+	f, err := openBuiltinByName(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ParseConfig(f)
 }
 
 func BuiltinList() []string {
@@ -159,6 +148,10 @@ func BuiltinList() []string {
 }
 
 func BuiltinRead(name string) ([]byte, error) {
-	_, data, err := builtinByName(name, true)
-	return data, err
+	f, err := openBuiltinByName(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(f)
 }

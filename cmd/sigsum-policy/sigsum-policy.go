@@ -42,7 +42,7 @@ Usage: sigsum-policy [--help|help] [--version|version]
 		if len(os.Args) != 3 {
 			log.Fatal(usage[1:])
 		}
-		policy, err := policy.RawByName(os.Args[2])
+		policy, err := policy.ReadByName(os.Args[2])
 		if err != nil {
 			log.Fatal(err)
 		}
