@@ -28,10 +28,6 @@ const (
 var builtin embed.FS
 
 func checkName(name string) error {
-	// Reject names involving directories
-	if strings.ContainsRune(name, filepath.Separator) {
-		return fmt.Errorf("invalid policy name %q, must not contain %v", name, filepath.Separator)
-	}
 	// Reject names that do not match regexp (see named policy proposal)
 	expr := "^[a-z0-9][a-z0-9-]+$"
 	re := regexp.MustCompile(expr)
