@@ -29,7 +29,7 @@ var builtin embed.FS
 
 func checkName(name string) error {
 	// Reject names that do not match regexp (see named policy proposal)
-	expr := "^[a-z0-9][a-z0-9-]+$"
+	const expr = "^[a-z0-9][a-z0-9-]+$"
 	re := regexp.MustCompile(expr)
 	if !re.MatchString(name) {
 		return fmt.Errorf("invalid policy name %q, does not match regexp %q", name, expr)
