@@ -85,7 +85,7 @@ func openFromPolicyDir(name string) (io.ReadCloser, error) {
 	filePath := directory + "/" + name + installedPolicyFilenameSuffix
 	// If filePath is a symbolic link, follow it
 	if dst, err := os.Readlink(filePath); err == nil {
-	    return os.Open(dst)
+		return os.Open(dst)
 	}
 	// Readlink failed, assume regular file
 	return os.Open(filePath)
