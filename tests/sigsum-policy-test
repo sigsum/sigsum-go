@@ -43,7 +43,7 @@ diff -q test.builtin.sigsum-policy test.other.sigsum-policy && false
 diff test.other.sigsum-policy "${TMP_POLICY_DIR}"/sigsum-test1-2025.sigsum-policy
 
 # Check that "sigsum-policy list" works for symlink
-ln -s ${PWD}/test.policy "${TMP_POLICY_DIR}"/testpolicy-symlinked.sigsum-policy
+ln -s "${PWD}"/test.policy "${TMP_POLICY_DIR}"/testpolicy-symlinked.sigsum-policy
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy list | grep testpolicy-symlinked
 
 # Check that "sigsum-policy show" works for symlink
