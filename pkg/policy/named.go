@@ -102,7 +102,9 @@ func listFromPolicyDir() []string {
 	for _, e := range entries {
 		if e.Type().IsRegular() || e.Type()&fs.ModeSymlink != 0 {
 			if name, found := strings.CutSuffix(e.Name(), installedPolicyFilenameSuffix); found {
-				names = append(names, name)
+                               if err := checkName(name); err == nil {
+                                       names = append(names, name)
+                               }
 			}
 		}
 	}
