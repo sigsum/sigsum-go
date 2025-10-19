@@ -17,6 +17,8 @@ cleanup () {
     rm -f "${TMP_POLICY_DIR}"/abc-test.sigsum-policy
     rm -f "${TMP_POLICY_DIR}"/sigsum-test1-2025.sigsum-policy
     rm -f "${TMP_POLICY_DIR}"/testpolicy-symlinked.sigsum-policy
+    rm -f "${TMP_POLICY_DIR}"/UPPERCASE-should-be-skipped.sigsum-policy
+    rm -f "${TMP_POLICY_DIR}"/lowercase-should-be-included.sigsum-policy
     rmdir "${TMP_POLICY_DIR}"
 }
 
@@ -51,3 +53,9 @@ SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy list | grep testpolicy-s
 # Check that "sigsum-policy show" works for symlink
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy show testpolicy-symlinked > test.symlinked.sigsum-policy
 diff test.policy test.symlinked.sigsum-policy
+
+# Check that "sigsum-policy list" skips filenames that do not follow the rules for policy names
+cp test.policy "${TMP_POLICY_DIR}"/UPPERCASE-should-be-skipped.sigsum-policy
+cp test.policy "${TMP_POLICY_DIR}"/lowercase-should-be-included.sigsum-policy
+SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy list | grep UPPERCASE-should-be-skipped && false
+SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy list | grep lowercase-should-be-included
