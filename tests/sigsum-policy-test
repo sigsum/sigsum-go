@@ -4,6 +4,7 @@ set -e
 
 # Check that the listed policies are as expected when there are only builtin policies
 echo "sigsum-test1-2025" > test.policies.expected
+echo "sigsum-test2-2025" >> test.policies.expected
 # Note: this test will need to be updated by appending any additional builtin policy names to test.policies.expected here
 sort test.policies.expected > test.policies.expected.sorted
 SIGSUM_POLICY_DIR=/dev/null ./bin/sigsum-policy list | sort | diff test.policies.expected.sorted -
@@ -29,10 +30,11 @@ cp test.policy "${TMP_POLICY_DIR}"/abc-test.sigsum-policy
 cp test.policy "${TMP_POLICY_DIR}"/sigsum-test1-2025.sigsum-policy # override builtin policy
 
 # Check that the number of policies listed is as expected when there are installed policies in addition to the builtin policies
-n=$(SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy list | wc -l)
-if [ "$n" != 4 ] ; then
-    false
-fi
+echo testpolicy1 >> test.policies.expected
+echo testpolicy2 >> test.policies.expected
+echo abc-test    >> test.policies.expected
+sort test.policies.expected > test.policies.expected.sorted
+SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy list | sort | diff test.policies.expected.sorted -
 
 echo "Checking that we can override the \"sigsum-test1-2025\" builtin policy"
 SIGSUM_POLICY_DIR=/dev/null ./bin/sigsum-policy show sigsum-test1-2025 > test.builtin.sigsum-policy
