@@ -155,7 +155,7 @@ func BuiltinList() []string {
 	return names
 }
 
-func BuiltinRead(name string) ([]byte, error) {
+func ReadBuiltinByName(name string) ([]byte, error) {
 	f, err := openBuiltinByName(name)
 	if err != nil {
 		return nil, err
