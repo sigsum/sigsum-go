@@ -32,9 +32,7 @@ cp test.policy "${TMP_POLICY_DIR}"/abc-test.sigsum-policy
 cp test.policy "${TMP_POLICY_DIR}"/sigsum-test1-2025.sigsum-policy # override builtin policy
 
 # Check that the number of policies listed is as expected when there are installed policies in addition to the builtin policies
-echo testpolicy1 >> test.policies.expected
-echo testpolicy2 >> test.policies.expected
-echo abc-test    >> test.policies.expected
+printf "testpolicy1\ntestpolicy2\nabc-test\n" >> test.policies.expected
 sort test.policies.expected > test.policies.expected.sorted
 SIGSUM_POLICY_DIR=${TMP_POLICY_DIR} ./bin/sigsum-policy list | sort | diff test.policies.expected.sorted -
 
