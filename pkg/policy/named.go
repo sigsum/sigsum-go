@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sigsum.org/sigsum-go/pkg/log"
+	"slices"
 	"strings"
 )
 
@@ -37,27 +38,45 @@ func checkName(name string) error {
 	return nil
 }
 
-func ByName(name string) (*Policy, error) {
+func openByName(name string) (io.ReadCloser, error) {
 	if err := checkName(name); err != nil {
 		return nil, err
 	}
 	// If there is a file for this policy in the policy directory
 	// then that should be used. If no such file is found, then a
 	// builtin policy should be used.
-	p, err1 := readFromPolicyDir(name)
+	f, err1 := openFromPolicyDir(name)
 	if err1 == nil {
-		return p, nil
+		return f, nil
 	}
-	p, err2 := BuiltinByName(name)
+	f, err2 := openBuiltinByName(name)
 	if err2 == nil {
 		log.Info("Found builtin policy '%q'", name)
-		return p, nil
+		return f, nil
 	}
 	err := fmt.Errorf("failed to get named policy for name '%q', errors '%v' and '%v'", name, err1, err2)
 	return nil, err
 }
 
-func readFromPolicyDir(name string) (*Policy, error) {
+func ByName(name string) (*Policy, error) {
+	f, err := openByName(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ParseConfig(f)
+}
+
+func ReadByName(name string) ([]byte, error) {
+	f, err := openByName(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(f)
+}
+
+func openFromPolicyDir(name string) (io.ReadCloser, error) {
 	if err := checkName(name); err != nil {
 		return nil, err
 	}
@@ -66,18 +85,53 @@ func readFromPolicyDir(name string) (*Policy, error) {
 		directory = defaultPolicyDirectory
 	}
 	filePath := directory + "/" + name + installedPolicyFilenameSuffix
-	p, err := ReadPolicyFile(filePath)
-	if err == nil {
-		log.Info("Successfully read policy from file %q", filePath)
-	}
-	return p, err
+	return os.Open(filePath)
 }
 
-func BuiltinByName(name string) (*Policy, error) {
+func listFromPolicyDir() []string {
+	directory := os.Getenv(policyDirectoryEnvVariable)
+	if len(directory) == 0 {
+		directory = defaultPolicyDirectory
+	}
+	entries, err := os.ReadDir(directory)
+	if err != nil {
+		return nil
+	}
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		name, found := strings.CutSuffix(e.Name(), installedPolicyFilenameSuffix)
+		if !found || checkName(name) != nil {
+			continue
+		}
+		// Using Stat below because we want to allow symlinks but
+		// require that a symlink resolves to a regular file
+		if fileInfo, err := os.Stat(filepath.Join(directory, e.Name())); err != nil || !fileInfo.Mode().IsRegular() {
+			continue
+		}
+		names = append(names, name)
+	}
+	return names
+}
+
+func List() []string {
+	builtin := BuiltinList()
+	installed := listFromPolicyDir()
+	all := append(builtin, installed...)
+	// Use Sort() and Compact() to remove duplicates
+	slices.Sort(all)
+	all = slices.Compact(all)
+	return all
+}
+
+func openBuiltinByName(name string) (io.ReadCloser, error) {
 	if err := checkName(name); err != nil {
 		return nil, err
 	}
-	f, err := builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
+	return builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
+}
+
+func BuiltinByName(name string) (*Policy, error) {
+	f, err := openBuiltinByName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -101,11 +155,8 @@ func BuiltinList() []string {
 	return names
 }
 
-func BuiltinRead(name string) ([]byte, error) {
-	if err := checkName(name); err != nil {
-		return nil, err
-	}
-	f, err := builtin.Open(filepath.Join("builtin", name) + builtinPolicyFilenameSuffix)
+func ReadBuiltinByName(name string) ([]byte, error) {
+	f, err := openBuiltinByName(name)
 	if err != nil {
 		return nil, err
 	}
