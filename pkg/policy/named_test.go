@@ -1,6 +1,8 @@
 package policy
 
 import (
+	"bytes"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -23,6 +25,32 @@ func TestBuiltinByName(t *testing.T) {
 			t.Errorf("failed for builtin %q: %v", name, err)
 		} else if p == nil {
 			t.Errorf("got nil policy for builtin %q", name)
+		}
+	}
+}
+
+func TestReadBuiltinByName(t *testing.T) {
+	for _, name := range BuiltinList() {
+		// Check that BuiltinByName and ReadBuiltinByName give same results
+		p1, err := BuiltinByName(name)
+		if err != nil {
+			t.Errorf("failed for builtin %q: %v", name, err)
+		} else if p1 == nil {
+			t.Errorf("got nil policy for builtin %q", name)
+		}
+		data, err := ReadBuiltinByName(name)
+		if err != nil {
+			t.Errorf("failed for builtin %q: %v", name, err)
+		} else if data == nil {
+			t.Errorf("got nil data for builtin %q", name)
+		}
+		r := bytes.NewReader(data)
+		p2, err := ParseConfig(r)
+		if err != nil {
+			t.Errorf("parse failed for builtin %q: %v", name, err)
+		}
+		if !reflect.DeepEqual(p1, p2) {
+			t.Errorf("got different policies for builtin name %q", name)
 		}
 	}
 }
