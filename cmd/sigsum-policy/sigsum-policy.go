@@ -35,14 +35,14 @@ Usage: sigsum-policy [--help|help] [--version|version]
 		if len(os.Args) != 2 {
 			log.Fatal(usage[1:])
 		}
-		for _, name := range policy.BuiltinList() {
+		for _, name := range policy.List() {
 			fmt.Println(name)
 		}
 	case "show":
 		if len(os.Args) != 3 {
 			log.Fatal(usage[1:])
 		}
-		policy, err := policy.BuiltinRead(os.Args[2])
+		policy, err := policy.ReadByName(os.Args[2])
 		if err != nil {
 			log.Fatal(err)
 		}
