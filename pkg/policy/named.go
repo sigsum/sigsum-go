@@ -99,16 +99,16 @@ func listFromPolicyDir() []string {
 	}
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
+		name, found := strings.CutSuffix(e.Name(), installedPolicyFilenameSuffix)
+		if !found || checkName(name) != nil {
+			continue
+		}
 		// Using Stat below because we want to allow symlinks but
 		// require that a symlink resolves to a regular file
-		filePath := directory + "/" + e.Name()
-		if fileInfo, err := os.Stat(filePath); err == nil && fileInfo.Mode().IsRegular() {
-			if name, found := strings.CutSuffix(e.Name(), installedPolicyFilenameSuffix); found {
-				if err := checkName(name); err == nil {
-					names = append(names, name)
-				}
-			}
+		if fileInfo, err := os.Stat(filepath.Join(directory, e.Name())); err != nil || !fileInfo.Mode().IsRegular() {
+			continue
 		}
+		names = append(names, name)
 	}
 	return names
 }
