@@ -1,6 +1,7 @@
 [SEE ALSO]
 .BR sigsum-key (1)
 .BR sigsum-monitor (1)
+.BR sigsum-policy (1)
 .BR sigsum-token (1)
 .BR sigsum-tools (5)
 .BR sigsum-verify (1)
