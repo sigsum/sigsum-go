@@ -13,11 +13,19 @@ SUBCOMMANDS["sigsum-policy"]="list show"
 version=$1; shift
 for cmd in "${COMMANDS[@]}"; do
     echo "INFO: generating doc/$cmd.1" >&2
+
+    # Include ENVIRONMENT and FILES sections only for those commands that need those
+    env_and_files_includes="--include=environment.help2man --include=files.help2man"
+    if [[ $cmd == "sigsum-key" || $cmd == "sigsum-token" ]] ; then
+	env_and_files_includes=""
+    fi
+
     help2man \
         --no-info \
         --version-string "$cmd $version" \
         --include="../../cmd/$cmd/help2man/name.help2man" \
         --include="../../cmd/$cmd/help2man/see-also.help2man" \
+        $env_and_files_includes \
         --include="return-codes.help2man" \
         --include="reporting-bugs.help2man" \
         --include="contact.help2man" \
@@ -32,6 +40,7 @@ for cmd in "${COMMANDS[@]}"; do
                 --version-string "$cmd $subcmd $version" \
                 --include="../../cmd/$cmd/help2man/$subcmd.help2man" \
                 --include="../../cmd/$cmd/help2man/see-also.help2man" \
+                $env_and_files_includes \
                 --include="return-codes.help2man" \
                 --include="reporting-bugs.help2man" \
                 --include="contact.help2man" \

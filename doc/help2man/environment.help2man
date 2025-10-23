@@ -1,0 +1,5 @@
+[ENVIRONMENT]
+The behavior of the sigsum tools is affected by the following environment variables:
+
+SIGSUM_POLICY_DIR
+        If set, this determines the location where the sigsum tools will look for named policy files.
