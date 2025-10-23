@@ -44,13 +44,13 @@ Usage: sigsum-policy [--help|help] [--version|version]
 		// There are no settings for the list command yet, but the settings.parse function can display a help message
 		var settings listSettings
 		settings.parse(os.Args)
-		for _, name := range policy.BuiltinList() {
+		for _, name := range policy.List() {
 			fmt.Println(name)
 		}
 	case "show":
 		var settings showSettings
 		settings.parse(os.Args)
-		policy, err := policy.BuiltinRead(settings.policyName)
+		policy, err := policy.ReadByName(settings.policyName)
 		if err != nil {
 			log.Fatal(err)
 		}
