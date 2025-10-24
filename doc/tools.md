@@ -66,7 +66,7 @@ policies.
 
 A submitter public key file is specified as input to the sigsum-submit
 and sigsum-verify tools, and can include options on the same form that
-is used for the `authorized_keys` file for sshd. To sepcify a policy
+is used for the `authorized_keys` file for sshd. To specify a policy
 name, the option sigsum-policy="policy-name" can be used. For the
 sigsum tools, if neither of the -p or -P input options were given and
 a sigsum-policy="policy-name" option is found inside the submitter
