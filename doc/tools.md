@@ -27,13 +27,73 @@ variation.  All tools display a usage message if `--help` is provided.
 All tools display a program version if `--version` is provided.  All
 tools that have sub commands additionally accept "help" and "version".
 
-Operation of several tools is controlled by a Sigsum policy, defined by
-a separate [policy file](./policy.md).  The location of the policy file
-is specified using the `-p` option.  Most tools also require one or
-more input keys.  The `-k` option is used to specify a key file, but
-some commands have additional ways of taking keys and key-file input.
+Operation of several tools is controlled by a Sigsum
+[policy](./policy.md). The policy to use can be specified in different
+ways, as described under "Policies" below.
 
-There are no default locations for policy file or key files.
+Most tools also require one or more input keys.  The `-k` option is
+used to specify a key file, but some commands have additional ways of
+taking keys and key-file input. There is no default location for key
+files.
+
+## Policies
+
+There are three different ways to specify the policy to use:
+
+1. By specifying the location of a separate policy file using the `-p`
+   option.
+
+2. By specifying a named policy using the `-P` option.
+
+3. By specifying a named policy as an option on the form
+   sigsum-policy="policy-name" included in a public key file.
+
+### Named policies
+
+There are two kinds of named policies: builtin policies and installed
+policies.
+
+Installed policies are by default read from the /etc/sigsum/policy
+directory. A different location can be set using the SIGSUM_POLICY_DIR
+environment variable. Installed policy files must have the
+`.sigsum-policy` filename suffix.
+
+The sigsum-policy tool can be used to list and show the contents of
+the available named policies, including both builtin and installed
+policies.
+
+### Specifying a policy name inside a submitter public key file
+
+A submitter public key file is specified as input to the sigsum-submit
+and sigsum-verify tools, and can include options on the same form that
+is used for the `authorized_keys` file for sshd. To sepcify a policy
+name, the option sigsum-policy="policy-name" can be used. For the
+sigsum tools, if neither of the -p or -P input options were given and
+a sigsum-policy="policy-name" option is found inside the submitter
+public key file, then that policy name is used.
+
+Example: a submitter public key file that contains the following
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPwsfu294zCxiE157E4N5od+wkx7eZtH1Lz+L9Zg5g4r sigsum key
+
+could be modified to add a policy name like this:
+
+sigsum-policy="sigsum-test" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPwsfu294zCxiE157E4N5od+wkx7eZtH1Lz+L9Zg5g4r sigsum key
+
+and then the policy name "sigsum-test" would be used, provided
+that none of the -p or -P input options were given.
+
+### Order of priority for policies
+
+It is not allowed to specify both `-p` and `-P` at the same time. If a
+policy is specified using either the `-p` or the `-P` option, then
+that policy is used, and any policy name in the submitter public key
+file is ignored. Thus, named policies are only used if the -p option
+is absent, and a policy name in the submitter public key file is only
+used if neither of `-p` or `-P` was specified.
+
+Regarding named policies, if there is an installed policy with the
+same name as a builtin policy, then the installed policy is used.
 
 ## Key handling
 
