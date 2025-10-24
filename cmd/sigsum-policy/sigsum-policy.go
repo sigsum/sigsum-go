@@ -70,13 +70,13 @@ func newOptionSet(args []string, parameters string) *getopt.Set {
 }
 
 // Also adds and processes the help option.
-func parseNoArgs(set *getopt.Set, args []string, usage string) {
+func parse(set *getopt.Set, args []string, usage string) []string {
 	help := false
 	set.FlagLong(&help, "help", 0, "Display help")
 	err := set.Getopt(args[1:], nil)
 	// Check help first; if seen, ignore errors about missing mandatory arguments.
 	if help {
-		fmt.Print(usage[1:] + "\n")
+		fmt.Print(usage + "\n\n")
 		set.PrintUsage(os.Stdout)
 		os.Exit(0)
 	}
@@ -85,33 +85,25 @@ func parseNoArgs(set *getopt.Set, args []string, usage string) {
 		set.PrintUsage(log.Writer())
 		os.Exit(1)
 	}
-	if set.NArgs() > 0 {
-		log.Fatal("Too many arguments.")
-	}
+	return set.Args()
 }
 
 func (s *listSettings) parse(args []string) {
 	set := newOptionSet(args, "")
-	parseNoArgs(set, args, `
-List available named policies.
-`)
+	finalArgs := parse(set, args, `List available named policies.`)
+	if len(finalArgs) > 0 {
+		log.Fatal("Too many arguments.")
+	}
 }
 
 func (s *showSettings) parse(args []string) {
 	set := newOptionSet(args, "name")
-	help := false
-	set.FlagLong(&help, "help", 0, "Display help")
-	set.Parse(args[1:])
-	if help {
-		fmt.Print("Show contents of given named policy.\n\n")
-		set.PrintUsage(os.Stdout)
-		os.Exit(0)
-	}
-	if set.NArgs() < 1 {
+	finalArgs := parse(set, args, `Show contents of given named policy.`)
+	if len(finalArgs) < 1 {
 		log.Fatal("Missing argument: name")
 	}
-	if set.NArgs() > 1 {
+	if len(finalArgs) > 1 {
 		log.Fatal("Too many arguments.")
 	}
-	s.policyName = set.Args()[0]
+	s.policyName = finalArgs[0]
 }
