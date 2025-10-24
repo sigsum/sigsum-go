@@ -24,3 +24,4 @@ test_one ./bin/sigsum-submit --version
 test_one ./bin/sigsum-verify --version
 test_one ./bin/sigsum-witness --version
 test_one ./bin/sigsum-monitor --version
+test_one ./bin/sigsum-policy --version
