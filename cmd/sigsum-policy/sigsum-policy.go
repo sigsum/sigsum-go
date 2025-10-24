@@ -41,7 +41,8 @@ Usage: sigsum-policy [--help|help] [--version|version]
 		version.DisplayVersion("sigsum-policy")
 		os.Exit(0)
 	case "list":
-		// There are no settings for the list command yet, but the settings.parse function can display a help message
+		// There are no settings for the list command yet, but
+		// the settings.parse function can display a help message
 		var settings listSettings
 		settings.parse(os.Args)
 		for _, name := range policy.List() {
