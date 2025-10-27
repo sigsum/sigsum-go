@@ -1,6 +1,7 @@
 [SEE ALSO]
 .BR sigsum-key (1)
 .BR sigsum-monitor (1)
+.BR sigsum-policy (1)
 .BR sigsum-submit (1)
 .BR sigsum-token-create (1)
 .BR sigsum-token-record (1)

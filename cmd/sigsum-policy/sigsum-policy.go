@@ -5,9 +5,18 @@ import (
 	"log"
 	"os"
 
+	"github.com/pborman/getopt/v2"
+
 	"sigsum.org/sigsum-go/internal/version"
 	"sigsum.org/sigsum-go/pkg/policy"
 )
+
+type listSettings struct {
+}
+
+type showSettings struct {
+	policyName string
+}
 
 func main() {
 	const usage = `
@@ -32,17 +41,17 @@ Usage: sigsum-policy [--help|help] [--version|version]
 		version.DisplayVersion("sigsum-policy")
 		os.Exit(0)
 	case "list":
-		if len(os.Args) != 2 {
-			log.Fatal(usage[1:])
-		}
+		// There are no settings for the list command yet, but
+		// the settings.parse function can display a help message
+		var settings listSettings
+		settings.parse(os.Args)
 		for _, name := range policy.List() {
 			fmt.Println(name)
 		}
 	case "show":
-		if len(os.Args) != 3 {
-			log.Fatal(usage[1:])
-		}
-		policy, err := policy.ReadByName(os.Args[2])
+		var settings showSettings
+		settings.parse(os.Args)
+		policy, err := policy.ReadByName(settings.policyName)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -51,4 +60,50 @@ Usage: sigsum-policy [--help|help] [--version|version]
 		}
 
 	}
+}
+
+func newOptionSet(args []string, parameters string) *getopt.Set {
+	set := getopt.New()
+	set.SetProgram(os.Args[0] + " " + os.Args[1])
+	set.SetParameters(parameters)
+	return set
+}
+
+// Also adds and processes the help option.
+func parse(set *getopt.Set, args []string, usage string) []string {
+	help := false
+	set.FlagLong(&help, "help", 0, "Display help")
+	err := set.Getopt(args[1:], nil)
+	// Check help first; if seen, ignore errors about missing mandatory arguments.
+	if help {
+		fmt.Print(usage + "\n\n")
+		set.PrintUsage(os.Stdout)
+		os.Exit(0)
+	}
+	if err != nil {
+		log.Printf("err: %v\n", err)
+		set.PrintUsage(log.Writer())
+		os.Exit(1)
+	}
+	return set.Args()
+}
+
+func (s *listSettings) parse(args []string) {
+	set := newOptionSet(args, "")
+	finalArgs := parse(set, args, `List available named policies.`)
+	if len(finalArgs) > 0 {
+		log.Fatal("Too many arguments.")
+	}
+}
+
+func (s *showSettings) parse(args []string) {
+	set := newOptionSet(args, "name")
+	finalArgs := parse(set, args, `Show contents of given named policy.`)
+	if len(finalArgs) < 1 {
+		log.Fatal("Missing argument: name")
+	}
+	if len(finalArgs) > 1 {
+		log.Fatal("Too many arguments.")
+	}
+	s.policyName = finalArgs[0]
 }
