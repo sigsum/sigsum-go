@@ -10,8 +10,7 @@ also used by monitors, submitters, and log servers.
 
 While the design is tailored for use with Sigsum, the main semantics
 can be applied also to other transparency logs that rely on witness
-cosigning. Please see Appendix A below for further recommendations on
-this.
+cosigning.
 
 
 ## What is a "policy"?
@@ -92,15 +91,16 @@ lines are written with "#" at the start of the line (possibly preceded
 by whitespace).
 
 Public keys are written in raw hex representation, case insensitive.
-(The `sigsum-key to-hex` command can be used to convert a public key
-in OpenSSH format to raw hex, and `sigsum-key from-hex` for the
-opposite conversion.)
+(The `sigsum-key` command can be used to convert public keys between
+raw hex, OpenSSH, and [vkey][] formats).
 
 Lines defining witnesses and logs can appear in any order; the order
 does not imply any preference or priority. A line defining a group can
 only reference names of groups and witnesses defined on preceding
 lines. Similarly, the quorum line must specify a witness or group
 defined earlier.
+
+[vkey]: https://github.com/C2SP/C2SP/blob/main/signed-note.md#verifier-keys
 
 ### Defining a log
 
@@ -181,49 +181,35 @@ in particular, in only one way.
 
 ### Character set
 
-The policy file syntax is based on ASCII characters. The only allowed
-control characters are tab (0x09) and newline (0x0a). Non-ASCII
-characters may appear in names, URLs and comments. I.e., the allowed
-octet values are 0x09, 0x0a, 0x20 -- 0x7e, 0x80 -- 0xff. Using UTF-8
-for any non-ASCII text is strongly recommended, but a policy file
-parser must treat items as opaque octet strings, e.g., no unicode
-normalization applied to names.
+The policy file is treated as a file of octets, where octets with the
+most significant bit clear are interpreted as ASCII characters. The
+only allowed control characters are tab and newline, which means that
+the allowed octet values are 0x09 (tab), 0x0A (newline), 0x20-0x7E,
+and 0x80-0xFF.
 
+Non-ASCII octets may appear in names, URLs and comments. Using UTF-8
+for any non-ASCII text is strongly recommended, but with respect to
+the policy file syntax and semantics, all octets with the high bit set
+are opaque. In particular, names must be handled as opaque octet
+strings, e.g., the name 0x4B (ASCII "K") is different from the name
+0xE2 0x84 0xAA (a Kelvin sign encoded using UTF-8).
 
-## Appendix A: Use with non-Sigsum logs
+The motivation for this way of allowing non-ASCII, but handle it as
+opaque data, is to:
 
-This policy file format can be used for non-Sigsum logs. One important
-usecase is to specify the quorum for verifying a
-[cosigned](https://github.com/C2SP/C2SP/blob/main/tlog-cosignature.md)
-[checkpoint](https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md).
+* Ensure that processing the policy file does not require unicode
+  awareness and corresponding tables, and that the meaning of the
+  policy does not depend on the unicode version used.
 
-The Sigsum project would suggest for this case to:
+* Allow using any [signed note key name][] as a witness name, allow
+  international domain names in URLs (without resorting to punycode),
+  and allow free use of non-ASCII comments.
 
-* Apply each policy file to a single log origin line, configured
-  separately.
+[signed note key name]: https://github.com/C2SP/C2SP/blob/main/signed-note.md#format
 
-* Avoid using log URLs (since it is expected that such URLs are usable
-  with the Sigsum log API).
+### Implementation limits
 
-* Use witness names corresponding to the key names used in the
-  corresponding checkpoint cosignature lines. This policy file syntax
-  is liberal enough that all valid [key
-  names](https://github.com/C2SP/C2SP/blob/main/signed-note.md#format)
-  are valid witness names.
-
-Further issues may be discovered, and a shared policy specification
-may be developed in the future under the [C2SP
-umbrella](https://github.com/C2SP/C2SP/tree/main).
-
-
-## Appendix B: Use on constrained devices
-
-It is desirable to be able to apply Sigsum policy as part of Sigsum
-proof verification on constrained devices. A constrained device will
-likely have to enforce some limits on policy complexity. It is
-recommended that an implementations of Sigsum policy at least supports
-up to 32 logs, 32 witnesses, and 32 groups.
-
-For a constrained device it would also be helpful with a "compiled"
-binary representation of the policy, that is compact, easy to parse,
-and easy to apply; this may be subject to future specification.
+An implementation of Sigsum policy may impose limits on policy
+complexity. It is strongly recommended that an implementation of
+Sigsum policy supports at least up 32 logs, 32 witnesses, and 32
+groups.
