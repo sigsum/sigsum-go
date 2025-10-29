@@ -39,7 +39,7 @@ verification.
 Witnesses (and groups, described below) are named. These names are
 used only for defining the quorum and group membership; they have no
 meaning outside of the policy file itself. Witnesses and groups share
-a single name space, and the special name `none` is predefined.
+a single namespace, and the special name `none` is predefined.
 
 We will look at an example policy, before specifying the contents of
 the policy file in detail.
@@ -110,7 +110,7 @@ log <pubkey> [<url>]
 ```
 When the policy is used for verifying a sigsum proof, all of the
 listed logs are accepted. When the policy is used for submitting a new
-entry to a log, any of the logs that has an associated URL can be
+entry to a log, any of the logs that have an associated URL can be
 used. (The `sigsum-submit` tool tries them in randomized order, until
 logging succeeds).
 
@@ -141,8 +141,8 @@ In the simplest case, the name refers to a witness, and it means that
 a cosignature from that witness is required for a tree head to be
 considered valid.
 
-To not require any cosignatures a all, one can use the predefined name
-`none`, like
+To not require any cosignatures at all, one can use the predefined name
+`none` as follows:
 ```
 quorum none
 ```
