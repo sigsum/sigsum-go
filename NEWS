@@ -1,3 +1,32 @@
+NEWS for Sigsum tools, v0.12.x
+
+	The main change in this version is the addition of support for
+	named policies.
+
+	New features:
+
+	* Added support for builtin policies. Currently there are two
+	  builtin policies called "sigsum-test1-2025" and
+	  "sigsum-test2-2025".
+
+	* Added support for named policies. This means that the user
+	  can optionally specify a policy name instead of specifying
+	  a policy file.
+
+	* Added new tool "sigsum-policy" that can be used to list and
+	  show available named policies.
+
+	* In policy package: added policy builder functionality that
+	  can be used to programmatically to construct a policy.
+
+	Documentation improvements:
+
+	* Clarify leaf_hash computation description in doc/sigsum-proof.md
+
+	Incompatible changes:
+
+	* Building now requires go version 1.23 or later.
+
 NEWS for Sigsum tools, v0.11.2
 
 	This release fixes yet another manpage date nit.
