@@ -5,7 +5,8 @@ NEWS for Sigsum tools, v0.12.x
 	New features:
 
 	* Support for named policies. This means that the user can
-	  optionally specify a policy name instead of specifying a
+	  optionally specify a policy name (using the -P option or
+	  directly in submitter key file) instead of specifying a
 	  policy file.
 
 	* Support for builtin policies. In this version there are two
