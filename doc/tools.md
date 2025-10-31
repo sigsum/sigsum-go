@@ -276,15 +276,21 @@ The `sigsum-submit` tool is used to create and/or submit add-leaf
 requests to a Sigsum log (as defined in the [Sigsum
 spec](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md).
 
-To create and immediately submit one or more requests, pass both of
-the `-k` (signing key) and `-p` (policy) options, described below.
+The process has two parts: the first part is to create and sign a
+request, and the second part is to submit the request to a log.
 
-To separate these two parts of the process (e.g., if the machine with
-access to the private signing key does not have Internet connectivity),
-first run `sigsum-submit -k` to create and sign the request. Collect
-the output, which in this case is the body of a Sigsum add-leaf
-request, and pass that as input input to `sigsum -p` later on, to
-submit it to a log.
+To create and immediately submit one or more requests, pass arguments
+specifying both signing key and policy. The signing key is specified
+using the `-k` option. The policy is specified using either `-p`
+(policy file) or `-P` (policy name), see above.
+
+To separate the two parts of the process (e.g., if the machine with
+access to the private signing key does not have Internet
+connectivity), first run `sigsum-submit -k` to create and sign the
+request. Collect the output, which in this case is the body of a
+Sigsum add-leaf request, and pass that as input input to
+`sigsum-submit` with a policy option (`-p` or `-P`) later on, to
+submit the request to a log.
 
 ## Inputs
 
@@ -342,8 +348,9 @@ Any existing output files are overwritten.
 
 ## Submitting a request
 
-To submit one or more leaf requests, specify a Sigsum policy file
-using the `-p` option.
+To submit one or more leaf requests, specify a Sigsum policy using
+either the `-p` (policy file) or the `-P` (policy name) option, or by
+specifying a policy inside the submitter public key file.
 
 If the `-k` option and a signing key was provided, the leaf(s) to be
 submitted are the newly created ones. If no `-k` option was provided,
@@ -393,13 +400,13 @@ producing version 1 proofs was
 
 The `--leaf-hash` options can be used to output the hex-encoded leaf
 hash for the leaf to be created. This option can be used with or
-without `-k`, but it is mutually exclusive with `-p`. When the output
-is written to a file (rather than stdout), a file suffix of ".hash" is
-used.
+without `-k`, but it is mutually exclusive with the policy options
+(`-p` and `-P`). When the output is written to a file (rather than
+stdout), a file suffix of ".hash" is used.
 
 ## Verifying a leaf request
 
-If neither a signing key (`-k`), policy file (`-p`) or the
+If neither a signing key (`-k`), policy (`-p` or `-P`) or the
 `--leaf-hash` option is provided, `sigsum-submit` reads the leaf
 request(s) on the command line (or from standard input if there are no
 arguments). Syntax and signature of each leaf request is verified, but
@@ -407,7 +414,7 @@ there is no output, just the exit code to signal success or failure.
 
 ## Examples
 
-To submit to the log server at `poc.sigsum.org`, we first need a
+To submit to the log server at `poc.sigsum.org`, we first create a
 policy file with the following two lines.
 ```
 log 154f49976b59ff09a123675f58cb3e346e0455753c3c3b15d465dcb4f6512b0b https://poc.sigsum.org/jellyfish
@@ -471,9 +478,9 @@ input data. If the `--raw-hash` options is provided, the input is used
 as is, without hashing, and in this case, it must be either exactly 32
 octets, or a hex string representing 32 octets.
 
-The submitter public key(s) (`-k` option) and a policy file (`-p`
-option) must be provided, and the name of the proof file is the only
-non-option argument.
+The submitter public key(s) (`-k` option) and a policy (`-p` or `-P`
+option or policy name option inside pubkey) must be provided, and the
+name of the proof file is the only non-option argument.
 
 The proof is considered valid if
 
