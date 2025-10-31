@@ -46,7 +46,7 @@ There are three different ways to specify the policy to use:
 2. By specifying a named policy using the `-P` option.
 
 3. By specifying a named policy as an option on the form
-   sigsum-policy="policy-name" included in a public key file.
+   `sigsum-policy="<policy-name>"` included in a public key file.
 
 ### Named policies
 
@@ -63,9 +63,9 @@ environment variable. Installed policy files must have the
 A submitter public key file is specified as input to the sigsum-submit
 and sigsum-verify tools, and can include options on the same form that
 is used for OpenSSH's `.authorized_keys` file. To specify a policy
-name, the option sigsum-policy="policy-name" can be used. For the
+name, the option `sigsum-policy="<policy-name>"` can be used. For the
 sigsum tools, if neither of the `-p` or `-P` input options were given
-and a sigsum-policy="policy-name" option is found inside the submitter
+and a `sigsum-policy="<policy-name>"` option is found inside the submitter
 public key file, then that policy name is used.
 
 Example: a submitter public key file that contains the following
