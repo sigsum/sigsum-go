@@ -71,13 +71,13 @@ public key file, then that policy name is used.
 
 Example: a submitter public key file that contains the following
 
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPwsfu294zCxiE157E4N5od+wkx7eZtH1Lz+L9Zg5g4r sigsum key
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOCGOxh5TSFQ85mVkODlCMCQaLmIPwXqZfWM/AgnEw6S sigsum key
 
 could be modified to add a policy name like this:
 
-sigsum-policy="sigsum-test" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPwsfu294zCxiE157E4N5od+wkx7eZtH1Lz+L9Zg5g4r sigsum key
+sigsum-policy="sigsum-test1-2025" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOCGOxh5TSFQ85mVkODlCMCQaLmIPwXqZfWM/AgnEw6S sigsum key
 
-and then the policy name "sigsum-test" would be used, provided
+and then the policy name "sigsum-test1-2025" would be used, provided
 that none of the -p or -P input options were given.
 
 ### Order of priority for policies
