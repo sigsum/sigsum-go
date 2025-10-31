@@ -9,6 +9,7 @@ Documentation of Sigsum's supported command-line tools.
   * [The sigsum-submit tool](#the-sigsum-submit-tool)
   * [The sigsum-verify tool](#the-sigsum-verify-tool)
   * [The sigsum-token tool](#the-sigsum-token-tool)
+  * [The sigsum-policy tool](#the-sigsum-policy-tool)
 
 # General conventions
 
@@ -27,13 +28,68 @@ variation.  All tools display a usage message if `--help` is provided.
 All tools display a program version if `--version` is provided.  All
 tools that have sub commands additionally accept "help" and "version".
 
-Operation of several tools is controlled by a Sigsum policy, defined by
-a separate [policy file](./policy.md).  The location of the policy file
-is specified using the `-p` option.  Most tools also require one or
-more input keys.  The `-k` option is used to specify a key file, but
-some commands have additional ways of taking keys and key-file input.
+Operation of several tools is controlled by a Sigsum
+[policy](./policy.md). The policy to use can be specified in different
+ways, as described under "Policies" below.
 
-There are no default locations for policy file or key files.
+Most tools also require one or more input keys.  The `-k` option is
+used to specify a key file. Some commands have additional ways of
+taking keys and key-file input. There is no default location for key
+files.
+
+## Policies
+
+There are three different ways to specify the policy to use:
+
+1. By specifying the location of a policy file using the `-p` option.
+
+2. By specifying a named policy using the `-P` option.
+
+3. By specifying a named policy as an option on the form
+   `sigsum-policy="<policy-name>"` included in a public key file.
+
+### Named policies
+
+There are two kinds of named policies: builtin policies and installed
+policies.
+
+Installed policies are by default read from the /etc/sigsum/policy
+directory. A different location can be set using the SIGSUM_POLICY_DIR
+environment variable. Installed policy files must have the
+`.sigsum-policy` filename suffix.
+
+### Specifying a policy name inside a submitter public key file
+
+A submitter public key file is specified as input to the sigsum-submit
+and sigsum-verify tools, and can include options on the same form that
+is used for OpenSSH's `.authorized_keys` file. To specify a policy
+name, the option `sigsum-policy="<policy-name>"` can be used. For the
+sigsum tools, if neither of the `-p` or `-P` input options were given
+and a `sigsum-policy="<policy-name>"` option is found inside the
+submitter public key file, then that named policy is used.
+
+Example: a submitter public key file that contains the following
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOCGOxh5TSFQ85mVkODlCMCQaLmIPwXqZfWM/AgnEw6S sigsum key
+
+could be modified to specify a policy name like this:
+
+sigsum-policy="sigsum-test1-2025" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOCGOxh5TSFQ85mVkODlCMCQaLmIPwXqZfWM/AgnEw6S sigsum key
+
+and then the policy name "sigsum-test1-2025" would be used, provided
+that none of the `-p` or `-P` input options were given.
+
+### Order of priority for policies
+
+It is not allowed to specify both `-p` and `-P` at the same time. If a
+policy is specified using either the `-p` or the `-P` option, then
+that policy is used, and any policy name in the submitter public key
+file is ignored. Thus, named policies are only used if the `-p` option
+is absent, and a policy name in the submitter public key file is only
+used if neither of `-p` or `-P` was specified.
+
+Regarding named policies, if there is an installed policy with the
+same name as a builtin policy, then the installed policy is used.
 
 ## Key handling
 
@@ -54,6 +110,10 @@ is 32 octets in the format defined by [RFC
 8032](https://www.rfc-editor.org/rfc/rfc8032.html#section-5.1.2).
 
 The `sigsum-key` tool can be used to convert between these two forms.
+
+Public key files can also optionally include a
+`sigsum-policy="<policy-name>"` option in the beginning of the line,
+as described earlier in the "Policies" section.
 
 The `sigsum-verify` tool accepts a file specifying multiple public
 keys. This file should contain at least one key line in the same single
@@ -205,7 +265,7 @@ signature is not valid
 
 Convert key to raw hex format.
 ```
-$ sigsum-key hex -k example.key.pub
+$ sigsum-key to-hex -k example.key.pub
 e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
 ```
 
@@ -215,15 +275,26 @@ The `sigsum-submit` tool is used to create and/or submit add-leaf
 requests to a Sigsum log (as defined in the [Sigsum
 spec](https://git.glasklar.is/sigsum/project/documentation/-/blob/main/log.md).
 
-To create and immediately submit one or more requests, pass both of
-the `-k` (signing key) and `-p` (policy) options, described below.
+The process has two parts: the first part is to create and sign a
+request, and the second part is to submit the request to a log.
 
-To separate these two parts of the process (e.g., if the machine with
-access to the private signing key does not have Internet connectivity),
-first run `sigsum-submit -k` to create and sign the request. Collect
-the output, which in this case is the body of a Sigsum add-leaf
-request, and pass that as input input to `sigsum -p` later on, to
-submit it to a log.
+To create and immediately submit one or more requests, pass arguments
+specifying both signing key and policy. The signing key is specified
+using the `-k` option. The policy is specified using `-p` (policy
+file), `-P` (policy name), or directly in the key file (also as a
+policy name).
+
+To separate the two parts of the process (e.g., if the machine with
+access to the private signing key does not have Internet
+connectivity), first run `sigsum-submit -k` to create and sign the
+request. Collect the output, which in this case is the body of a
+Sigsum add-leaf request, and pass that as input to `sigsum-submit`
+with a policy option (`-p` or `-P`) later on, to submit the request to
+a log.
+
+(For sigsum submit to only create a signing request without
+submission, it is also required that the key file does not include the
+named policy option.)
 
 ## Inputs
 
@@ -281,8 +352,9 @@ Any existing output files are overwritten.
 
 ## Submitting a request
 
-To submit one or more leaf requests, specify a Sigsum policy file
-using the `-p` option.
+To submit one or more leaf requests, specify a Sigsum policy using
+either the `-p` (policy file) or the `-P` (policy name) option, or by
+specifying a policy inside the submitter public key file.
 
 If the `-k` option and a signing key was provided, the leaf(s) to be
 submitted are the newly created ones. If no `-k` option was provided,
@@ -330,15 +402,15 @@ producing version 1 proofs was
 
 ## Producing a leaf hash
 
-The `--leaf-hash` options can be used to output the hex-encoded leaf
+The `--leaf-hash` option can be used to output the hex-encoded leaf
 hash for the leaf to be created. This option can be used with or
-without `-k`, but it is mutually exclusive with `-p`. When the output
-is written to a file (rather than stdout), a file suffix of ".hash" is
-used.
+without `-k`, but it is mutually exclusive with the policy options
+(`-p` and `-P`). When the output is written to a file (rather than
+stdout), a file suffix of ".hash" is used.
 
 ## Verifying a leaf request
 
-If neither a signing key (`-k`), policy file (`-p`) or the
+If neither a signing key (`-k`), policy (`-p` or `-P`) or the
 `--leaf-hash` option is provided, `sigsum-submit` reads the leaf
 request(s) on the command line (or from standard input if there are no
 arguments). Syntax and signature of each leaf request is verified, but
@@ -346,7 +418,7 @@ there is no output, just the exit code to signal success or failure.
 
 ## Examples
 
-To submit to the log server at `poc.sigsum.org`, we first need a
+To submit to the log server at `poc.sigsum.org`, we first create a
 policy file with the following two lines.
 ```
 log 154f49976b59ff09a123675f58cb3e346e0455753c3c3b15d465dcb4f6512b0b https://poc.sigsum.org/jellyfish
@@ -410,9 +482,9 @@ input data. If the `--raw-hash` options is provided, the input is used
 as is, without hashing, and in this case, it must be either exactly 32
 octets, or a hex string representing 32 octets.
 
-The submitter public key(s) (`-k` option) and a policy file (`-p`
-option) must be provided, and the name of the proof file is the only
-non-option argument.
+The submitter public key(s) (`-k` option) and a policy (`-p` or `-P`
+option or policy name option inside pubkey) must be provided, and the
+name of the proof file is the only non-option argument.
 
 The proof is considered valid if
 
@@ -506,4 +578,25 @@ Create a token, formatted as a HTTP header.
 ```
 $ sigsum-token create -k example.key -l poc.key.pub -d test.example.org
 sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e938f1b99dcc9333954c9eab1dfaf89643679a47c7a33fa2182c8f8cb8eb1222f90c55355a8b5b300
+```
+
+# The `sigsum-policy` tool
+
+The `sigsum-policy` tool can be used to list and show the contents of
+the available named policies, including both builtin and installed
+policies.
+
+## Examples
+
+List all available named policies, including builtin and installed
+policies.
+```
+$ sigsum-policy list
+[snip]
+```
+
+Show the contents of a given named policy.
+```
+$ sigsum-policy show sigsum-test1-2025
+[snip]
 ```
