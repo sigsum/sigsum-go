@@ -5,19 +5,19 @@ NEWS for Sigsum tools, v0.12.x
 
 	New features:
 
-	* Added support for builtin policies. Currently there are two
+	* Support for named policies. This means that the user can
+	  optionally specify a policy name instead of specifying a
+	  policy file.
+
+	* Support for builtin policies. In this version there are two
 	  builtin policies called "sigsum-test1-2025" and
 	  "sigsum-test2-2025".
 
-	* Added support for named policies. This means that the user
-	  can optionally specify a policy name instead of specifying
-	  a policy file.
+	* New tool "sigsum-policy" that can be used to list and show
+	  available named policies.
 
-	* Added new tool "sigsum-policy" that can be used to list and
-	  show available named policies.
-
-	* In policy package: added policy builder functionality that
-	  can be used to programmatically to construct a policy.
+	* In policy package: policy builder functionality that can be
+	  used to programmatically to construct a policy.
 
 	Documentation improvements:
 
