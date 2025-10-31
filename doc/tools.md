@@ -63,10 +63,10 @@ environment variable. Installed policy files must have the
 
 A submitter public key file is specified as input to the sigsum-submit
 and sigsum-verify tools, and can include options on the same form that
-is used for the `authorized_keys` file for sshd. To specify a policy
+is used for OpenSSH's `.authorized_keys` file. To specify a policy
 name, the option sigsum-policy="policy-name" can be used. For the
-sigsum tools, if neither of the `-p` or `-P` input options were given and
-a sigsum-policy="policy-name" option is found inside the submitter
+sigsum tools, if neither of the `-p` or `-P` input options were given
+and a sigsum-policy="policy-name" option is found inside the submitter
 public key file, then that policy name is used.
 
 Example: a submitter public key file that contains the following
@@ -114,7 +114,7 @@ The `sigsum-key` tool can be used to convert between these two forms.
 
 Public key files can also optionally include a
 sigsum-policy="policy-name" option in the beginning of the line, as
-noted above.
+described above.
 
 The `sigsum-verify` tool accepts a file specifying multiple public
 keys. This file should contain at least one key line in the same single
