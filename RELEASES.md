@@ -16,6 +16,7 @@ not all tags are considered releases).
 The following programs are released and supported:
 
 - `./cmd/sigsum-key`
+- `./cmd/sigsum-policy`
 - `./cmd/sigsum-submit`
 - `./cmd/sigsum-token`
 - `./cmd/sigsum-verify`
