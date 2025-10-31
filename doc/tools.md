@@ -33,7 +33,7 @@ Operation of several tools is controlled by a Sigsum
 ways, as described under "Policies" below.
 
 Most tools also require one or more input keys.  The `-k` option is
-used to specify a key file, but some commands have additional ways of
+used to specify a key file. Some commands have additional ways of
 taking keys and key-file input. There is no default location for key
 files.
 
@@ -41,8 +41,7 @@ files.
 
 There are three different ways to specify the policy to use:
 
-1. By specifying the location of a separate policy file using the `-p`
-   option.
+1. By specifying the location of a policy file using the `-p` option.
 
 2. By specifying a named policy using the `-P` option.
 
