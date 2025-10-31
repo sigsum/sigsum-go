@@ -72,7 +72,7 @@ Example: a submitter public key file that contains the following
 
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOCGOxh5TSFQ85mVkODlCMCQaLmIPwXqZfWM/AgnEw6S sigsum key
 
-could be modified to add a policy name like this:
+could be modified to specify a policy name like this:
 
 sigsum-policy="sigsum-test1-2025" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOCGOxh5TSFQ85mVkODlCMCQaLmIPwXqZfWM/AgnEw6S sigsum key
 
@@ -112,8 +112,8 @@ is 32 octets in the format defined by [RFC
 The `sigsum-key` tool can be used to convert between these two forms.
 
 Public key files can also optionally include a
-sigsum-policy="policy-name" option in the beginning of the line, as
-described above.
+`sigsum-policy="<policy-name>"` option in the beginning of the line,
+as described earlier in the "Policies" section.
 
 The `sigsum-verify` tool accepts a file specifying multiple public
 keys. This file should contain at least one key line in the same single
@@ -280,16 +280,21 @@ request, and the second part is to submit the request to a log.
 
 To create and immediately submit one or more requests, pass arguments
 specifying both signing key and policy. The signing key is specified
-using the `-k` option. The policy is specified using either `-p`
-(policy file) or `-P` (policy name), see above.
+using the `-k` option. The policy is specified using `-p` (policy
+file), `-P` (policy name), or directly in the key file (also as a
+policy name).
 
 To separate the two parts of the process (e.g., if the machine with
 access to the private signing key does not have Internet
 connectivity), first run `sigsum-submit -k` to create and sign the
 request. Collect the output, which in this case is the body of a
-Sigsum add-leaf request, and pass that as input input to
-`sigsum-submit` with a policy option (`-p` or `-P`) later on, to
-submit the request to a log.
+Sigsum add-leaf request, and pass that as input to `sigsum-submit`
+with a policy option (`-p` or `-P`) later on, to submit the request to
+a log.
+
+(For sigsum submit to only create a signing request without
+submission, it is also required that the key file does not include the
+named policy option.)
 
 ## Inputs
 
@@ -397,7 +402,7 @@ producing version 1 proofs was
 
 ## Producing a leaf hash
 
-The `--leaf-hash` options can be used to output the hex-encoded leaf
+The `--leaf-hash` option can be used to output the hex-encoded leaf
 hash for the leaf to be created. This option can be used with or
 without `-k`, but it is mutually exclusive with the policy options
 (`-p` and `-P`). When the output is written to a file (rather than
@@ -580,3 +585,18 @@ sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e9
 The `sigsum-policy` tool can be used to list and show the contents of
 the available named policies, including both builtin and installed
 policies.
+
+## Examples
+
+List all available named policies, including builtin and installed
+policies.
+```
+$ sigsum-policy list
+[snip]
+```
+
+Show the contents of a given named policy.
+```
+$ sigsum-policy show sigsum-test1-2025
+[snip]
+```
