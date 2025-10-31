@@ -9,6 +9,7 @@ Documentation of Sigsum's supported command-line tools.
   * [The sigsum-submit tool](#the-sigsum-submit-tool)
   * [The sigsum-verify tool](#the-sigsum-verify-tool)
   * [The sigsum-token tool](#the-sigsum-token-tool)
+  * [The sigsum-policy tool](#the-sigsum-policy-tool)
 
 # General conventions
 
@@ -57,10 +58,6 @@ Installed policies are by default read from the /etc/sigsum/policy
 directory. A different location can be set using the SIGSUM_POLICY_DIR
 environment variable. Installed policy files must have the
 `.sigsum-policy` filename suffix.
-
-The sigsum-policy tool can be used to list and show the contents of
-the available named policies, including both builtin and installed
-policies.
 
 ### Specifying a policy name inside a submitter public key file
 
@@ -567,3 +564,9 @@ Create a token, formatted as a HTTP header.
 $ sigsum-token create -k example.key -l poc.key.pub -d test.example.org
 sigsum-token: test.example.org 327b93c116155a9755975a3a1847628e680e9d4fb1e6dc6e938f1b99dcc9333954c9eab1dfaf89643679a47c7a33fa2182c8f8cb8eb1222f90c55355a8b5b300
 ```
+
+# The `sigsum-policy` tool
+
+The `sigsum-policy` tool can be used to list and show the contents of
+the available named policies, including both builtin and installed
+policies.
