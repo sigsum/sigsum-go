@@ -1,7 +1,6 @@
 NEWS for Sigsum tools, v0.12.x
 
-	The main change in this version is the addition of support for
-	named policies.
+	The main change in this release is support for named policies.
 
 	New features:
 
