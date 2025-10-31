@@ -65,8 +65,8 @@ and sigsum-verify tools, and can include options on the same form that
 is used for OpenSSH's `.authorized_keys` file. To specify a policy
 name, the option `sigsum-policy="<policy-name>"` can be used. For the
 sigsum tools, if neither of the `-p` or `-P` input options were given
-and a `sigsum-policy="<policy-name>"` option is found inside the submitter
-public key file, then that policy name is used.
+and a `sigsum-policy="<policy-name>"` option is found inside the
+submitter public key file, then that named policy is used.
 
 Example: a submitter public key file that contains the following
 
