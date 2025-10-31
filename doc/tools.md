@@ -65,7 +65,7 @@ A submitter public key file is specified as input to the sigsum-submit
 and sigsum-verify tools, and can include options on the same form that
 is used for the `authorized_keys` file for sshd. To specify a policy
 name, the option sigsum-policy="policy-name" can be used. For the
-sigsum tools, if neither of the -p or -P input options were given and
+sigsum tools, if neither of the `-p` or `-P` input options were given and
 a sigsum-policy="policy-name" option is found inside the submitter
 public key file, then that policy name is used.
 
@@ -78,14 +78,14 @@ could be modified to add a policy name like this:
 sigsum-policy="sigsum-test1-2025" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOCGOxh5TSFQ85mVkODlCMCQaLmIPwXqZfWM/AgnEw6S sigsum key
 
 and then the policy name "sigsum-test1-2025" would be used, provided
-that none of the -p or -P input options were given.
+that none of the `-p` or `-P` input options were given.
 
 ### Order of priority for policies
 
 It is not allowed to specify both `-p` and `-P` at the same time. If a
 policy is specified using either the `-p` or the `-P` option, then
 that policy is used, and any policy name in the submitter public key
-file is ignored. Thus, named policies are only used if the -p option
+file is ignored. Thus, named policies are only used if the `-p` option
 is absent, and a policy name in the submitter public key file is only
 used if neither of `-p` or `-P` was specified.
 
