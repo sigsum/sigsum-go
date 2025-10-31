@@ -112,6 +112,10 @@ is 32 octets in the format defined by [RFC
 
 The `sigsum-key` tool can be used to convert between these two forms.
 
+Public key files can also optionally include a
+sigsum-policy="policy-name" option in the beginning of the line, as
+noted above.
+
 The `sigsum-verify` tool accepts a file specifying multiple public
 keys. This file should contain at least one key line in the same single
 line format. Lines that are completely empty or start with the `#`
@@ -262,7 +266,7 @@ signature is not valid
 
 Convert key to raw hex format.
 ```
-$ sigsum-key hex -k example.key.pub
+$ sigsum-key to-hex -k example.key.pub
 e0863b18794d2150f3999590e0e508c09068b9883f05ea65f58cfc0827130e92
 ```
 
