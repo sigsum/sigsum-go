@@ -1,4 +1,4 @@
-NEWS for Sigsum tools, v0.12.x
+NEWS for Sigsum tools, v0.12.0
 
 	The main change in this release is support for named policies.
 
@@ -18,7 +18,9 @@ NEWS for Sigsum tools, v0.12.x
 
 	Documentation improvements:
 
-	* Clarify leaf_hash computation description in doc/sigsum-proof.md
+	* In doc/sigsum-proof.md, document the correct keyword "size",
+	  https://git.glasklar.is/sigsum/core/sigsum-go/-/issues/135,
+	  and clarify the description of how to compute the leaf hash.
 
 	Incompatible changes:
 
