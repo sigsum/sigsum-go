@@ -14,10 +14,13 @@ publicly logged. See
 [design](https://git.glasklar.is/nisse/cats-2023/-/blob/main/sigsum-design-cats-2023.pdf)
 for the bigger picture on why that is useful. The submitter interacts
 with a sigsum log server to submit the message, and collect related
-inclusion proof and cosignatures. This is packaged, together with
-the message and any associated data, to be distributed to a *verifier*.
+inclusion proof and cosignatures from the log's witnesses. This is
+packaged, together with the message and any associated data, to be
+distributed to a *verifier*. The cosignatures ensure log consistency,
+i.e., that all verifiers, and relevant log monitors, see consistent
+log contents, even if the log itself is malicious or compromised.
 
-As concrete usecase, consider distribution of software updates. Then
+As a concrete usecase, consider distribution of software updates. Then
 the logged message is the hash of a software update. The update
 and the sigsum proof is distributed to the devices to be updated. The
 software update client then uses the sigsum proof to determine whether
