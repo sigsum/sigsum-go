@@ -32,7 +32,11 @@ func (q *quorumKofN) IsQuorum(verified map[crypto.Hash]struct{}) bool {
 
 // Represents a policy being built.
 type builder struct {
-	names     map[string]Quorum
+	names map[string]Quorum
+	// Names that have already been used as group members, and
+	// must not be used again. The map value is the name of parent
+	// group, for error messages.
+	usedNames map[string]string
 	logs      map[crypto.Hash]Entity
 	witnesses map[crypto.Hash]Entity
 	quorum    Quorum
@@ -41,6 +45,7 @@ type builder struct {
 func newBuilder() *builder {
 	return &builder{
 		names:     map[string]Quorum{ConfigNone: &quorumKofN{}},
+		usedNames: make(map[string]string),
 		logs:      make(map[crypto.Hash]Entity),
 		witnesses: make(map[crypto.Hash]Entity),
 	}
@@ -64,6 +69,19 @@ type Setting interface {
 func (b *builder) ifdef(name string) bool {
 	_, ok := b.names[name]
 	return ok
+}
+
+// Looks up the name of a group member. On success, marks name as used
+// so that it cannot be used as a member a second time.
+func (b *builder) lookupMember(member, parent string) (Quorum, error) {
+	if other, ok := b.usedNames[member]; ok {
+		return nil, fmt.Errorf("group/witness %q is already a member of %q", member, other)
+	}
+	if quorum, ok := b.names[member]; ok {
+		b.usedNames[member] = parent
+		return quorum, nil
+	}
+	return nil, fmt.Errorf("undefined name: %q", member)
 }
 
 type addLog struct {
@@ -122,13 +140,13 @@ func (g *addGroup) apply(b *builder) error {
 		return fmt.Errorf("group %q: invalid threshold k = %d for n = %d", g.name, g.threshold, len(g.members))
 	}
 	subQuorums := []Quorum{}
-	// TODO: Warn or fail if there's overlap between group members?
+
 	for _, member := range g.members {
-		if q, ok := b.names[member]; ok {
-			subQuorums = append(subQuorums, q)
-		} else {
-			return fmt.Errorf("undefined name: %q", member)
+		q, err := b.lookupMember(member, g.name)
+		if err != nil {
+			return err
 		}
+		subQuorums = append(subQuorums, q)
 	}
 	b.names[g.name] = &quorumKofN{subQuorums: subQuorums, k: g.threshold}
 	return nil
