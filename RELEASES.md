@@ -29,7 +29,7 @@ There are two additional programs, currently not properly supported:
 intended mainly for test purposes (to operate a witness, see
 [litewitness][]).
 
-[litewitness]: https://github.com/FiloSottile/litetlog/tree/main/cmd/litewitness
+[litewitness]: https://github.com/FiloSottile/torchwood/tree/main/cmd/litewitness
 
 ### Library
 
