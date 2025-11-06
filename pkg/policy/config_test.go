@@ -12,7 +12,8 @@ func TestValidConfig(t *testing.T) {
 	policy, err := ParseConfig(bytes.NewBufferString(`
 # example config
 log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa http://sigsum.example.org
-  log bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb#comment
+  # comment
+  log bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 
 witness W1 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc http://w1
 # same key for log and key is undesirable, but not an error
@@ -188,9 +189,16 @@ func TestInvalidConfig(t *testing.T) {
 		config string
 	}{
 		{"empty", "no quorum", ""},
+		{"invalid control char (formfeed)", "control character 0x0c",
+			"# \f\nquorum none\n"},
+		{"invalid control char (DEL)", "control character 0x7f",
+			"# \x7F\nquorum none\n"},
 		{"duplicate log", "duplicate log: aaa", `
-log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa #foo
-  log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa #bar
+log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+`},
+		{"end-of-line comment", "invalid log policy line", `
+log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa http://example.org #comment
 `},
 		{"duplicate witness", "duplicate witness: ccc", `
 witness W1 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
