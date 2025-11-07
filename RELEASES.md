@@ -34,9 +34,9 @@ intended mainly for test purposes (to operate a witness, see
 ### Builtin named policies
 
 A set of builtin named policies are included as files in the
-`./pkg/policy/builtin/` directory. When building, the contents of
-those files are embedded in the built executable files. The contents
-of each builtin policy can be shown using the `sigsum-policy` program.
+`./pkg/policy/builtin/` directory. Those are embedded in the built
+executable files. The contents of each builtin policy can be shown
+using the `sigsum-policy` program.
 
 ### Library
 
