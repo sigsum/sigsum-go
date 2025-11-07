@@ -31,6 +31,13 @@ intended mainly for test purposes (to operate a witness, see
 
 [litewitness]: https://github.com/FiloSottile/torchwood/tree/main/cmd/litewitness
 
+### Builtin named policies
+
+A set of builtin named policies are included as files in the
+`./pkg/policy/builtin/` directory. Those are embedded in the built
+executable files. The contents of each builtin policy can be shown
+using the `sigsum-policy` program.
+
 ### Library
 
 The Go library (exported packages under `./pkg`) is intended for
