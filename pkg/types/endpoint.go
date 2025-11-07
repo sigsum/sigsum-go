@@ -18,12 +18,15 @@ const (
 )
 
 // Path adds endpoint name to a service prefix.  If prefix is empty, nothing is added.
+// If prefix is non-empty, and doesn't end with a slash, a separating slash is added.
 // For example,
 // EndpointAddLeaf.Path("example.com/sigsum") -> "example.com/sigsum/add-leaf".
+// EndpointAddLeaf.Path("example.com/sigsum/") -> "example.com/sigsum/add-leaf".
 // EndpointAddLeaf.Path("") -> "add-leaf".
 func (e Endpoint) Path(prefix string) string {
-	if len(prefix) == 0 {
-		return string(e)
+	// Add slash, if prefix is non-empty and doesn't already end with a slash.
+	if len(prefix) > 0 && prefix[len(prefix)-1] != '/' {
+		prefix += "/"
 	}
-	return prefix + "/" + string(e)
+	return prefix + string(e)
 }
