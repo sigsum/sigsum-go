@@ -13,7 +13,7 @@ func sortedInPlace(a []string) []string {
 }
 
 func TestBuiltinList(t *testing.T) {
-	if got, want := sortedInPlace(BuiltinList()), []string{"sigsum-test1-2025", "sigsum-test2-2025"}; !slices.Equal(got, want) {
+	if got, want := sortedInPlace(BuiltinList()), []string{"sigsum-generic-2025-1", "sigsum-test1-2025", "sigsum-test2-2025"}; !slices.Equal(got, want) {
 		t.Errorf("bad builtin list: got %v, want %v", got, want)
 	}
 }
