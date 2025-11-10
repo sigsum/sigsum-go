@@ -105,17 +105,35 @@ func parseLine(fields []string) (Setting, error) {
 	}
 }
 
+func isSpace(c rune) bool {
+	return c == ' ' || c == '\t'
+}
+
+func checkLine(line string) error {
+	// Note that IndexFunc attempts to decode utf8, and produces a
+	// single replacement character (0xfffd) for each byte if it
+	// encounters invalid utf8.
+	invalidIndex := strings.IndexFunc(line, func(c rune) bool {
+		valid := (c >= 0x80 || c == '\t' || (c >= 0x20 && c < 0x7F))
+		return !valid
+	})
+	if invalidIndex >= 0 {
+		return fmt.Errorf("invalid control character 0x%02x", line[invalidIndex])
+	}
+	return nil
+}
+
 func ParseConfig(file io.Reader) (*Policy, error) {
 	b := newBuilder()
 	lineno := 0
 	for scanner := bufio.NewScanner(file); scanner.Scan(); {
 		lineno++
 		line := scanner.Text()
-		if comment := strings.Index(line, "#"); comment >= 0 {
-			line = line[:comment]
+		if err := checkLine(line); err != nil {
+			return nil, err
 		}
-		fields := strings.Fields(line)
-		if len(fields) == 0 {
+		fields := strings.FieldsFunc(line, isSpace)
+		if len(fields) == 0 || strings.HasPrefix(fields[0], "#") {
 			continue
 		}
 		setting, err := parseLine(fields)
