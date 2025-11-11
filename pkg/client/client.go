@@ -177,16 +177,22 @@ func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error, errorH
 
 	rsp, err := cli.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("send request: %w", err)
+		return fmt.Errorf("http %s request to %q failed: %w", req.Method, req.URL, err)
 	}
 	defer rsp.Body.Close()
+	decorateError := func(err error) error {
+		if err != nil {
+			return fmt.Errorf("invalid response from %q: %w", req.URL, err)
+		}
+		return nil
+	}
 	if rsp.StatusCode == http.StatusOK && parseBody != nil {
-		return parseBody(rsp.Body)
+		return decorateError(parseBody(rsp.Body))
 	}
 	if errorHook != nil {
-		return errorHook(rsp)
+		return decorateError(errorHook(rsp))
 	}
-	return responseErrorHandling(rsp)
+	return decorateError(responseErrorHandling(rsp))
 }
 
 func responseErrorHandling(rsp *http.Response) error {
