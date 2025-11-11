@@ -11,7 +11,7 @@ import (
 
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/mocks"
+	"sigsum.org/sigsum-go/pkg/mocks/mockapi"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -36,7 +36,7 @@ func TestGetTreeHead(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	log := mocks.NewMockLog(ctrl)
+	log := mockapi.NewMockLog(ctrl)
 
 	config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 	server := NewLog(&config, log)
@@ -95,7 +95,7 @@ func TestGetInclusionProof(t *testing.T) {
 		func() {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			log := mocks.NewMockLog(ctrl)
+			log := mockapi.NewMockLog(ctrl)
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 			server := NewLog(&config, log)
@@ -157,7 +157,7 @@ func TestGetConsistencyProof(t *testing.T) {
 		func() {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			log := mocks.NewMockLog(ctrl)
+			log := mockapi.NewMockLog(ctrl)
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 			server := NewLog(&config, log)
@@ -220,7 +220,7 @@ func TestGetLeaves(t *testing.T) {
 		func() {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			log := mocks.NewMockLog(ctrl)
+			log := mockapi.NewMockLog(ctrl)
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 			server := NewLog(&config, log)
@@ -326,7 +326,7 @@ func TestAddLeaf(t *testing.T) {
 		func() {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			log := mocks.NewMockLog(ctrl)
+			log := mockapi.NewMockLog(ctrl)
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 			server := NewLog(&config, log)

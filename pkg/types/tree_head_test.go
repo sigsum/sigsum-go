@@ -9,9 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"sigsum.org/sigsum-go/internal/mocks/signer"
+	"github.com/golang/mock/gomock"
+
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
+	"sigsum.org/sigsum-go/pkg/mocks/mocksigner"
 )
 
 const (
@@ -42,38 +44,44 @@ func TestTreeHeadSign(t *testing.T) {
 	for _, table := range []struct {
 		desc    string
 		th      TreeHead
-		signer  crypto.Signer
+		signErr error
 		wantSig crypto.Signature
 		wantErr bool
 	}{
 		{
 			desc:    "invalid: signer error",
 			th:      validTreeHead(t),
-			signer:  &signer.Signer{newPubBufferInc(t), newSigBufferInc(t), fmt.Errorf("signing error")},
+			signErr: fmt.Errorf("signing error"),
 			wantErr: true,
 		},
 		{
 			desc:    "valid",
 			th:      validTreeHead(t),
-			signer:  &signer.Signer{newPubBufferInc(t), newSigBufferInc(t), nil},
 			wantSig: newSigBufferInc(t),
 		},
 	} {
-		sth, err := table.th.Sign(table.signer)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
-		}
-		if err != nil {
-			continue
-		}
+		func() {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			signer := mocksigner.NewMockSigner(ctrl)
+			signer.EXPECT().Sign(gomock.Any()).Return(table.wantSig, table.signErr)
+			signer.EXPECT().Public().Return(crypto.PublicKey{})
+			sth, err := table.th.Sign(signer)
+			if got, want := err != nil, table.wantErr; got != want {
+				t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+			}
+			if err != nil {
+				return
+			}
 
-		wantSTH := SignedTreeHead{
-			TreeHead:  table.th,
-			Signature: table.wantSig,
-		}
-		if got, want := sth, wantSTH; sth != wantSTH {
-			t.Errorf("got sth\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
-		}
+			wantSTH := SignedTreeHead{
+				TreeHead:  table.th,
+				Signature: table.wantSig,
+			}
+			if got, want := sth, wantSTH; sth != wantSTH {
+				t.Errorf("got sth\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
+			}
+		}()
 	}
 }
 

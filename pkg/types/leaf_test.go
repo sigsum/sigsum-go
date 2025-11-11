@@ -8,9 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"sigsum.org/sigsum-go/internal/mocks/signer"
+	"github.com/golang/mock/gomock"
+
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/mocks/mocksigner"
 )
 
 func TestLeafSignedData(t *testing.T) {
@@ -28,34 +30,39 @@ func TestSignLeaf(t *testing.T) {
 	for _, table := range []struct {
 		desc     string
 		checksum crypto.Hash
-		signer   crypto.Signer
+		signErr  error
 		wantSig  crypto.Signature
 		wantErr  bool
 	}{
 		{
 			desc:     "invalid: signer error",
 			checksum: validChecksum(t),
-			signer:   &signer.Signer{newPubBufferInc(t), newSigBufferInc(t), fmt.Errorf("signing error")},
+			signErr:  fmt.Errorf("signing error"),
 			wantErr:  true,
 		},
 		{
 			desc:     "valid",
 			checksum: validChecksum(t),
-			signer:   &signer.Signer{newPubBufferInc(t), newSigBufferInc(t), nil},
 			wantSig:  newSigBufferInc(t),
 		},
 	} {
-		sig, err := SignLeafChecksum(table.signer, &table.checksum)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
-		}
-		if err != nil {
-			continue
-		}
+		func() {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			signer := mocksigner.NewMockSigner(ctrl)
+			signer.EXPECT().Sign(validLeafSignedDataBytes(t)).Return(table.wantSig, table.signErr)
+			sig, err := SignLeafChecksum(signer, &table.checksum)
+			if got, want := err != nil, table.wantErr; got != want {
+				t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+			}
+			if err != nil {
+				return
+			}
 
-		if got, want := sig[:], table.wantSig[:]; !bytes.Equal(got, want) {
-			t.Errorf("got signature\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
-		}
+			if got, want := sig[:], table.wantSig[:]; !bytes.Equal(got, want) {
+				t.Errorf("got signature\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
+			}
+		}()
 	}
 }
 
