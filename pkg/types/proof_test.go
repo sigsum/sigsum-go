@@ -173,7 +173,7 @@ func validInclusionProof(t *testing.T) *InclusionProof {
 		LeafIndex: 1,
 		Path: []crypto.Hash{
 			crypto.Hash{},
-			*newHashBufferInc(t),
+			newHashBufferInc(t),
 		},
 	}
 }
@@ -183,7 +183,7 @@ func validInclusionProofASCII(t *testing.T) string {
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n",
 		"leaf_index", 1,
 		"node_hash", crypto.Hash{},
-		"node_hash", newHashBufferInc(t)[:],
+		"node_hash", newHashBufferInc(t),
 	)
 }
 
@@ -192,7 +192,7 @@ func validConsistencyProof(t *testing.T) *ConsistencyProof {
 	return &ConsistencyProof{
 		Path: []crypto.Hash{
 			crypto.Hash{},
-			*newHashBufferInc(t),
+			newHashBufferInc(t),
 		},
 	}
 }
@@ -201,6 +201,6 @@ func validConsistencyProofASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%x\n%s=%x\n",
 		"node_hash", crypto.Hash{},
-		"node_hash", newHashBufferInc(t)[:],
+		"node_hash", newHashBufferInc(t),
 	)
 }
