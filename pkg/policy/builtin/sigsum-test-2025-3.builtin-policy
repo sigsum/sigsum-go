@@ -15,7 +15,7 @@ witness witness1.smartit.nu/witness1               f4855a0f46e8a3e23bb40faf260ee
 # Test witness operated by Filippo Valsorda - https://navigli.sunlight.geomys.org/
 witness navigli.sunlight.geomys.org/dev            b20196b937a30d19f0cb7dfa2d5388bc8ddde9cc3df4c24fcf63db27a573d3f2
 
-# Test witness operated by florolf - https://remora.n621.de/
+# Test witness operated by Florian Larysch - https://remora.n621.de/
 witness remora.n621.de                             ebcdeb78e7fdb2ef9227b2c1ef11e94600b55b4d6d9a57877e31ee89e59adc36
 
 # Test witness operated by Mullvad VPN AB - https://witness.stagemole.eu/about
