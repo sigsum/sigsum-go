@@ -21,7 +21,8 @@ const (
 func TestTreeHeadFormatCheckpoint(t *testing.T) {
 	desc := "valid"
 	pub := crypto.PublicKey{}
-	if got, want := validTreeHead(t).FormatCheckpoint(SigsumCheckpointOrigin(&pub)),
+	th := validTreeHead(t)
+	if got, want := th.FormatCheckpoint(SigsumCheckpointOrigin(&pub)),
 		validTreeHeadCheckpoint(t); got != want {
 		t.Errorf("got tree head checkpoint\n\t%q\nbut wanted\n\t%q\nin test %q\n", got, want, desc)
 	}
@@ -30,7 +31,8 @@ func TestTreeHeadFormatCheckpoint(t *testing.T) {
 func TestTreeHeadToCosignedData(t *testing.T) {
 	desc := "valid"
 	origin := "sigsum.org/v1/tree/66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
-	if got, want := validTreeHead(t).toCosignedData(origin, testCosignTimestamp),
+	th := validTreeHead(t)
+	if got, want := th.toCosignedData(origin, testCosignTimestamp),
 		validTreeHeadCosignedData(t); got != want {
 		t.Errorf("got tree head checkpoint\n\t%q\nbut wanted\n\t%q\nin test %q\n", got, want, desc)
 	}
@@ -39,21 +41,21 @@ func TestTreeHeadToCosignedData(t *testing.T) {
 func TestTreeHeadSign(t *testing.T) {
 	for _, table := range []struct {
 		desc    string
-		th      *TreeHead
+		th      TreeHead
 		signer  crypto.Signer
-		wantSig *crypto.Signature
+		wantSig crypto.Signature
 		wantErr bool
 	}{
 		{
 			desc:    "invalid: signer error",
 			th:      validTreeHead(t),
-			signer:  &signer.Signer{*newPubBufferInc(t), *newSigBufferInc(t), fmt.Errorf("signing error")},
+			signer:  &signer.Signer{newPubBufferInc(t), newSigBufferInc(t), fmt.Errorf("signing error")},
 			wantErr: true,
 		},
 		{
 			desc:    "valid",
 			th:      validTreeHead(t),
-			signer:  &signer.Signer{*newPubBufferInc(t), *newSigBufferInc(t), nil},
+			signer:  &signer.Signer{newPubBufferInc(t), newSigBufferInc(t), nil},
 			wantSig: newSigBufferInc(t),
 		},
 	} {
@@ -66,8 +68,8 @@ func TestTreeHeadSign(t *testing.T) {
 		}
 
 		wantSTH := SignedTreeHead{
-			TreeHead:  *table.th,
-			Signature: *table.wantSig,
+			TreeHead:  table.th,
+			Signature: table.wantSig,
 		}
 		if got, want := sth, wantSTH; sth != wantSTH {
 			t.Errorf("got sth\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
@@ -78,7 +80,8 @@ func TestTreeHeadSign(t *testing.T) {
 func TestSignedTreeHeadToASCII(t *testing.T) {
 	desc := "valid"
 	buf := bytes.Buffer{}
-	if err := validSignedTreeHead(t).ToASCII(&buf); err != nil {
+	sth := validSignedTreeHead(t)
+	if err := sth.ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
 	if got, want := buf.String(), validSignedTreeHeadASCII(t); got != want {
@@ -91,7 +94,7 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 		desc       string
 		serialized io.Reader
 		wantErr    bool
-		want       *SignedTreeHead
+		want       SignedTreeHead
 	}{
 		{
 			desc:       "invalid: not a signed tree head (unexpected key-value pair)",
@@ -112,7 +115,7 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := sth, *table.want; got != want {
+		if got, want := sth, table.want; got != want {
 			t.Errorf("got signed tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -180,7 +183,8 @@ func TestCosignatureToASCII(t *testing.T) {
 	desc := "valid"
 	buf := bytes.Buffer{}
 	cs := validCosignature(t)
-	if err := cs.ToASCII(&buf, validKeyHash(t)); err != nil {
+	kh := validKeyHash(t)
+	if err := cs.ToASCII(&buf, &kh); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
 	if got, want := buf.String(), validCosignatureASCII(t); got != want {
@@ -193,7 +197,7 @@ func TestCosignatureFromASCII(t *testing.T) {
 		desc       string
 		serialized io.Reader
 		wantErr    bool
-		want       *Cosignature
+		want       Cosignature
 	}{
 		{
 			desc:       "invalid: not a cosignature request (unexpected key-value pair)",
@@ -214,17 +218,17 @@ func TestCosignatureFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := req, *table.want; got != want {
+		if got, want := req, table.want; got != want {
 			t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
-		if got, want := keyHash, *validKeyHash(t); got != want {
+		if got, want := keyHash, validKeyHash(t); got != want {
 			t.Errorf("wrong key hash: got %x, want %x", got, want)
 		}
 	}
 }
 
 func TestCosignAndVerify(t *testing.T) {
-	th := *validTreeHead(t)
+	th := validTreeHead(t)
 	pub, signer := newKeyPair(t)
 	origin := "example.org/log"
 
@@ -278,7 +282,8 @@ func TestCosignedTreeHeadToASCII(t *testing.T) {
 		sort.Strings(lines[3 : len(lines)-1])
 		return strings.Join(lines, "\n")
 	}
-	if err := validCosignedTreeHead(t).ToASCII(&buf); err != nil {
+	cth := validCosignedTreeHead(t)
+	if err := cth.ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
 	if got, want := canonicalize(buf.String()), validCosignedTreeHeadASCII(t); got != want {
@@ -291,7 +296,7 @@ func TestCosignedTreeHeadFromASCII(t *testing.T) {
 		desc       string
 		serialized io.Reader
 		wantErr    bool
-		want       *CosignedTreeHead
+		want       CosignedTreeHead
 	}{
 		{
 			desc:       "invalid: not a cosigned tree head (unexpected key-value pair)",
@@ -318,16 +323,16 @@ func TestCosignedTreeHeadFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := &cth, table.want; !reflect.DeepEqual(got, want) {
+		if got, want := cth, table.want; !reflect.DeepEqual(got, want) {
 			t.Errorf("got cosigned tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
 }
 
-func validTreeHead(t *testing.T) *TreeHead {
-	return &TreeHead{
+func validTreeHead(t *testing.T) TreeHead {
+	return TreeHead{
 		Size:     257,
-		RootHash: *newHashBufferInc(t),
+		RootHash: newHashBufferInc(t),
 	}
 }
 
@@ -349,14 +354,14 @@ AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
 `[1:]
 }
 
-func validSignedTreeHead(t *testing.T) *SignedTreeHead {
+func validSignedTreeHead(t *testing.T) SignedTreeHead {
 	t.Helper()
-	return &SignedTreeHead{
+	return SignedTreeHead{
 		TreeHead: TreeHead{
 			Size:     2,
-			RootHash: *newHashBufferInc(t),
+			RootHash: newHashBufferInc(t),
 		},
-		Signature: *newSigBufferInc(t),
+		Signature: newSigBufferInc(t),
 	}
 }
 
@@ -364,20 +369,20 @@ func validSignedTreeHeadASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n",
 		"size", 2,
-		"root_hash", newHashBufferInc(t)[:],
-		"signature", newSigBufferInc(t)[:],
+		"root_hash", newHashBufferInc(t),
+		"signature", newSigBufferInc(t),
 	)
 }
 
-func validCosignature(t *testing.T) *Cosignature {
+func validCosignature(t *testing.T) Cosignature {
 	t.Helper()
-	return &Cosignature{
-		Signature: *newSigBufferInc(t),
+	return Cosignature{
+		Signature: newSigBufferInc(t),
 		Timestamp: 1,
 	}
 }
 
-func validKeyHash(t *testing.T) *crypto.Hash {
+func validKeyHash(t *testing.T) crypto.Hash {
 	t.Helper()
 	return newHashBufferInc(t)
 }
@@ -385,24 +390,24 @@ func validKeyHash(t *testing.T) *crypto.Hash {
 func validCosignatureASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%x %d %x\n",
-		"cosignature", newHashBufferInc(t)[:], 1, newSigBufferInc(t)[:])
+		"cosignature", newHashBufferInc(t), 1, newSigBufferInc(t))
 }
 
-func validCosignedTreeHead(t *testing.T) *CosignedTreeHead {
+func validCosignedTreeHead(t *testing.T) CosignedTreeHead {
 	t.Helper()
-	return &CosignedTreeHead{
+	return CosignedTreeHead{
 		SignedTreeHead: SignedTreeHead{
 			TreeHead: TreeHead{
 				Size:     2,
-				RootHash: *newHashBufferInc(t),
+				RootHash: newHashBufferInc(t),
 			},
-			Signature: *newSigBufferInc(t),
+			Signature: newSigBufferInc(t),
 		},
 		Cosignatures: map[crypto.Hash]Cosignature{
 			crypto.Hash{}: Cosignature{},
-			*newHashBufferInc(t): Cosignature{
+			newHashBufferInc(t): Cosignature{
 				Timestamp: 1,
-				Signature: *newSigBufferInc(t),
+				Signature: newSigBufferInc(t),
 			},
 		},
 	}
@@ -412,10 +417,10 @@ func validCosignedTreeHeadASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%d\n%s=%x\n%s=%x\n%s=%x %d %x\n%s=%x %d %x\n",
 		"size", 2,
-		"root_hash", newHashBufferInc(t)[:],
-		"signature", newSigBufferInc(t)[:],
+		"root_hash", newHashBufferInc(t),
+		"signature", newSigBufferInc(t),
 		"cosignature", crypto.Hash{}, 0, crypto.Signature{},
-		"cosignature", newHashBufferInc(t)[:], 1, newSigBufferInc(t)[:],
+		"cosignature", newHashBufferInc(t), 1, newSigBufferInc(t),
 	)
 }
 
