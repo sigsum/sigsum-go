@@ -12,7 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/mocks"
+	"sigsum.org/sigsum-go/pkg/mocks/mockmetrics"
 )
 
 // Run HTTP request
@@ -204,7 +204,7 @@ func TestMetrics(t *testing.T) {
 		func() {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			metrics := mocks.NewMockMetrics(ctrl)
+			metrics := mockmetrics.NewMockMetrics(ctrl)
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute, Metrics: metrics}
 			server := newServer(&config)

@@ -10,7 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
-	"sigsum.org/sigsum-go/pkg/mocks"
+	"sigsum.org/sigsum-go/pkg/mocks/mockapi"
 	"sigsum.org/sigsum-go/pkg/policy"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -35,7 +35,7 @@ func TestSubmitSuccess(t *testing.T) {
 	oneTest := func(t *testing.T, i int) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		client := mocks.NewMockLog(ctrl)
+		client := mockapi.NewMockLog(ctrl)
 		logs := []logClient{logClient{
 			client: client,
 			entity: policy.Entity{
@@ -101,8 +101,8 @@ func TestSubmitWithFailure(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := mocks.NewMockLog(ctrl)
-	clientAlwaysFail := mocks.NewMockLog(ctrl)
+	client := mockapi.NewMockLog(ctrl)
+	clientAlwaysFail := mockapi.NewMockLog(ctrl)
 	logs := []logClient{
 		logClient{
 			client: clientAlwaysFail,
