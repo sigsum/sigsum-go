@@ -1,8 +1,9 @@
-image: golang:1.23
+image: golang:1.24
 
 before_script:
   - apt-get update
   - apt-get install -y make curl git shellcheck
+  - export GOTOOLCHAIN=local
 
 stages:
 - build
@@ -29,6 +30,11 @@ make-check-386:
     when: always
     paths:
     - ./tests/test.*
+
+make-check-go-1.23:
+  stage: test
+  image: golang:1.23
+  script: make check
 
 make-shellcheck:
   stage: test
