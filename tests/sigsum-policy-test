@@ -5,6 +5,7 @@ set -e
 # Check that the listed policies are as expected when there are only builtin policies
 echo "sigsum-test1-2025" > test.policies.expected
 echo "sigsum-test2-2025" >> test.policies.expected
+echo "sigsum-test-2025-3" >> test.policies.expected
 # Note: this test will need to be updated by appending any additional builtin policy names to test.policies.expected here
 sort test.policies.expected > test.policies.expected.sorted
 SIGSUM_POLICY_DIR=/dev/null ./bin/sigsum-policy list | sort | diff test.policies.expected.sorted -
