@@ -12,7 +12,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/checkpoint"
 	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/mocks"
+	"sigsum.org/sigsum-go/pkg/mocks/mockapi"
 	"sigsum.org/sigsum-go/pkg/requests"
 	"sigsum.org/sigsum-go/pkg/types"
 )
@@ -68,7 +68,7 @@ func TestAddCheckpoint(t *testing.T) {
 		func(req requests.AddCheckpoint) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			witness := mocks.NewMockWitness(ctrl)
+			witness := mockapi.NewMockWitness(ctrl)
 
 			config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 			server := NewWitness(&config, witness)

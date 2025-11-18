@@ -12,7 +12,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/api"
 	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/merkle"
-	"sigsum.org/sigsum-go/pkg/mocks"
+	"sigsum.org/sigsum-go/pkg/mocks/mockapi"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 	"sigsum.org/sigsum-go/pkg/types"
@@ -134,7 +134,7 @@ func TestGetTreeHeadErrors(t *testing.T) {
 	oneTest := func(description string, mungeTreeHead func(*types.CosignedTreeHead), mungeConsistency func(*types.ConsistencyProof)) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		mockLog := mocks.NewMockLog(ctrl)
+		mockLog := mockapi.NewMockLog(ctrl)
 
 		mockLog.EXPECT().GetTreeHead(gomock.Any()).DoAndReturn(
 			func(ctx context.Context) (types.CosignedTreeHead, error) {

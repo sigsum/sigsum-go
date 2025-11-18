@@ -8,7 +8,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/mocks"
+	"sigsum.org/sigsum-go/pkg/mocks/mockapi"
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
@@ -23,7 +23,7 @@ func TestGetSecondaryTreeHead(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	log := mocks.NewMockSecondary(ctrl)
+	log := mockapi.NewMockSecondary(ctrl)
 
 	config := Config{Prefix: "foo", Timeout: 5 * time.Minute}
 	server := NewSecondary(&config, log)

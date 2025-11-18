@@ -8,14 +8,17 @@ import (
 	"strings"
 	"testing"
 
-	"sigsum.org/sigsum-go/internal/mocks/signer"
+	"github.com/golang/mock/gomock"
+
 	"sigsum.org/sigsum-go/pkg/ascii"
 	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/pkg/mocks/mocksigner"
 )
 
 func TestLeafSignedData(t *testing.T) {
 	desc := "valid: checksum 0x00,0x01,..."
-	if got, want := leafSignedData(validChecksum(t)), validLeafSignedDataBytes(t); !bytes.Equal(got, want) {
+	checksum := validChecksum(t)
+	if got, want := leafSignedData(&checksum), validLeafSignedDataBytes(t); !bytes.Equal(got, want) {
 		t.Errorf("got\n\t%x\nbut wanted\n\t%x\nin test %q\n", got, want, desc)
 	}
 	if got, want := validLeafSignedDataBytes(t), 56; len(got) != want {
@@ -26,35 +29,40 @@ func TestLeafSignedData(t *testing.T) {
 func TestSignLeaf(t *testing.T) {
 	for _, table := range []struct {
 		desc     string
-		checksum *crypto.Hash
-		signer   crypto.Signer
-		wantSig  *crypto.Signature
+		checksum crypto.Hash
+		signErr  error
+		wantSig  crypto.Signature
 		wantErr  bool
 	}{
 		{
 			desc:     "invalid: signer error",
 			checksum: validChecksum(t),
-			signer:   &signer.Signer{*newPubBufferInc(t), *newSigBufferInc(t), fmt.Errorf("signing error")},
+			signErr:  fmt.Errorf("signing error"),
 			wantErr:  true,
 		},
 		{
 			desc:     "valid",
 			checksum: validChecksum(t),
-			signer:   &signer.Signer{*newPubBufferInc(t), *newSigBufferInc(t), nil},
 			wantSig:  newSigBufferInc(t),
 		},
 	} {
-		sig, err := SignLeafChecksum(table.signer, table.checksum)
-		if got, want := err != nil, table.wantErr; got != want {
-			t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
-		}
-		if err != nil {
-			continue
-		}
+		func() {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			signer := mocksigner.NewMockSigner(ctrl)
+			signer.EXPECT().Sign(validLeafSignedDataBytes(t)).Return(table.wantSig, table.signErr)
+			sig, err := SignLeafChecksum(signer, &table.checksum)
+			if got, want := err != nil, table.wantErr; got != want {
+				t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
+			}
+			if err != nil {
+				return
+			}
 
-		if got, want := sig[:], table.wantSig[:]; !bytes.Equal(got, want) {
-			t.Errorf("got signature\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
-		}
+			if got, want := sig[:], table.wantSig[:]; !bytes.Equal(got, want) {
+				t.Errorf("got signature\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
+			}
+		}()
 	}
 }
 
@@ -62,13 +70,13 @@ func TestLeafVerify(t *testing.T) {
 	checksum := validChecksum(t)
 	pub, signer := newKeyPair(t)
 
-	sig, err := SignLeafChecksum(signer, checksum)
+	sig, err := SignLeafChecksum(signer, &checksum)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	leaf := Leaf{
-		Checksum:  *checksum,
+		Checksum:  checksum,
 		Signature: sig,
 		KeyHash:   crypto.HashBytes(pub[:]),
 	}
@@ -84,7 +92,8 @@ func TestLeafVerify(t *testing.T) {
 
 func TestLeafToBinary(t *testing.T) {
 	desc := "valid: buffers 0x00,0x01,..."
-	if got, want := validLeaf(t).ToBinary(), validLeafBytes(t); !bytes.Equal(got, want) {
+	leaf := validLeaf(t)
+	if got, want := leaf.ToBinary(), validLeafBytes(t); !bytes.Equal(got, want) {
 		t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, desc)
 	}
 }
@@ -94,7 +103,7 @@ func TestLeafFromBinary(t *testing.T) {
 		desc       string
 		serialized []byte
 		wantErr    bool
-		want       *Leaf
+		want       Leaf
 	}{
 		{
 			desc:       "invalid: not enough bytes",
@@ -120,7 +129,7 @@ func TestLeafFromBinary(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := leaf, *table.want; got != want {
+		if got, want := leaf, table.want; got != want {
 			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -129,7 +138,8 @@ func TestLeafFromBinary(t *testing.T) {
 func TestLeafToASCII(t *testing.T) {
 	desc := "valid:, buffers 0x00,0x01,..."
 	buf := bytes.Buffer{}
-	if err := validLeaf(t).ToASCII(&buf); err != nil {
+	leaf := validLeaf(t)
+	if err := leaf.ToASCII(&buf); err != nil {
 		t.Fatalf("got error true but wanted false in test %q: %v", desc, err)
 	}
 	if got, want := buf.String(), validLeafASCII(t); got != want {
@@ -142,7 +152,7 @@ func TestLeafFromASCII(t *testing.T) {
 		desc       string
 		serialized io.Reader
 		wantErr    bool
-		want       *Leaf
+		want       Leaf
 	}{
 		{
 			desc:       "invalid: not a tree leaf (wrong key)",
@@ -169,7 +179,7 @@ func TestLeafFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := leaf, *table.want; got != want {
+		if got, want := leaf, table.want; got != want {
 			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -240,40 +250,42 @@ func TestLeavesFromASCII(t *testing.T) {
 	}
 }
 
-func validChecksum(t *testing.T) *crypto.Hash {
-	hash := crypto.HashBytes(newHashBufferInc(t)[:])
-	return &hash
+func validChecksum(t *testing.T) crypto.Hash {
+	msg := newHashBufferInc(t)
+	return crypto.HashBytes(msg[:])
 }
 
 func validLeafSignedDataBytes(t *testing.T) []byte {
-	hash := crypto.HashBytes(newHashBufferInc(t)[:])
+	hash := validChecksum(t)
 	return bytes.Join([][]byte{
 		[]byte("sigsum.org/v1/tree-leaf"),
 		[]byte{0}, hash[:],
 	}, nil)
 }
 
-func validLeaf(t *testing.T) *Leaf {
-	return &Leaf{
-		Checksum:  crypto.HashBytes(newHashBufferInc(t)[:]),
-		Signature: *newSigBufferInc(t),
-		KeyHash:   *newHashBufferInc(t),
+func validLeaf(t *testing.T) Leaf {
+	return Leaf{
+		Checksum:  validChecksum(t),
+		Signature: newSigBufferInc(t),
+		KeyHash:   newHashBufferInc(t),
 	}
 }
 
 func validLeafBytes(t *testing.T) []byte {
-	checksum := crypto.HashBytes(newHashBufferInc(t)[:])
+	checksum := validChecksum(t)
+	sig := newSigBufferInc(t)
+	kh := newHashBufferInc(t)
 	return bytes.Join([][]byte{
 		checksum[:],
-		newSigBufferInc(t)[:],
-		newHashBufferInc(t)[:],
+		sig[:],
+		kh[:],
 	}, nil)
 }
 
 func validLeafASCII(t *testing.T) string {
-	checksum := crypto.HashBytes(newHashBufferInc(t)[:])
+	checksum := validChecksum(t)
 	return fmt.Sprintf("%s=%x %x %x\n",
-		"leaf", checksum, newSigBufferInc(t)[:], newHashBufferInc(t)[:])
+		"leaf", checksum, newSigBufferInc(t), newHashBufferInc(t))
 }
 
 func invalidLeafASCII(t *testing.T) string {
@@ -284,7 +296,7 @@ func invalidLeafASCII(t *testing.T) string {
 
 func validLeaves(t *testing.T) []Leaf {
 	t.Helper()
-	return []Leaf{*validLeaf(t), Leaf{}}
+	return []Leaf{validLeaf(t), Leaf{}}
 }
 
 func validLeavesASCII(t *testing.T) string {
@@ -317,32 +329,32 @@ func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {
 	return pub, signer
 }
 
-func newHashBufferInc(t *testing.T) *crypto.Hash {
+func newHashBufferInc(t *testing.T) crypto.Hash {
 	t.Helper()
 
 	var buf crypto.Hash
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
-	return &buf
+	return buf
 }
 
-func newSigBufferInc(t *testing.T) *crypto.Signature {
+func newSigBufferInc(t *testing.T) crypto.Signature {
 	t.Helper()
 
 	var buf crypto.Signature
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
-	return &buf
+	return buf
 }
 
-func newPubBufferInc(t *testing.T) *crypto.PublicKey {
+func newPubBufferInc(t *testing.T) crypto.PublicKey {
 	t.Helper()
 
 	var buf crypto.PublicKey
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
-	return &buf
+	return buf
 }
