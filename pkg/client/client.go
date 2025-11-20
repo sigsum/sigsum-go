@@ -177,7 +177,7 @@ func (cli *Client) do(req *http.Request, parseBody func(io.Reader) error, errorH
 
 	rsp, err := cli.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("http %s request to %q failed: %w", req.Method, req.URL, err)
+		return err
 	}
 	defer rsp.Body.Close()
 	decorateError := func(err error) error {
