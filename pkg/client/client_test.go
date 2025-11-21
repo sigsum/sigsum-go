@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -304,5 +305,51 @@ func TestProcessConflictResponse(t *testing.T) {
 		} else if ok {
 			t.Errorf("unexpected old size: got %d, err %v", oldSize, err)
 		}
+	}
+}
+
+func TestThatErrorsIncludeURL(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	roundTripper := mocks.NewMockRoundTripper(ctrl)
+	client := New(newTestConfig(roundTripper))
+
+	roundTripper.EXPECT().RoundTrip(
+		getRequestTo("http://example.org/api/get-tree-head")).Return(
+		nil, fmt.Errorf("mock error"))
+	_, err := client.GetTreeHead(context.Background())
+
+	if err == nil {
+		t.Fatal("request error not propagated")
+	}
+	t.Logf("expected error: %v", err)
+	if got, want := err.Error(), "http://example.org/api/get-tree-head"; !strings.Contains(got, want) {
+		t.Errorf("got error message %q, without wanted substring %q", got, want)
+	}
+
+	roundTripper.EXPECT().RoundTrip(
+		getRequestTo("http://example.org/api/get-tree-head")).Return(
+		newResponse(http.StatusNotFound, "mock 404 error"), nil)
+	_, err = client.GetTreeHead(context.Background())
+
+	if err == nil {
+		t.Fatal("404 error not propagated")
+	}
+	t.Logf("expected error: %v", err)
+	if got, want := err.Error(), "http://example.org/api/get-tree-head"; !strings.Contains(got, want) {
+		t.Errorf("got error message %q, without wanted substring %q", got, want)
+	}
+
+	roundTripper.EXPECT().RoundTrip(
+		getRequestTo("http://example.org/api/get-tree-head")).Return(
+		newResponse(http.StatusOK, "not a tree head"), nil)
+	_, err = client.GetTreeHead(context.Background())
+
+	if err == nil {
+		t.Fatal("parsing error not propagated")
+	}
+	t.Logf("expected error: %v", err)
+	if got, want := err.Error(), "http://example.org/api/get-tree-head"; !strings.Contains(got, want) {
+		t.Errorf("got error message %q, without wanted substring %q", got, want)
 	}
 }
