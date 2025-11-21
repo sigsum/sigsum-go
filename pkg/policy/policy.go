@@ -52,10 +52,10 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 	return nil
 }
 
-func randomizeEntities(m map[crypto.Hash]Entity) []Entity {
+func randomizeEntities(m map[crypto.Hash]Entity, filter func(e *Entity) bool) []Entity {
 	entities := make([]Entity, 0, len(m))
 	for _, entity := range m {
-		if len(entity.URL) > 0 {
+		if filter(&entity) {
 			entities = append(entities, entity)
 		}
 	}
@@ -64,14 +64,24 @@ func randomizeEntities(m map[crypto.Hash]Entity) []Entity {
 	return entities
 }
 
+// Returns all logs, in randomized order.
+func (p *Policy) GetLogs() []Entity {
+	return randomizeEntities(p.logs, func(_ *Entity) bool { return true })
+}
+
+// Returns all witnesses, in randomized order.
+func (p *Policy) GetWitnesses() []Entity {
+	return randomizeEntities(p.witnesses, func(_ *Entity) bool { return true })
+}
+
 // Returns all logs with url specified, in randomized order.
 func (p *Policy) GetLogsWithUrl() []Entity {
-	return randomizeEntities(p.logs)
+	return randomizeEntities(p.logs, func(e *Entity) bool { return len(e.URL) > 0 })
 }
 
 // Returns all witnesses with url specified, in randomized order.
 func (p *Policy) GetWitnessesWithUrl() []Entity {
-	return randomizeEntities(p.witnesses)
+	return randomizeEntities(p.witnesses, func(e *Entity) bool { return len(e.URL) > 0 })
 }
 
 func NewPolicy(settings ...Setting) (*Policy, error) {
