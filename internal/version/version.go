@@ -5,7 +5,18 @@ import (
 	"runtime/debug"
 )
 
+// Can be configured at link time using
+//
+//	-ldflags="-X sigsum.org/sigsum-go/internal/version.ConfiguredVersion=..."
+//
+// to override the use of debug.ReadBuildInfo() for the version
+// string.
+var ConfiguredVersion = ""
+
 func ModuleVersion() string {
+	if ConfiguredVersion != "" {
+		return ConfiguredVersion
+	}
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return "unknown"
