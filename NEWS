@@ -18,6 +18,14 @@ NEWS for Sigsum tools, v0.13.x
 	  See updated doc/sigsum-proof.md. For motivation, see
 	  https://git.glasklar.is/sigsum/project/documentation/-/blob/main/proposals/2025-10-stricter-policy-format.md
 
+	New builtin policies:
+
+	* This version includes a new builtin trust policy named
+	  "sigsum-generic-2025-1". This is the first builtin policy
+	  that uses production logs and witnesses. For a description
+	  of the procedure used maintain builtin named policies, see
+	  https://git.glasklar.is/sigsum/project/documentation/-/blob/main/policy-maintenance.md
+
 	Miscellaneous:
 
 	* The primary supported go toolchain version is now 1.24.
