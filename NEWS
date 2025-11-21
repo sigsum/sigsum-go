@@ -4,12 +4,6 @@ NEWS for Sigsum tools, v0.13.x
 	includes a first builtin policy using production logs and
 	witnesses.
 
-	Bug fixes:
-
-	* Make Endpoint.Path not produce request URLs with double '/'
-	  separators. See
-	  https://git.glasklar.is/sigsum/core/log-go/-/issues/129.
-
 	Incompatible changes:
 
 	* The Sigsum policy format has been made a bit stricter,
@@ -25,6 +19,12 @@ NEWS for Sigsum tools, v0.13.x
 	  that uses production logs and witnesses. For a description
 	  of the procedure used maintain builtin named policies, see
 	  https://git.glasklar.is/sigsum/project/documentation/-/blob/main/policy-maintenance.md
+
+	Bug fixes:
+
+	* Make Endpoint.Path not produce request URLs with double '/'
+	  separators. See
+	  https://git.glasklar.is/sigsum/core/log-go/-/issues/129.
 
 	Miscellaneous:
 
