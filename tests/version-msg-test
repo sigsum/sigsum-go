@@ -25,3 +25,6 @@ test_one ./bin/sigsum-verify --version
 test_one ./bin/sigsum-witness --version
 test_one ./bin/sigsum-monitor --version
 test_one ./bin/sigsum-policy --version
+
+echo "=== override ==="
+go run -ldflags="-X sigsum.org/sigsum-go/internal/version.ConfiguredVersion=test-override" ../cmd/sigsum-key --version | grep test-override
