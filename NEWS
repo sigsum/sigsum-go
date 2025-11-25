@@ -1,3 +1,37 @@
+NEWS for Sigsum tools, v0.13.x
+
+	This release makes policy file format a bit stricter, and
+	includes a first builtin policy using production logs and
+	witnesses.
+
+	Incompatible changes:
+
+	* The Sigsum policy format has been made a bit stricter,
+	  rejecting duplicates, rejecting control characters, and
+	  requiring that comments start at the beginning of a line.
+	  See updated doc/sigsum-proof.md. For motivation, see
+	  https://git.glasklar.is/sigsum/project/documentation/-/blob/main/proposals/2025-10-stricter-policy-format.md
+
+	New policies:
+
+	* This version includes a new builtin trust policy named
+	  "sigsum-generic-2025-1". This is the first builtin policy
+	  that uses production logs and witnesses. For a description
+	  of the procedure used maintain builtin named policies, see
+	  https://git.glasklar.is/sigsum/project/documentation/-/blob/main/policy-maintenance.md
+
+	Bug fixes:
+
+	* Make Endpoint.Path not produce request URLs with double '/'
+	  separators. See
+	  https://git.glasklar.is/sigsum/core/log-go/-/issues/129.
+
+	Miscellaneous:
+
+	* The primary supported go toolchain version is now 1.24.
+	  Using go-1.23 is still supported and tested. Using later
+	  versions is also expected to work, but is not tested.
+
 NEWS for Sigsum tools, v0.12.0
 
 	The main change in this release is support for named policies.
