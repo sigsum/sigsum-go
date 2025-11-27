@@ -13,16 +13,61 @@ type Entity struct {
 	URL       string
 }
 
-// The method gets a set of witnesses for which a cosignature was
-// verified, and returns whether or not they are sufficient.
-type Quorum interface {
-	IsQuorum(map[crypto.Hash]struct{}) bool
+type Processor interface {
+	ProcessWitness(kh crypto.Hash) any
+	ProcessGroup(k int, members []any) any
+}
+
+type tree interface {
+	// Do a depth-first traversal, invoking the Processor for each
+	// group and witness in the tree.
+	depthFirst(processor Processor) any
 }
 
 type Policy struct {
 	logs      map[crypto.Hash]Entity
 	witnesses map[crypto.Hash]Entity
-	quorum    Quorum
+	quorum    tree
+}
+
+// Performs a depth-first traversal of the quorum tree.
+func (p *Policy) ProcessQuorum(processor Processor) any {
+	return p.quorum.depthFirst(processor)
+}
+
+type quorumProcessor struct {
+	// The set of witnesses for which a cosignature was verified.
+	verified map[crypto.Hash]struct{}
+}
+
+func newQuorumProcessor() quorumProcessor {
+	return quorumProcessor{
+		verified: make(map[crypto.Hash]struct{}),
+	}
+}
+
+func (qp quorumProcessor) count() int {
+	return len(qp.verified)
+}
+
+func (qp quorumProcessor) addVerifiedWitness(kh crypto.Hash) {
+	qp.verified[kh] = struct{}{}
+}
+
+// Implement Processor interface
+func (qp quorumProcessor) ProcessWitness(kh crypto.Hash) any {
+	_, ok := qp.verified[kh]
+	return ok
+}
+
+func (_ quorumProcessor) ProcessGroup(k int, members []any) any {
+	c := 0
+	for _, m := range members {
+		if m.(bool) {
+			c++
+		}
+	}
+	return c >= k
 }
 
 func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
@@ -35,19 +80,19 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 		return fmt.Errorf("invalid log signature")
 	}
 	origin := types.SigsumCheckpointOrigin(&log.PublicKey)
-	verified := make(map[crypto.Hash]struct{})
+	processor := newQuorumProcessor()
 	failed := 0
 	for keyHash, cs := range cth.Cosignatures {
 		if witness, ok := p.witnesses[keyHash]; ok {
 			if cs.Verify(&witness.PublicKey, origin, &cth.TreeHead) {
-				verified[keyHash] = struct{}{}
+				processor.addVerifiedWitness(keyHash)
 			} else {
 				failed++
 			}
 		}
 	}
-	if !p.quorum.IsQuorum(verified) {
-		return fmt.Errorf("not enough cosignatures, total: %d, verified: %d, failed to verify: %d", len(cth.Cosignatures), len(verified), failed)
+	if !p.ProcessQuorum(processor).(bool) {
+		return fmt.Errorf("not enough cosignatures, total: %d, verified: %d, failed to verify: %d", len(cth.Cosignatures), processor.count(), failed)
 	}
 	return nil
 }
