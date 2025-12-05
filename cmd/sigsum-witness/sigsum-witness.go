@@ -77,7 +77,8 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	<-sigs
 
-	shutdownCtx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	httpServer.Shutdown(shutdownCtx)
 }
@@ -207,7 +208,7 @@ func (s *state) Load(pub, logPub *crypto.PublicKey) error {
 
 	cs, ok := cth.Cosignatures[crypto.HashBytes(pub[:])]
 	if !ok {
-		fmt.Errorf("No matching cosignature on stored tree head")
+		return fmt.Errorf("No matching cosignature on stored tree head")
 	}
 	if !cs.Verify(pub, types.SigsumCheckpointOrigin(logPub), &cth.TreeHead) {
 		return fmt.Errorf("Invalid cosignature on stored tree head")

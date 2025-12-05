@@ -66,7 +66,7 @@ func main() {
 	if _, err := fmt.Printf("old %d\n", oldSize); err != nil {
 		log.Fatal(err)
 	}
-	if err := (&types.ConsistencyProof{proof}).ToBase64(os.Stdout); err != nil {
+	if err := (&types.ConsistencyProof{Path: proof}).ToBase64(os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 	if _, err := fmt.Printf("\n"); err != nil {

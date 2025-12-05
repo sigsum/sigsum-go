@@ -54,6 +54,10 @@ codespell:
   script:
     - codespell -L erro
 
+go-vet:
+  stage: test
+  script: go vet ./...
+
 build-log-go:
   stage: build-log
   allow_failure: true
