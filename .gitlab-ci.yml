@@ -58,6 +58,10 @@ go-vet:
   stage: test
   script: go vet ./...
 
+go-mod-tidy:
+  stage: test
+  script: go mod tidy -diff
+
 build-log-go:
   stage: build-log
   allow_failure: true
