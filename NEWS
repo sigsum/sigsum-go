@@ -1,4 +1,4 @@
-NEWS for Sigsum tools, v0.13.x
+NEWS for Sigsum tools, v0.13.0
 
 	This release makes policy file format a bit stricter, and
 	includes a first builtin policy using production logs and
