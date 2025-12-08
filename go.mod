@@ -8,11 +8,11 @@ require (
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
 	github.com/golang/mock v1.6.0
 	github.com/pborman/getopt/v2 v2.1.0
-	golang.org/x/net v0.40.0
-	golang.org/x/text v0.25.0
+	golang.org/x/net v0.43.0
+	golang.org/x/text v0.28.0
 )
 
 require (
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 )
