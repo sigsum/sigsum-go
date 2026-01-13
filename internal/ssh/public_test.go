@@ -27,6 +27,7 @@ func TestParsePublicEd25519(t *testing.T) {
 		{"with bad policy name, missing quotes", "sigsum-policy=abc ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFMuCrItf6Qzxi/GQr6R1m4B3lwn5kfc28ETV4TvLym comment", false, ""},
 		{"with bad policy name, single quotes", "sigsum-policy='mypolicy' ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFMuCrItf6Qzxi/GQr6R1m4B3lwn5kfc28ETV4TvLym comment", false, ""},
 		{"with policy name twice", "sigsum-policy=\"abc\" sigsum-policy=\"def\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFMuCrItf6Qzxi/GQr6R1m4B3lwn5kfc28ETV4TvLym comment", false, ""},
+		{"policy with broken ssh pub key", "sigsum-policy=\"0\" ssh-ed25519", false, ""},
 	} {
 		key, policyName, err := ParsePublicEd25519(table.ascii)
 		if err != nil {
