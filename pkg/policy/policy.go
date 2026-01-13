@@ -35,6 +35,8 @@ func (p *Policy) ProcessQuorum(processor Processor) any {
 	return p.quorum.depthFirst(processor)
 }
 
+// This processor evaluates if the quorum is satisfied, using bool
+// values everywhere the Processor interface uses any.
 type quorumProcessor struct {
 	// The set of witnesses for which a cosignature was verified.
 	verified map[crypto.Hash]struct{}
@@ -92,7 +94,8 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 		}
 	}
 	if !p.ProcessQuorum(processor).(bool) {
-		return fmt.Errorf("not enough cosignatures, total: %d, verified: %d, failed to verify: %d", len(cth.Cosignatures), processor.count(), failed)
+		return fmt.Errorf("not enough cosignatures, total: %d, verified: %d, failed to verify: %d",
+			len(cth.Cosignatures), processor.count(), failed)
 	}
 	return nil
 }
