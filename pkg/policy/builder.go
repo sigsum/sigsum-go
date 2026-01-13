@@ -6,45 +6,42 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
-type quorumSingle struct {
-	w crypto.Hash
+type leafWitness struct {
+	kh crypto.Hash
 }
 
-func (q *quorumSingle) IsQuorum(verified map[crypto.Hash]struct{}) bool {
-	_, ok := verified[q.w]
-	return ok
+func (w *leafWitness) depthFirst(processor Processor) any {
+	return processor.ProcessWitness(w.kh)
 }
 
-type quorumKofN struct {
-	subQuorums []Quorum
-	k          int
+type groupKofN struct {
+	members []tree
+	k       int
 }
 
-func (q *quorumKofN) IsQuorum(verified map[crypto.Hash]struct{}) bool {
-	c := 0
-	for _, sq := range q.subQuorums {
-		if sq.IsQuorum(verified) {
-			c++
-		}
+func (g *groupKofN) depthFirst(processor Processor) any {
+	r := make([]any, len(g.members))
+	for i, m := range g.members {
+		r[i] = m.depthFirst(processor)
 	}
-	return c >= q.k
+	return processor.ProcessGroup(g.k, r)
 }
 
 // Represents a policy being built.
 type builder struct {
-	names map[string]Quorum
+	names map[string]tree
 	// Names that have already been used as group members, and
 	// must not be used again. The map value is the name of parent
 	// group, for error messages.
 	usedNames map[string]string
 	logs      map[crypto.Hash]Entity
 	witnesses map[crypto.Hash]Entity
-	quorum    Quorum
+	quorum    tree
 }
 
 func newBuilder() *builder {
 	return &builder{
-		names:     map[string]Quorum{ConfigNone: &quorumKofN{}},
+		names:     map[string]tree{ConfigNone: &groupKofN{}},
 		usedNames: make(map[string]string),
 		logs:      make(map[crypto.Hash]Entity),
 		witnesses: make(map[crypto.Hash]Entity),
@@ -73,13 +70,13 @@ func (b *builder) ifdef(name string) bool {
 
 // Looks up the name of a group member. On success, marks name as used
 // so that it cannot be used as a member a second time.
-func (b *builder) lookupMember(member, parent string) (Quorum, error) {
+func (b *builder) lookupMember(member, parent string) (tree, error) {
 	if other, ok := b.usedNames[member]; ok {
 		return nil, fmt.Errorf("group/witness %q is already a member of %q", member, other)
 	}
-	if quorum, ok := b.names[member]; ok {
+	if group, ok := b.names[member]; ok {
 		b.usedNames[member] = parent
-		return quorum, nil
+		return group, nil
 	}
 	return nil, fmt.Errorf("undefined name: %q", member)
 }
@@ -115,7 +112,7 @@ func (w *addWitness) apply(b *builder) error {
 		return fmt.Errorf("duplicate witness: %x\n", w.entity.PublicKey)
 	}
 	b.witnesses[h] = w.entity
-	b.names[w.name] = &quorumSingle{h}
+	b.names[w.name] = &leafWitness{h}
 	return nil
 }
 
@@ -139,16 +136,16 @@ func (g *addGroup) apply(b *builder) error {
 	if g.threshold < 1 || g.threshold > len(g.members) {
 		return fmt.Errorf("group %q: invalid threshold k = %d for n = %d", g.name, g.threshold, len(g.members))
 	}
-	subQuorums := []Quorum{}
+	members := []tree{}
 
 	for _, member := range g.members {
 		q, err := b.lookupMember(member, g.name)
 		if err != nil {
 			return err
 		}
-		subQuorums = append(subQuorums, q)
+		members = append(members, q)
 	}
-	b.names[g.name] = &quorumKofN{subQuorums: subQuorums, k: g.threshold}
+	b.names[g.name] = &groupKofN{members: members, k: g.threshold}
 	return nil
 }
 
@@ -169,8 +166,8 @@ func (s *setQuorum) apply(b *builder) error {
 		return fmt.Errorf("quorum can only be set once")
 	}
 
-	if q, ok := b.names[s.name]; ok {
-		b.quorum = q
+	if group, ok := b.names[s.name]; ok {
+		b.quorum = group
 	} else {
 		return fmt.Errorf("undefined name %q", s.name)
 	}

@@ -110,12 +110,12 @@ witness W6 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 		{[]int{1, 3, 4}, true},
 		{[]int{2, 3, 5}, true},
 	} {
-		m := make(map[crypto.Hash]struct{})
+		processor := newQuorumProcessor()
 		for _, i := range table.witnesses {
-			m[witnessHashes[i-1]] = struct{}{}
+			processor.addVerifiedWitness(witnessHashes[i-1])
 		}
-		if got, want := policy.quorum.IsQuorum(m), table.sufficient; got != want {
-			t.Errorf("Unexpected result of IsQuorum for set %v, got %v, expected %v", table.witnesses, got, want)
+		if got, want := policy.ProcessQuorum(processor).(bool), table.sufficient; got != want {
+			t.Errorf("Unexpected result of quorum validation for set %v, got %v, expected %v", table.witnesses, got, want)
 		}
 	}
 }
@@ -194,15 +194,15 @@ quorum G
 		{[]int{}, []int{1, 2, 3}, true},
 		{[]int{2}, []int{1, 2, 3}, true},
 	} {
-		m := make(map[crypto.Hash]struct{})
+		processor := newQuorumProcessor()
 		for _, i := range table.aWitnesses {
-			m[aHashes[i-1]] = struct{}{}
+			processor.addVerifiedWitness(aHashes[i-1])
 		}
 		for _, i := range table.bWitnesses {
-			m[bHashes[i-1]] = struct{}{}
+			processor.addVerifiedWitness(bHashes[i-1])
 		}
-		if got, want := policy.quorum.IsQuorum(m), table.sufficient; got != want {
-			t.Errorf("Unexpected result of IsQuorum for set A %v, B %v, got %v, expected %v", table.aWitnesses, table.bWitnesses, got, want)
+		if got, want := policy.ProcessQuorum(processor).(bool), table.sufficient; got != want {
+			t.Errorf("Unexpected result of quorum validation for set A %v, B %v, got %v, expected %v", table.aWitnesses, table.bWitnesses, got, want)
 		}
 	}
 }
