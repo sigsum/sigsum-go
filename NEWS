@@ -1,3 +1,9 @@
+NEWS for Sigsum tools, v0.14.x
+
+	Incompatible changes:
+
+	* Building now requires go version 1.24 or later.
+
 NEWS for Sigsum tools, v0.13.1
 
 	This is a bug fix release.

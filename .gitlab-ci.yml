@@ -31,11 +31,6 @@ make-check-386:
     paths:
     - ./tests/test.*
 
-make-check-go-1.23:
-  stage: test
-  image: golang:1.23
-  script: make check
-
 make-shellcheck:
   stage: test
   script: cd tests && make shellcheck
