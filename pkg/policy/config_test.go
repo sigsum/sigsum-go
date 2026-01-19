@@ -258,6 +258,12 @@ witness W3 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 group G1 all W1 W2
 group G2 all W3 W2
 `},
+		{"none as member", "cannot be a group member", `
+log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+witness W bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+group G all W none
+quorum G
+`},
 	} {
 		policy, err := ParseConfig(bytes.NewBufferString(table.config))
 		if err == nil {
