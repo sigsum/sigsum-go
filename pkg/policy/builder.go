@@ -42,7 +42,7 @@ type builder struct {
 func newBuilder() *builder {
 	return &builder{
 		names:     map[string]tree{ConfigNone: &groupKofN{}},
-		usedNames: make(map[string]string),
+		usedNames: map[string]string{ConfigNone: ""},
 		logs:      make(map[crypto.Hash]Entity),
 		witnesses: make(map[crypto.Hash]Entity),
 	}
@@ -72,7 +72,10 @@ func (b *builder) ifdef(name string) bool {
 // so that it cannot be used as a member a second time.
 func (b *builder) lookupMember(member, parent string) (tree, error) {
 	if other, ok := b.usedNames[member]; ok {
-		return nil, fmt.Errorf("group/witness %q is already a member of %q", member, other)
+		if len(other) > 0 {
+			return nil, fmt.Errorf("group/witness %q is already a member of %q", member, other)
+		}
+		return nil, fmt.Errorf("group/witness %q cannot be a group member", member)
 	}
 	if group, ok := b.names[member]; ok {
 		b.usedNames[member] = parent

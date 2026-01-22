@@ -38,7 +38,8 @@ verification.
 Witnesses (and groups, described below) are named. These names are
 used only for defining the quorum and group membership; they have no
 meaning outside of the policy file itself. Witnesses and groups share
-a single namespace, and the special name `none` is predefined.
+a single namespace. The special name `none` is predefined; it can
+be used when defining the quorum, but it is invalid as a group member.
 
 We will look at an example policy, before specifying the contents of
 the policy file in detail.
