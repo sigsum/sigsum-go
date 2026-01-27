@@ -75,6 +75,9 @@ func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, string, error) {
 	}
 	if policyName != "" {
 		fields = fields[1:]
+		if len(fields) < 2 {
+			return crypto.PublicKey{}, "", fmt.Errorf("invalid public key after stripping policy")
+		}
 	}
 	if fields[0] != "ssh-ed25519" {
 		return crypto.PublicKey{}, "", fmt.Errorf("unsupported public key type: %v", fields[0])
