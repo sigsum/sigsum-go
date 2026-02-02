@@ -133,7 +133,7 @@ func (sp *SigsumProof) FromASCII(r io.Reader) error {
 		return nil
 	}
 	if !emptyLine {
-		return fmt.Errorf("missing inclusion proof part: %v", err)
+		return fmt.Errorf("missing inclusion proof part")
 	}
 	return sp.Inclusion.Parse(p)
 }

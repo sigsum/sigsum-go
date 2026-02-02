@@ -219,10 +219,12 @@ func main() {
 				if err != nil {
 					log.Fatal("Internal error; leaf request invalid: %v", err)
 				}
-				settings.withOutputFile(inputFile, ".hash", func(w io.Writer) error {
+				if err := settings.withOutputFile(inputFile, ".hash", func(w io.Writer) error {
 					_, err := fmt.Fprintf(w, "%x\n", leaf.ToHash())
 					return err
-				})
+				}); err != nil {
+					log.Fatal("Writing hash failed: %v", err)
+				}
 			}
 		} else if len(settings.keyFile) > 0 {
 			// Output created add-leaf requests.
