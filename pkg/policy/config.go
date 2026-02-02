@@ -126,7 +126,8 @@ func checkLine(line string) error {
 func ParseConfig(file io.Reader) (*Policy, error) {
 	b := newBuilder()
 	lineno := 0
-	for scanner := bufio.NewScanner(file); scanner.Scan(); {
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
 		lineno++
 		line := scanner.Text()
 		if err := checkLine(line); err != nil {
@@ -143,6 +144,9 @@ func ParseConfig(file io.Reader) (*Policy, error) {
 		if err := setting.apply(b); err != nil {
 			return nil, fmt.Errorf("%d: %v", lineno, err)
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
 	}
 	return b.finish()
 }
