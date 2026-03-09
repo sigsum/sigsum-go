@@ -43,7 +43,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFMuCrItf6Qzxi/GQr6R1m4B3lwn5kfc28ETV4TvLyn
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFMuCrItf6Qzxi/GQr6R1m4B3lwn5kfc28ETV4TvLym same as key 1`, 0},
 	} {
 		buf := bytes.NewBufferString(table.input)
-		keys, _, err := parsePublicKeysFile(buf, table.desc, false)
+		keys, _, err := parsePublicKeys(buf, false)
 		got := len(keys)
 		if table.expCount > 0 {
 			if err != nil {
@@ -127,7 +127,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFMuCrItf6Qzxi/GQr6R1m4B3lwn5kfc28ETV4TvLyn
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFMuCrItf6Qzxi/GQr6R1m4B3lwn5kfc28ETV4TvLym same as key 1`, true, 0, ""},
 	} {
 		buf := bytes.NewBufferString(table.input)
-		keys, policyName, err := parsePublicKeysFile(buf, table.desc, table.getPolicy)
+		keys, policyName, err := parsePublicKeys(buf, table.getPolicy)
 		got := len(keys)
 		if table.expCount > 0 {
 			if err != nil {
