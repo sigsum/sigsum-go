@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -124,6 +125,10 @@ func MonitorLog(ctx context.Context, client *monitoringLogClient,
 			allLeaves, glState, err = client.getLeaves(updateCtx, glState, &state.TreeHead,
 				requests.Leaves{StartIndex: state.NextLeafIndex, EndIndex: end})
 			if err != nil {
+				if errors.Is(err, context.DeadlineExceeded) {
+					err = newAlert(AlertWarning, "downloading leaves timed out, backlog: %d (%d / %d)",
+						state.TreeHead.Size-state.NextLeafIndex, state.NextLeafIndex, state.TreeHead.Size)
+				}
 				config.Callbacks.Alert(keyHash, err)
 				break
 			}

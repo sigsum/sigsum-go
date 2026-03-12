@@ -33,7 +33,7 @@ func newMonitoringLogClient(logKey *crypto.PublicKey, URL string) *monitoringLog
 func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.TreeHead) (types.SignedTreeHead, error) {
 	cth, err := c.client.GetTreeHead(ctx)
 	if err != nil {
-		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-tree-head failed: %v", err)
+		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-tree-head failed: %w", err)
 	}
 	// For now, only check log's signature. TODO: Also check cosignatures.
 	if !cth.Verify(&c.logKey) {
@@ -44,10 +44,10 @@ func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.T
 	}
 	proof, err := c.client.GetConsistencyProof(ctx, requests.ConsistencyProof{OldSize: treeHead.Size, NewSize: cth.Size})
 	if err != nil {
-		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-consistency-proof failed: %v", err)
+		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-consistency-proof failed: %w", err)
 	}
 	if err := proof.Verify(treeHead, &cth.TreeHead); err != nil {
-		return types.SignedTreeHead{}, newAlert(AlertInconsistentTreeHead, "consistency proof not valid: %v", err)
+		return types.SignedTreeHead{}, newAlert(AlertInconsistentTreeHead, "consistency proof not valid: %w", err)
 	}
 	return cth.SignedTreeHead, nil
 }
@@ -56,7 +56,7 @@ func (c *monitoringLogClient) getInclusionProofAtIndex(ctx context.Context,
 	index uint64, req requests.InclusionProof) (types.InclusionProof, error) {
 	proof, err := c.client.GetInclusionProof(ctx, req)
 	if err != nil {
-		return types.InclusionProof{}, newAlert(AlertLogError, "get-inclusion-proof failed: %v", err)
+		return types.InclusionProof{}, newAlert(AlertLogError, "get-inclusion-proof failed: %w", err)
 	}
 	if proof.LeafIndex != index {
 		return types.InclusionProof{}, newAlert(AlertLogError, "unexpected get-inclusion-proof index, got %d, want %d", proof.LeafIndex, index)
@@ -117,7 +117,7 @@ func (c *monitoringLogClient) getLeaves(ctx context.Context, state *getLeavesSta
 
 	if end == treeHead.Size {
 		if err := merkle.VerifyInclusionTail(leafHashes, start, &treeHead.RootHash, proof.Path); err != nil {
-			return nil, nil, newAlert(AlertLogError, "inclusion proof not valid for tail range %d:%d: %v",
+			return nil, nil, newAlert(AlertLogError, "inclusion proof not valid for tail range %d:%d: %w",
 				start, end, err)
 		}
 		return leaves, nil, nil
@@ -129,7 +129,7 @@ func (c *monitoringLogClient) getLeaves(ctx context.Context, state *getLeavesSta
 		return nil, nil, err
 	}
 	if err := merkle.VerifyInclusionBatch(leafHashes, start, treeHead.Size, &treeHead.RootHash, proof.Path, endProof.Path); err != nil {
-		return nil, nil, newAlert(AlertLogError, "inclusion proof not valid for range %d:%d: %v", start, end, err)
+		return nil, nil, newAlert(AlertLogError, "inclusion proof not valid for range %d:%d: %w", start, end, err)
 	}
 
 	return leaves, &getLeavesState{leafHash: leafHashes[len(leafHashes)-1], proof: endProof}, nil

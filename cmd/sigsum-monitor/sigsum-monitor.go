@@ -41,7 +41,11 @@ func (_ callbacks) NewLeaves(logKeyHash crypto.Hash, numberOfProcessedLeaves uin
 }
 
 func (_ callbacks) Alert(logKeyHash crypto.Hash, e error) {
-	log.Fatal("Alert log %x: %v\n", logKeyHash, e)
+	if monitor.ErrorAlertType(e) == monitor.AlertWarning {
+		log.Warning("Alert log %x: %v\n", logKeyHash, e)
+	} else {
+		log.Fatal("Alert log %x: %v\n", logKeyHash, e)
+	}
 }
 
 func readPublicKeyFiles(fileNames []string, getPolicy bool) (map[crypto.Hash]crypto.PublicKey, string, error) {
