@@ -76,7 +76,7 @@ func ReadPublicKeyFileWithPolicyName(fileName string) (crypto.PublicKey, string,
 // determines if a policy name is to be returned. If getPolicy is true
 // and a policy name is present in any of the pubkeys, then this function
 // requires that the same policy name is given for all pubkeys.
-func parsePublicKeysFile(f io.Reader, fileName string, getPolicy bool) (map[crypto.Hash]crypto.PublicKey, string, error) {
+func parsePublicKeys(f io.Reader, getPolicy bool) (map[crypto.Hash]crypto.PublicKey, string, error) {
 	keys := make(map[crypto.Hash]crypto.PublicKey)
 	var policyNames []string
 	scanner := bufio.NewScanner(f)
@@ -92,20 +92,20 @@ func parsePublicKeysFile(f io.Reader, fileName string, getPolicy bool) (map[cryp
 		}
 		key, policyName, err := ParsePublicKeyWithPolicyName(line)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to parse public key on line %d of file %q: %v", n, fileName, err)
+			return nil, "", fmt.Errorf("invalid public key on line %d: %v", n, err)
 		}
 		keyHash := crypto.HashBytes(key[:])
 		if _, has := keys[keyHash]; has {
-			return nil, "", fmt.Errorf("duplicate public key on line %d of file %q", n, fileName)
+			return nil, "", fmt.Errorf("duplicate public key on line %d", n)
 		}
 		keys[keyHash] = key
 		policyNames = append(policyNames, policyName)
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, "", fmt.Errorf("failed to read public keys file %q: %v", fileName, err)
+		return nil, "", err
 	}
 	if len(keys) == 0 {
-		return nil, "", fmt.Errorf("no public keys found in file %q", fileName)
+		return nil, "", fmt.Errorf("no public keys found")
 	}
 	if !getPolicy {
 		return keys, "", nil
@@ -120,27 +120,46 @@ func parsePublicKeysFile(f io.Reader, fileName string, getPolicy bool) (map[cryp
 	return keys, policyName, nil
 }
 
+// ParsePublicKeys reads and parses public keys from r in OpenSSH authorized_keys format.
+// All keys must be of type ssh-ed25519 and it is an error if r contains duplicate keys or no keys at all.
+func ParsePublicKeys(r io.Reader) (map[crypto.Hash]crypto.PublicKey, error) {
+	keys, _, err := parsePublicKeys(r, false)
+	return keys, err
+}
+
+// ReadPublicKeysFile is like ParsePublicKeys but reads from the named file.
 func ReadPublicKeysFile(fileName string) (map[crypto.Hash]crypto.PublicKey, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
 	}
 	defer f.Close()
-	keys, _, err := parsePublicKeysFile(f, fileName, false)
+	keys, err := ParsePublicKeys(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse public keys file %q: %w", fileName, err)
+	}
 	return keys, err
 }
 
-// This function returns public keys along with a single policy name
-// extracted from the pubkeys file. If a policy name is present in any of
-// the pubkeys, then this function requires that the same policy name is
-// given for all pubkeys.
+// ParsePublicKeysWithPolicy is like ParsePublicKeys but also returns a single policy name extracted from the pubkeys file.
+// If a policy name is present in any of the pubkeys, then this function requires that the same policy name is given for all pubkeys.
+// The returned policy name is the empty string if no key specifies one.
+func ParsePublicKeysWithPolicy(r io.Reader) (map[crypto.Hash]crypto.PublicKey, string, error) {
+	return parsePublicKeys(r, true)
+}
+
+// ReadPublicKeysFileWithPolicy is like ParsePublicKeysWithPolicy but reads from the named file.
 func ReadPublicKeysFileWithPolicy(fileName string) (map[crypto.Hash]crypto.PublicKey, string, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
 	}
 	defer f.Close()
-	return parsePublicKeysFile(f, fileName, true)
+	signer, policy, err := ParsePublicKeysWithPolicy(f)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to parse public keys file %q: %w", fileName, err)
+	}
+	return signer, policy, nil
 }
 
 // The second output is a resulting policy name, in case a
