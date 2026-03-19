@@ -131,12 +131,12 @@ func ParsePublicKeys(r io.Reader) (map[crypto.Hash]crypto.PublicKey, error) {
 func ReadPublicKeysFile(fileName string) (map[crypto.Hash]crypto.PublicKey, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
+		return nil, err
 	}
 	defer f.Close()
 	keys, err := ParsePublicKeys(f)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse public keys file %q: %w", fileName, err)
+		return nil, fmt.Errorf("parse %q: %w", fileName, err)
 	}
 	return keys, err
 }
@@ -152,12 +152,12 @@ func ParsePublicKeysWithPolicy(r io.Reader) (map[crypto.Hash]crypto.PublicKey, s
 func ReadPublicKeysFileWithPolicy(fileName string) (map[crypto.Hash]crypto.PublicKey, string, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to open public keys file %q: %v", fileName, err)
+		return nil, "", err
 	}
 	defer f.Close()
 	signer, policy, err := ParsePublicKeysWithPolicy(f)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to parse public keys file %q: %w", fileName, err)
+		return nil, "", fmt.Errorf("parse %q: %w", fileName, err)
 	}
 	return signer, policy, nil
 }
