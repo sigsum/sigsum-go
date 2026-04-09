@@ -78,3 +78,30 @@ make-doc:
     - MANPAGER=cat mandoc -T lint doc/*.? || true
     - MANPAGER=cat mandoc -T lint -W error doc/*.?
     - lexgrog --debug doc/*.1
+
+.make-debian: &make-debian
+  allow_failure: true
+  stage: test
+  before_script:
+    - sed -i 's/ deb$/ deb deb-src/' /etc/apt/sources.list.d/*.sources
+    - apt-get update
+    - apt-get install -y --no-install-recommends git ca-certificates dctrl-tools dpkg-dev devscripts
+  script:
+    - git clone https://salsa.debian.org/go-team/packages/sigsum-go.git
+    - mv sigsum-go/debian debian
+    - rm -rf sigsum-go
+    - rm -f debian/changelog
+    - dch --create --package sigsum-go --newversion 0.0-1 "Build"
+    - git archive --format=tar.gz HEAD > ../sigsum-go_0.0.orig.tar.gz
+    - apt-get install -y --no-install-recommends build-essential $(cat debian/control | grep-dctrl -n -s Build-Depends . | sed -e 's/,//' -e  's/<.*>//' -e 's/(.*)//')
+    - dpkg-buildpackage --no-sign
+    - dpkg -c ../sigsum-go_0.0-1_amd64.deb
+    - dpkg -I ../sigsum-go_0.0-1_amd64.deb
+
+make-debian-forky:
+  image: debian:forky-slim
+  extends: .make-debian
+
+make-debian-trixie:
+  image: debian:trixie-slim
+  extends: .make-debian
