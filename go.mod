@@ -2,7 +2,7 @@ module sigsum.org/sigsum-go
 
 // We don't want to depend on golang version later than is available
 // in debian's stable or backports repos.
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
