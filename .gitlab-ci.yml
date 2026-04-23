@@ -57,6 +57,11 @@ go-mod-tidy:
   stage: test
   script: go mod tidy -diff
 
+govulncheck:
+  stage: test
+  # v1.1.4 appears to be latest version supporting go 1.24
+  script: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 -show verbose ./...
+
 build-log-go:
   stage: build-log
   allow_failure: true
