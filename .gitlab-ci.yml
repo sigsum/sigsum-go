@@ -57,6 +57,12 @@ go-mod-tidy:
   stage: test
   script: go mod tidy -diff
 
+govulncheck:
+  stage: test
+  # Allow failure, since this can fail due to changes outside of our control.
+  allow_failure: true
+  script: go run golang.org/x/vuln/cmd/govulncheck@v1.3.0 -show verbose ./...
+
 build-log-go:
   stage: build-log
   allow_failure: true
