@@ -134,6 +134,40 @@ func TestWitnessPolicy(t *testing.T) {
 	}
 }
 
+func TestFilterCosignatures(t *testing.T) {
+	td := newTestData(t, 4)
+
+	// Policy only knows witnesses 0 and 1.
+	p, err := NewKofNPolicy([]crypto.PublicKey{td.logPub}, td.witnessKeys[:2], 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// CosignedTreeHead has cosignatures from all four witnesses.
+	cosignatures := make(map[crypto.Hash]types.Cosignature)
+	for i := range td.witnessHashes {
+		cosignatures[td.witnessHashes[i]] = td.cosignatures[i]
+	}
+	cth := types.CosignedTreeHead{SignedTreeHead: td.sth, Cosignatures: cosignatures}
+
+	if err := p.VerifyCosignedTreeHead(&td.logHash, &cth); err != nil {
+		t.Fatalf("pre-filter verify failed: %v", err)
+	}
+	p.FilterCosignatures(&cth)
+
+	if got := len(cth.Cosignatures); got != 2 {
+		t.Errorf("got %d cosignatures after filter, want 2", got)
+	}
+	for _, kh := range td.witnessHashes[2:] {
+		if _, ok := cth.Cosignatures[kh]; ok {
+			t.Errorf("non-policy witness still present after filter")
+		}
+	}
+	if err := p.VerifyCosignedTreeHead(&td.logHash, &cth); err != nil {
+		t.Errorf("post-filter verify failed: %v", err)
+	}
+}
+
 func TestTrimCosignatures(t *testing.T) {
 	td := newTestData(t, 6)
 

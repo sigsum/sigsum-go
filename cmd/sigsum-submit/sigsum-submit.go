@@ -28,19 +28,20 @@ import (
 )
 
 type Settings struct {
-	rawHash          bool
-	keyFile          string
-	policyFile       string
-	policyName       string
-	leafHash         bool
-	diagnostics      string
-	inputFiles       []string
-	outputFile       string
-	outputDir        string
-	tokenDomain      string
-	tokenKeyFile     string
-	timeout          time.Duration
-	trimCosignatures bool
+	rawHash            bool
+	keyFile            string
+	policyFile         string
+	policyName         string
+	leafHash           bool
+	diagnostics        string
+	inputFiles         []string
+	outputFile         string
+	outputDir          string
+	tokenDomain        string
+	tokenKeyFile       string
+	timeout            time.Duration
+	filterCosignatures bool
+	trimCosignatures   bool
 }
 
 // A LeafSink represents the action to take for input leaf requests,
@@ -155,10 +156,11 @@ func main() {
 	}
 	if policy != nil {
 		config := submit.Config{
-			Policy:           policy,
-			Domain:           settings.tokenDomain,
-			Timeout:          settings.timeout,
-			TrimCosignatures: settings.trimCosignatures,
+			Policy:             policy,
+			Domain:             settings.tokenDomain,
+			Timeout:            settings.timeout,
+			FilterCosignatures: settings.filterCosignatures,
+			TrimCosignatures:   settings.trimCosignatures,
 		}
 		ctx := context.Background()
 
@@ -315,6 +317,7 @@ If a ".req" file already exists, then it is simply overwritten.
 	set.FlagLong(&s.tokenDomain, "token-domain", 'd', "Domain name to use for rate-limiting; \"_sigsum_v1.\" will be prepended", "domain-name")
 	set.FlagLong(&s.tokenKeyFile, "token-signing-key", 'a', "Private key in OpenSSH format to sign DNS rate-limit tokens; or a corresponding public key where the private part is accessed using the SSH agent protocol", "key-file")
 	set.FlagLong(&s.timeout, "timeout", 't', "Timeout for submitting all signed checksums and collecting the proofs", "timeout")
+	set.FlagLong(&s.filterCosignatures, "filter-cosignatures", 0, "Remove cosignatures from witnesses not in the active policy")
 	set.FlagLong(&s.trimCosignatures, "trim-cosignatures", 0, "Limit cosignatures in proof to the minimum required by the quorum")
 	set.FlagLong(&help, "help", 0, "Show usage message and exit")
 	set.FlagLong(&versionFlag, "version", 'v', "Show software version and exit")

@@ -128,6 +128,16 @@ func (sp selectProcessor) ProcessGroup(k int, members []any) any {
 	return selected
 }
 
+// Removes cosignatures from witnesses not present in the policy. Must
+// be called after VerifyCosignedTreeHead succeeds.
+func (p *Policy) FilterCosignatures(cth *types.CosignedTreeHead) {
+	for kh := range cth.Cosignatures {
+		if _, ok := p.witnesses[kh]; !ok {
+			delete(cth.Cosignatures, kh)
+		}
+	}
+}
+
 // Removes cosignatures from cth that are not needed to satisfy the
 // quorum. Must be called after VerifyCosignedTreeHead succeeds.
 func (p *Policy) TrimCosignatures(logKeyHash *crypto.Hash, cth *types.CosignedTreeHead) {

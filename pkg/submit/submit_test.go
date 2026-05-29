@@ -61,7 +61,7 @@ func TestSubmitSuccess(t *testing.T) {
 		client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{SignedTreeHead: sth}, nil)
 		client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
 
-		proofs, err := collectProofs(context.Background(), timeout, nop, p, false, submissions)
+		proofs, err := collectProofs(context.Background(), timeout, nop, p, false, false, submissions)
 		if err != nil {
 			t.Errorf("collect failed: %v", err)
 			return
@@ -163,7 +163,7 @@ func TestSubmitWithFailure(t *testing.T) {
 	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{SignedTreeHead: sth}, nil)
 	client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
 
-	if _, err := collectProofs(context.Background(), timeout, nop, p, false, submissions); err != nil {
+	if _, err := collectProofs(context.Background(), timeout, nop, p, false, false, submissions); err != nil {
 		t.Errorf("collect failed but shouldn't have: %v", err)
 		return
 	}
@@ -173,7 +173,7 @@ func TestSubmitWithFailure(t *testing.T) {
 	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{SignedTreeHead: sth}, nil)
 	client.EXPECT().GetInclusionProof(gomock.Any(), gomock.Any()).Return(inclusionProof, nil)
 
-	if _, err := collectProofs(context.Background(), timeout, nop, p, false, submissions); err == nil {
+	if _, err := collectProofs(context.Background(), timeout, nop, p, false, false, submissions); err == nil {
 		t.Errorf("collect succeeded but shouldn't have")
 		return
 	}
