@@ -100,6 +100,61 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 	return nil
 }
 
+// Travrese the quorum tree and select a minimal set of witnesses that
+// satisfies the quorum.
+type selectProcessor struct {
+	verified map[crypto.Hash]struct{}
+}
+
+func (sp selectProcessor) ProcessWitness(kh crypto.Hash) any {
+	if _, ok := sp.verified[kh]; ok {
+		return []crypto.Hash{kh}
+	}
+	return ([]crypto.Hash)(nil)
+}
+
+func (sp selectProcessor) ProcessGroup(k int, members []any) any {
+	var selected []crypto.Hash
+	for _, m := range members {
+		witnesses := m.([]crypto.Hash)
+		if len(witnesses) > 0 {
+			selected = append(selected, witnesses...)
+			k--
+			if k == 0 {
+				break
+			}
+		}
+	}
+	return selected
+}
+
+// Removes cosignatures from cth that are not needed to satisfy the
+// quorum. Must be called after VerifyCosignedTreeHead succeeds.
+func (p *Policy) TrimCosignatures(logKeyHash *crypto.Hash, cth *types.CosignedTreeHead) {
+	l, ok := p.logs[*logKeyHash]
+	if !ok {
+		return
+	}
+	origin := types.SigsumCheckpointOrigin(&l.PublicKey)
+	verified := make(map[crypto.Hash]struct{})
+	for keyHash, cs := range cth.Cosignatures {
+		if witness, ok := p.witnesses[keyHash]; ok {
+			if cs.Verify(&witness.PublicKey, origin, &cth.TreeHead) {
+				verified[keyHash] = struct{}{}
+			}
+		}
+	}
+	keep := make(map[crypto.Hash]struct{})
+	for _, kh := range p.ProcessQuorum(selectProcessor{verified: verified}).([]crypto.Hash) {
+		keep[kh] = struct{}{}
+	}
+	for kh := range cth.Cosignatures {
+		if _, ok := keep[kh]; !ok {
+			delete(cth.Cosignatures, kh)
+		}
+	}
+}
+
 func randomizeEntities(m map[crypto.Hash]Entity, filter func(e *Entity) bool) []Entity {
 	entities := make([]Entity, 0, len(m))
 	for _, entity := range m {

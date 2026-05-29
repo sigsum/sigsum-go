@@ -50,6 +50,10 @@ type Config struct {
 	// The policy specifies the logs and witnesses to use.
 	Policy *policy.Policy
 
+	// TrimCosignatures controls whether cosignatures in the proof are trimmed
+	// to only those needed to satisfy the quorum.
+	TrimCosignatures bool
+
 	// HTTPClient specifies the HTTP client to use when making requests to the
 	// log.  If nil, a default client is created.
 	HTTPClient *http.Client
@@ -130,7 +134,7 @@ func SubmitLeafRequests(ctx context.Context, config *Config, reqs []requests.Lea
 	if err != nil {
 		return nil, err
 	}
-	return collectProofs(sctx, config.getRequestTimeout(), config.sleep, config.Policy, submissions)
+	return collectProofs(sctx, config.getRequestTimeout(), config.sleep, config.Policy, config.TrimCosignatures, submissions)
 }
 
 type pendingSubmission struct {
@@ -219,12 +223,12 @@ func submitLeaf(ctx context.Context, timeout time.Duration, lc logClient, req re
 
 // collectProofs ensures the pending submissions transition from HTTP status 2XX
 // to HTTP status 200 OK in the respective logs. Proofs are then collected.
-func collectProofs(ctx context.Context, timeout time.Duration, sleep func(ctx context.Context) error, policy *policy.Policy, submissions []pendingSubmission) ([]proof.SigsumProof, error) {
+func collectProofs(ctx context.Context, timeout time.Duration, sleep func(ctx context.Context) error, policy *policy.Policy, trimCosignatures bool, submissions []pendingSubmission) ([]proof.SigsumProof, error) {
 	var proofs []proof.SigsumProof
 	for i, submission := range submissions {
 		for {
 			log.Info("Attempting to retrieve proof for checksum#%d", i+1)
-			pr, err := collectProof(ctx, timeout, policy, submission)
+			pr, err := collectProof(ctx, timeout, policy, trimCosignatures, submission)
 			if err != nil {
 				return nil, err
 			}
@@ -242,7 +246,7 @@ func collectProofs(ctx context.Context, timeout time.Duration, sleep func(ctx co
 
 // collectProof returns (non-nil, nil) when a proof was collected successfully.
 // Returns an error if it seems unlikely that trying again will help.
-func collectProof(ctx context.Context, timeout time.Duration, policy *policy.Policy, submission pendingSubmission) (*proof.SigsumProof, error) {
+func collectProof(ctx context.Context, timeout time.Duration, policy *policy.Policy, trimCosignatures bool, submission pendingSubmission) (*proof.SigsumProof, error) {
 	sctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	pr := proof.SigsumProof{
@@ -265,6 +269,9 @@ func collectProof(ctx context.Context, timeout time.Duration, policy *policy.Pol
 	if err := policy.VerifyCosignedTreeHead(&pr.LogKeyHash, &pr.TreeHead); err != nil {
 		log.Info("Verifying latest tree head: %v", err)
 		return nil, nil // continue trying
+	}
+	if trimCosignatures {
+		policy.TrimCosignatures(&pr.LogKeyHash, &pr.TreeHead)
 	}
 	req := requests.InclusionProof{Size: pr.TreeHead.Size, LeafHash: submission.leafHash}
 	if pr.Inclusion, err = submission.log.client.GetInclusionProof(sctx, req); err != nil {

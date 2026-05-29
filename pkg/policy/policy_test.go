@@ -134,6 +134,82 @@ func TestWitnessPolicy(t *testing.T) {
 	}
 }
 
+func TestTrimCosignatures(t *testing.T) {
+	td := newTestData(t, 6)
+
+	for _, s := range []struct {
+		desc     string
+		policy   *Policy
+		present  []int // witness indices in the cosignatures map
+		expected int   // expected cosignature count after trimming
+	}{
+		{
+			desc: "flat 3-of-4: all 4 present, trim to 3",
+			policy: func() *Policy {
+				p, err := NewKofNPolicy([]crypto.PublicKey{td.logPub}, td.witnessKeys[:4], 3)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return p
+			}(),
+			present:  []int{0, 1, 2, 3},
+			expected: 3,
+		},
+		{
+			desc: "flat 3-of-4: exactly 3 present, no change",
+			policy: func() *Policy {
+				p, err := NewKofNPolicy([]crypto.PublicKey{td.logPub}, td.witnessKeys[:4], 3)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return p
+			}(),
+			present:  []int{0, 1, 2},
+			expected: 3,
+		},
+		{
+			desc: "nested 1-of-n: 6 present, trim to 1",
+			policy: func() *Policy {
+				p, err := NewPolicy(
+					AddLog(&Entity{PublicKey: td.logPub}),
+					AddWitness("w0", &Entity{PublicKey: td.witnessKeys[0]}),
+					AddWitness("w1", &Entity{PublicKey: td.witnessKeys[1]}),
+					AddGroup("g0", 1, []string{"w0", "w1"}),
+					AddWitness("w2", &Entity{PublicKey: td.witnessKeys[2]}),
+					AddWitness("w3", &Entity{PublicKey: td.witnessKeys[3]}),
+					AddGroup("g1", 1, []string{"w2", "w3"}),
+					AddWitness("w4", &Entity{PublicKey: td.witnessKeys[4]}),
+					AddWitness("w5", &Entity{PublicKey: td.witnessKeys[5]}),
+					AddGroup("g2", 1, []string{"g1", "w4", "w5"}),
+					AddGroup("q", 1, []string{"g0", "g2"}),
+					SetQuorum("q"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				return p
+			}(),
+			present:  []int{0, 1, 2, 3, 4, 5},
+			expected: 1,
+		},
+	} {
+		cosignatures := make(map[crypto.Hash]types.Cosignature)
+		for _, i := range s.present {
+			cosignatures[td.witnessHashes[i]] = td.cosignatures[i]
+		}
+		cth := types.CosignedTreeHead{SignedTreeHead: td.sth, Cosignatures: cosignatures}
+		if err := s.policy.VerifyCosignedTreeHead(&td.logHash, &cth); err != nil {
+			t.Fatalf("%s: pre-trim verify failed: %v", s.desc, err)
+		}
+		s.policy.TrimCosignatures(&td.logHash, &cth)
+		if got := len(cth.Cosignatures); got != s.expected {
+			t.Errorf("%s: got %d cosignatures after trim, want %d", s.desc, got, s.expected)
+		}
+		if err := s.policy.VerifyCosignedTreeHead(&td.logHash, &cth); err != nil {
+			t.Errorf("%s: post-trim verify failed: %v", s.desc, err)
+		}
+	}
+}
+
 func TestOneOfNWitnessPolicy(t *testing.T) {
 	td := newTestData(t, 6)
 	// Policy with 1-of-n everywhere. Despite the hierarchy, this
