@@ -1,8 +1,33 @@
-NEWS for Sigsum tools, v0.14.x
+NEWS for Sigsum tools, v0.14.1
+
+	This release fixes bugs and adds a few new library features.
 
 	Incompatible changes:
 
-	* Building now requires go version 1.24 or later.
+	* Building now requires go version 1.25 or later.
+
+	* In Sigsum policy files, the special name "none" can no
+	  longer be used as a group member. See
+	  https://git.glasklar.is/sigsum/core/sigsum-go/-/work_items/170.
+
+	Bug fixes:
+
+	* sigsum-monitor: Fix handling of DeadlineExceeded errors, see
+	  https://git.glasklar.is/sigsum/core/sigsum-go/-/work_items/179.
+
+	* Fix panic when parsing certain invalid public key files. See
+	  https://git.glasklar.is/sigsum/core/sigsum-go/-/merge_requests/301.
+
+	* Fix broken handling of i/o errors when reading policy files
+	  and for sigsum-submit --leaf-hash.
+
+	New features:
+
+	* pkg/key: New functions ParsePublicKeys and
+	  ParsePublicKeysWithPolicy.
+
+	* pkg/policy: New method Policy.ProcessQuorum, for depth-first
+	  processing of the groups and witnesses defining the quorum.
 
 NEWS for Sigsum tools, v0.13.1
 
@@ -11,7 +36,7 @@ NEWS for Sigsum tools, v0.13.1
 	Bug fixes:
 
 	* Fix go.mod and go.sum files as needed after versions of
-          x/net and x/text dependencies were changed.
+	  x/net and x/text dependencies were changed.
 
 NEWS for Sigsum tools, v0.13.0
 
