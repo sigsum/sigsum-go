@@ -4,6 +4,9 @@ set -e
 
 # This test was created by starting from sigsum-submit-witness-test and adding a litewitness process there
 
+# This test expects sigsum-agent to be already running using the socket given by AGENT_SOCKET below
+AGENT_SOCKET=/tmp/agent-sock
+
 # Remove any old litewitness things
 rm -rf tmp-litewitness
 
@@ -24,9 +27,23 @@ cd ../../../..
 # Add log key to litewitness
 tmp-litewitness/torchwood/cmd/witnessctl/witnessctl add-sigsum-log -db tmp-litewitness/litewitness.db -key $(cat test.log.key.pub | ./bin/sigsum-key to-hex)
 
+# Check that agent is available and get witness pubkey
+echo Checking that agent socket $AGENT_SOCKET exists
+ls $AGENT_SOCKET
+LITEWITNESS_PUBKEY_AS_HEX=$(SSH_AUTH_SOCK=$AGENT_SOCKET ssh-add -L | ./bin/sigsum-key to-hex)
+LITEWITNESS_KEYHASH=$(SSH_AUTH_SOCK=$AGENT_SOCKET ssh-add -L | ./bin/sigsum-key to-hash)
+echo LITEWITNESS_PUBKEY_AS_HEX = $LITEWITNESS_PUBKEY_AS_HEX
+echo LITEWITNESS_KEYHASH = $LITEWITNESS_KEYHASH
+
+# Prepare policy file
 echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
-echo "witness W $(./bin/sigsum-key to-hex -k test.witness.key.pub) http://localhost:7777" >> test.policy
-echo "quorum W" >> test.policy
+echo "witness W1 $(./bin/sigsum-key to-hex -k test.witness.key.pub) http://localhost:7777" >> test.policy
+echo "witness W2 $LITEWITNESS_PUBKEY_AS_HEX http://localhost:9999" >> test.policy
+echo "group quorum-rule 2 W1 W2" >> test.policy
+echo "quorum quorum-rule" >> test.policy
+
+echo Policy file test.policy looks like this:
+cat test.policy
 
 # Start witness server
 rm -f test.witness.cth
@@ -34,6 +51,11 @@ rm -f test.witness.cth
   --state-file test.witness.cth localhost:7777 &
 
 WITNESS_PID=$!
+
+# Start litewitness server
+tmp-litewitness/torchwood/cmd/litewitness/litewitness -db tmp-litewitness/litewitness.db -ssh-agent $AGENT_SOCKET -key $LITEWITNESS_KEYHASH -listen localhost:9999 -name litewitness-test &
+
+LITEWITNESS_PID=$!
 
 # Start sigsum log server
 rm -f test.log.sth
@@ -45,7 +67,7 @@ echo "startup=empty" > test.log.sth.startup
 SIGSUM_PID=$!
 
 cleanup () {
-    kill ${SIGSUM_PID} ${WITNESS_PID}
+    kill ${SIGSUM_PID} ${WITNESS_PID} ${LITEWITNESS_PID}
 }
 
 trap cleanup EXIT
