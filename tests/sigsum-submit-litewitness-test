@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 set -e
 
@@ -20,12 +20,18 @@ cd ../witnessctl
 go build
 cd ../../../..
 
-./bin/sigsum-key generate -o test.log.key
+N_LOGS=5
+echo N_LOGS = $N_LOGS
+for i in `seq 1 $N_LOGS` ; do
+    ./bin/sigsum-key generate -o test.log.$i.key
+done
 ./bin/sigsum-key generate -o test.submit.key
 ./bin/sigsum-key generate -o test.witness.key
 
-# Add log key to litewitness
-tmp-litewitness/torchwood/cmd/witnessctl/witnessctl add-sigsum-log -db tmp-litewitness/litewitness.db -key $(cat test.log.key.pub | ./bin/sigsum-key to-hex)
+# Add log keys to litewitness
+for i in `seq 1 $N_LOGS` ; do
+    tmp-litewitness/torchwood/cmd/witnessctl/witnessctl add-sigsum-log -db tmp-litewitness/litewitness.db -key $(cat test.log.$i.key.pub | ./bin/sigsum-key to-hex)
+done
 
 # Check that agent is available and get witness pubkey
 echo Checking that agent socket $AGENT_SOCKET exists
@@ -36,7 +42,7 @@ echo LITEWITNESS_PUBKEY_AS_HEX = $LITEWITNESS_PUBKEY_AS_HEX
 echo LITEWITNESS_KEYHASH = $LITEWITNESS_KEYHASH
 
 # Prepare policy file
-echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
+echo "log $(./bin/sigsum-key to-hex -k test.log.1.key.pub) http://localhost:12000" > test.policy
 echo "witness W1 $(./bin/sigsum-key to-hex -k test.witness.key.pub) http://localhost:7777" >> test.policy
 echo "witness W2 $LITEWITNESS_PUBKEY_AS_HEX http://localhost:9999" >> test.policy
 echo "group quorum-rule 2 W1 W2" >> test.policy
@@ -47,7 +53,7 @@ cat test.policy
 
 # Start witness server
 rm -f test.witness.cth
-./bin/sigsum-witness -k test.witness.key --log-key test.log.key.pub \
+./bin/sigsum-witness -k test.witness.key --log-key test.log.1.key.pub \
   --state-file test.witness.cth localhost:7777 &
 
 WITNESS_PID=$!
@@ -57,17 +63,29 @@ tmp-litewitness/torchwood/cmd/litewitness/litewitness -db tmp-litewitness/litewi
 
 LITEWITNESS_PID=$!
 
-# Start sigsum log server
-rm -f test.log.sth
-echo "startup=empty" > test.log.sth.startup
-./bin/sigsum-log-primary --key-file test.log.key \
-    --policy-file=test.policy \
-    --interval=1s --log-level=error --backend=ephemeral --sth-file test.log.sth &
-
-SIGSUM_PID=$!
+# Start sigsum log servers
+declare -a SIGSUM_PIDS
+extport=12000
+intport=13000
+for i in `seq 1 $N_LOGS` ; do
+    rm -f test.log.$i.sth
+    echo "startup=empty" > test.log.$i.sth.startup
+    ./bin/sigsum-log-primary --key-file test.log.$i.key \
+        --policy-file=test.policy \
+        --interval=1s --log-level=error --backend=ephemeral --sth-file test.log.$i.sth \
+	--internal-endpoint=localhost:$intport --external-endpoint=localhost:$extport &
+    SIGSUM_PIDS[i]=$!
+    echo started log server with pid ${SIGSUM_PIDS[i]}
+    ((extport=extport+1))
+    ((intport=intport+1))
+done
 
 cleanup () {
-    kill ${SIGSUM_PID} ${WITNESS_PID} ${LITEWITNESS_PID}
+    for i in `seq 1 $N_LOGS` ; do
+	echo killing log server with pid ${SIGSUM_PIDS[i]}
+        kill ${SIGSUM_PIDS[i]}
+    done
+    kill ${WITNESS_PID} ${LITEWITNESS_PID}
 }
 
 trap cleanup EXIT
