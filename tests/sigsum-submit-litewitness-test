@@ -10,10 +10,13 @@ AGENT_SOCKET=/tmp/agent-sock
 # Remove any old litewitness things
 rm -rf tmp-litewitness
 
+TORCHWOOD_REPO=https://git.glasklar.is/elias/torchwood.git
+#TORCHWOOD_REPO=https://github.com/FiloSottile/torchwood.git
+
 # Build litewitness and witnessctl
 mkdir tmp-litewitness
 cd tmp-litewitness
-git clone https://git.glasklar.is/elias/torchwood.git
+git clone $TORCHWOOD_REPO
 cd torchwood/cmd/litewitness
 go build
 cd ../witnessctl
