@@ -1,4 +1,4 @@
-image: golang:1.25
+image: git.glasklar.is:5050/glasklar/infra/containers/golang:1.25
 
 before_script:
   - apt-get update
