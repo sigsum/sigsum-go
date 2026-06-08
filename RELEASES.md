@@ -3,8 +3,9 @@
 ## What is a release?
 
 A release of sigsum-go is a git tag that is mentioned in the [NEWS][]
-file, and announced on the [sigsum-announce][] mailing list. (I.e.,
-not all tags are considered releases).
+file, and announced on the [sigsum-announce][] mailing list. Starting
+with v0.14.1, tags of this form are used exclusively for releases, but
+some of the older tags of this form are not considered releases.
 
 [NEWS]: ./NEWS
 [sigsum-announce]: https://lists.sigsum.org/mailman3/postorius/lists/sigsum-announce.lists.sigsum.org/
@@ -42,6 +43,7 @@ using the `sigsum-policy` program.
 
 The Go library (exported packages under `./pkg`) is intended for
 applications that want to implement Sigsum logging, without going via
-the command line tools. However, we are not yet able to promise API
-stability (as indicated by the "v0.*" module version), and there's no
-documentation beyond what's included in the source code.
+the command line tools. Important changes are documented in the NEWS
+file, but we are not yet able to promise API stability (as indicated
+by the "v0.*" module version). There's no documentation beyond the
+source code comments.
