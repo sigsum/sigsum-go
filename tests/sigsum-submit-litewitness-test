@@ -66,6 +66,9 @@ tmp-litewitness/torchwood/cmd/litewitness/litewitness -db tmp-litewitness/litewi
 
 LITEWITNESS_PID=$!
 
+# Give litewitness server some time to get ready.
+sleep 2
+
 # Start sigsum log servers
 declare -a SIGSUM_PIDS
 extport=12000
@@ -75,8 +78,8 @@ for i in `seq 1 $N_LOGS` ; do
     echo "startup=empty" > test.log.$i.sth.startup
     ./bin/sigsum-log-primary --key-file test.log.$i.key \
         --policy-file=test.policy \
-        --interval=1s --log-level=error --backend=ephemeral --sth-file test.log.$i.sth \
-	--internal-endpoint=localhost:$intport --external-endpoint=localhost:$extport &
+        --interval=1s --log-level=debug --backend=ephemeral --sth-file test.log.$i.sth \
+	--internal-endpoint=localhost:$intport --external-endpoint=localhost:$extport &> tmp-log-output-$i &
     SIGSUM_PIDS[i]=$!
     echo started log server with pid ${SIGSUM_PIDS[i]}
     ((extport=extport+1))
@@ -96,15 +99,22 @@ trap cleanup EXIT
 # Give log server some time to get ready.
 sleep 2
 
-for x in $(seq 5); do
+N_SUBMISSIONS=10
+
+for x in $(seq $N_SUBMISSIONS); do
     echo >&2 "submit $x"
     # Must be exactly 32 bytes
     printf "%31s\n" "foo-$x" \
 	| ./bin/sigsum-submit --diagnostics=warning --raw-hash -o "test.$x.proof" -k test.submit.key --policy test.policy
+    echo Checking tmp-log-output-1 after submission $x
+    n_failures=`grep "querying witness" tmp-log-output-1 | grep failed | wc -l`
+    echo n_failures = $n_failures
 done
 
-for x in $(seq 5); do
+for x in $(seq $N_SUBMISSIONS); do
     echo >&2 "verify $x"
     printf "%31s\n" "foo-$x" \
 	| ./bin/sigsum-verify --raw-hash --key test.submit.key.pub --policy test.policy "test.$x.proof"
 done
+
+echo n_failures = $n_failures
