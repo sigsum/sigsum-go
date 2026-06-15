@@ -70,7 +70,7 @@ func readPublicKeyFiles(fileNames []string, getPolicy bool) (map[crypto.Hash]cry
 	policyName = policyNames[0]
 	for _, name := range policyNames {
 		if name != policyName {
-			return nil, "", fmt.Errorf("conflicting policy names found in pubkeys: '%q' != '%q'", name, policyName)
+			return nil, "", fmt.Errorf("conflicting policy names found in pubkeys: %q != %q", name, policyName)
 		}
 	}
 	return pubkeys, policyName, nil

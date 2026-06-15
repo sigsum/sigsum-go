@@ -135,7 +135,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDFMuCrItf6Qzxi/GQr6R1m4B3lwn5kfc28ETV4TvLym
 			} else if got != table.expCount {
 				t.Errorf("unexpected number of keys, got %d, want %d", got, table.expCount)
 			} else if policyName != table.expPolicyName {
-				t.Errorf("unexpected policy name, got '%q', want '%q'", policyName, table.expPolicyName)
+				t.Errorf("unexpected policy name, got %q, want %q", policyName, table.expPolicyName)
 			}
 		} else {
 			if err == nil {
