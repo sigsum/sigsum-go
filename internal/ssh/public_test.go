@@ -40,7 +40,7 @@ func TestParsePublicEd25519(t *testing.T) {
 			} else if key != expKey {
 				t.Errorf("%q: parsing gave wrong key: %x", table.desc, key)
 			} else if policyName != table.expPolicyName {
-				t.Errorf("%q: parsing gave wrong policy name: '%q' != '%q'", table.desc, policyName, table.expPolicyName)
+				t.Errorf("%q: parsing gave wrong policy name: %q != %q", table.desc, policyName, table.expPolicyName)
 			}
 		}
 	}
@@ -78,7 +78,7 @@ func TestGetPolicy(t *testing.T) {
 			if !table.expSuccess {
 				t.Errorf("%q: unexpected success, should have failed", table.desc)
 			} else if policyName != table.expPolicyName {
-				t.Errorf("%q: parsing gave wrong policy name: '%q' != '%q'", table.desc, policyName, table.expPolicyName)
+				t.Errorf("%q: parsing gave wrong policy name: %q != %q", table.desc, policyName, table.expPolicyName)
 			}
 		}
 	}

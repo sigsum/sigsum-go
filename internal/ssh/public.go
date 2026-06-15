@@ -44,18 +44,18 @@ func getPolicy(field string) (string, error) {
 	}
 	// First and last character must be quotation marks
 	if len(quotedPolicyName) < 3 {
-		return "", fmt.Errorf("failed to extract policy name from string '%q' - too short", field)
+		return "", fmt.Errorf("failed to extract policy name from string %q - too short", field)
 	}
 	name, found := strings.CutPrefix(quotedPolicyName, "\"")
 	if !found {
-		return "", fmt.Errorf("failed to extract policy name from string '%q' - initial quotation mark not found", field)
+		return "", fmt.Errorf("failed to extract policy name from string %q - initial quotation mark not found", field)
 	}
 	name, found = strings.CutSuffix(name, "\"")
 	if !found {
-		return "", fmt.Errorf("failed to extract policy name from string '%q' - final quotation mark not found", field)
+		return "", fmt.Errorf("failed to extract policy name from string %q - final quotation mark not found", field)
 	}
 	if strings.ContainsAny(name, "\"'\\ \n") {
-		return "", fmt.Errorf("failed to extract policy name from string '%q' - name contains forbidden character", field)
+		return "", fmt.Errorf("failed to extract policy name from string %q - name contains forbidden character", field)
 	}
 	return name, nil
 }

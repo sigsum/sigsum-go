@@ -51,10 +51,10 @@ func openByName(name string) (io.ReadCloser, error) {
 	}
 	f, err2 := openBuiltinByName(name)
 	if err2 == nil {
-		log.Info("Found builtin policy '%q'", name)
+		log.Info("Found builtin policy %q", name)
 		return f, nil
 	}
-	err := fmt.Errorf("failed to get named policy for name '%q', errors '%v' and '%v'", name, err1, err2)
+	err := fmt.Errorf("failed to get named policy for name %q, errors '%v' and '%v'", name, err1, err2)
 	return nil, err
 }
 
