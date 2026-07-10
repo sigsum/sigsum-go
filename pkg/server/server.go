@@ -19,6 +19,17 @@ import (
 	"sigsum.org/sigsum-go/pkg/types"
 )
 
+type Middleware func(http.Handler) http.Handler
+
+func chain(middlewares ...Middleware) Middleware {
+	return func(h http.Handler) http.Handler {
+		for i := len(middlewares); i > 0; i-- {
+			h = middlewares[i-1](h)
+		}
+		return h
+	}
+}
+
 type server struct {
 	config Config
 	mux    *http.ServeMux
@@ -41,6 +52,7 @@ func (ws *responseWriterWithStatus) Header() http.Header {
 func (ws *responseWriterWithStatus) Write(data []byte) (int, error) {
 	return ws.w.Write(data)
 }
+
 func (ws *responseWriterWithStatus) WriteHeader(statusCode int) {
 	ws.statusCode = statusCode
 	ws.w.WriteHeader(statusCode)
@@ -72,9 +84,10 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r.WithContext(ctx))
 }
 
-func (s *server) register(method string, endpoint types.Endpoint, args string, handler http.Handler) {
-	s.mux.Handle(method+" /"+endpoint.Path(s.config.Prefix)+args,
-		&handlerWithMetrics{config: &s.config, endpoint: string(endpoint), handler: handler})
+func (s *server) register(method string, endpoint types.Endpoint, args string, h http.Handler) {
+	h = chain(s.config.Middlewares...)(h)
+	h = &handlerWithMetrics{config: &s.config, endpoint: string(endpoint), handler: h}
+	s.mux.Handle(method+" /"+endpoint.Path(s.config.Prefix)+args, h)
 }
 
 // Note that it's not useful to report errors that occur when writing

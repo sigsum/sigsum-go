@@ -22,6 +22,8 @@ type Config struct {
 	Prefix  string
 	Timeout time.Duration
 	Metrics Metrics
+	// Middlewares wrap handlers and are executed in the order they are added.
+	Middlewares []Middleware
 }
 
 func (c *Config) withDefaults() Config {
