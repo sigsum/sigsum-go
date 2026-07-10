@@ -4,14 +4,15 @@
 // for errors where it's clear that a request is bad according to the
 // specs, regardless of what's backing the api interface. It converts
 // the api method's return values (success or errors) into a http
-// response to be returned to the client. Optionally, it can produce
-// basic request and response metrics.
+// response to be returned to the client. Optionally, handlers can be
+// wrapped with middleware to perform tasks such as recording metrics.
 package server
 
 import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"sigsum.org/sigsum-go/pkg/api"
@@ -28,6 +29,23 @@ func chain(middlewares ...Middleware) Middleware {
 		}
 		return h
 	}
+}
+
+type endpointContextKey struct{}
+
+// EndpointFromContext returns the endpoint stored in ctx, or an empty
+// string if no endpoint is present.
+func EndpointFromContext(ctx context.Context) string {
+	v, _ := ctx.Value(endpointContextKey{}).(string)
+	return v
+}
+
+func withEndpoint(endpoint string, next http.Handler) http.Handler {
+	endpoint = strings.TrimSuffix(endpoint, "/")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = r.WithContext(context.WithValue(r.Context(), endpointContextKey{}, endpoint))
+		next.ServeHTTP(w, r)
+	})
 }
 
 type server struct {
@@ -87,6 +105,7 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *server) register(method string, endpoint types.Endpoint, args string, h http.Handler) {
 	h = chain(s.config.Middlewares...)(h)
 	h = &handlerWithMetrics{config: &s.config, endpoint: string(endpoint), handler: h}
+	h = withEndpoint(string(endpoint), h)
 	s.mux.Handle(method+" /"+endpoint.Path(s.config.Prefix)+args, h)
 }
 

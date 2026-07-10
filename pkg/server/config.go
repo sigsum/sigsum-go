@@ -21,9 +21,10 @@ func (_ noMetrics) OnResponse(_ string, _ int, _ time.Duration) {}
 type Config struct {
 	Prefix  string
 	Timeout time.Duration
-	Metrics Metrics
 	// Middlewares wrap handlers and are executed in the order they are added.
 	Middlewares []Middleware
+	// Deprecated: use Middlewares to instrument handlers instead.
+	Metrics Metrics
 }
 
 func (c *Config) withDefaults() Config {
