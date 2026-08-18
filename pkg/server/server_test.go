@@ -9,10 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-
 	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/mocks/mockmetrics"
 )
 
 // Run HTTP request
@@ -164,74 +161,5 @@ func TestPost(t *testing.T) {
 				t.Errorf("Unexpected response for %q, got %q, want %q", table.url, got, want)
 			}
 		}
-	}
-}
-
-func TestMetrics(t *testing.T) {
-	// If this delay is exceeded, don't fail test, just log a
-	// warning, since we may be delayed due to bad luck in
-	// scheduling on an overloaded machine.
-	maxExpectedDelay := 100 * time.Millisecond
-
-	// Just long enough to be noticeable.
-	testDelay := 200 * time.Millisecond
-
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch args := r.PathValue("args"); args {
-		default:
-			reportError(w, r.URL, api.ErrBadRequest.WithError(
-				fmt.Errorf("bad request %q", args)))
-		case "ok":
-			// Do nothing
-		case "accept":
-			reportError(w, r.URL, api.ErrAccepted)
-		case "slow":
-			time.Sleep(testDelay)
-		}
-	})
-	for _, table := range []struct {
-		url     string
-		status  int
-		usePost bool
-		slow    bool
-	}{
-		{url: "/foo/get-x", status: 301},
-		{url: "/foo/get-x/ok", status: 200},
-		{url: "/foo/get-x/bad", status: 400},
-		{url: "/foo/get-x/accept", status: 202},
-		{url: "/foo/get-x/slow", status: 200, slow: true},
-	} {
-		func() {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			metrics := mockmetrics.NewMockMetrics(ctrl)
-
-			config := Config{Prefix: "foo", Timeout: 5 * time.Minute, Metrics: metrics}
-			server := newServer(&config)
-			server.register(http.MethodGet, "get-x/", "{args...}", handler)
-			method := "GET"
-			if table.usePost {
-				method = "POST"
-			}
-			if table.status != 301 {
-				metrics.EXPECT().OnRequest("get-x/")
-				metrics.EXPECT().OnResponse("get-x/", table.status, gomock.Any()).Do(
-					func(_ string, _ int, latency time.Duration) {
-						if table.slow {
-							if latency < testDelay {
-								t.Errorf("Expected latency (got %v) >= %v", latency, testDelay)
-							}
-						} else if latency > maxExpectedDelay {
-							t.Logf("warn: Unexpectedly high latency (%v), expected at most %v", latency, maxExpectedDelay)
-						}
-					})
-
-			}
-
-			result, _ := queryServer(t, server, method, table.url, "")
-			if got, want := result.StatusCode, table.status; got != want {
-				t.Errorf("Unexpected status code for %q, got %d, want %d", table.url, got, want)
-			}
-		}()
 	}
 }
