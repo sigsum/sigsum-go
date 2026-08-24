@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"sigsum.org/sigsum-go/pkg/api"
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 // Run HTTP request
@@ -161,5 +162,49 @@ func TestPost(t *testing.T) {
 				t.Errorf("Unexpected response for %q, got %q, want %q", table.url, got, want)
 			}
 		}
+	}
+}
+
+// Basic smoke test of this configuration feature.
+func TestHandlerDecorator(t *testing.T) {
+	decoratorCalled := false
+	decoratedHandlerCalled := false
+	endpointHandled := types.Endpoint("none")
+
+	config := Config{
+		Prefix:  "foo",
+		Timeout: 5 * time.Minute,
+		HandlerDecorator: func(h http.Handler, e types.Endpoint) http.Handler {
+			decoratorCalled = true
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				decoratedHandlerCalled = true
+				endpointHandled = e
+				h.ServeHTTP(w, r)
+			})
+		},
+	}
+	server := newServer(&config)
+	endpoint := types.Endpoint("get-x")
+	server.register(http.MethodGet, endpoint, "",
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, err := fmt.Fprintf(w, "x-response\n")
+			if err != nil {
+				t.Fatalf("writing response failed: %v\n", err)
+			}
+		}))
+	if !decoratorCalled {
+		t.Errorf("The HandlerDecorator wasn't called")
+	}
+	result, body := queryServer(t, server, "GET", "/foo/get-x", "")
+	if got, want := result.StatusCode, 200; got != want {
+		t.Fatalf("Unexpected status code, got %d, want %d", got, want)
+	}
+	if !decoratedHandlerCalled {
+		t.Errorf("The decorated handler wasn't called")
+	} else if endpointHandled != endpoint {
+		t.Errorf("Unexpected endpoint passed to decorator: %v", endpointHandled)
+	}
+	if got, want := body, "x-response\n"; got != want {
+		t.Errorf("Unexpected response, got %q, want %q", got, want)
 	}
 }
