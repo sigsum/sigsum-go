@@ -69,10 +69,11 @@ response to the `get-leaves` request, but the checksum is omitted; the
 checksum must be derived from other context.
 
 The last two blocks are verbatim responses from the get-tree-head and
-get-inclusion proof requests. In the corner case that `size` <= 1, the
-last part is omitted. A proof with `size` = 0 is always invalid, and
-for `size` = 1, it is implied that `leaf_index` = 0 and there is no
-inclusion path.
+get-inclusion proof requests. The cosignature lines must carry
+*distinct* key hashes, no duplicates. In the corner case that `size`
+<= 1, the last part is omitted. A proof with `size` = 0 is always
+invalid, and for `size` = 1, it is implied that `leaf_index` = 0 and
+there is no inclusion path.
 
 # Verifying a proof
 
@@ -136,5 +137,3 @@ before attempting to verify the leaf signature. See [proposal][] for
 the rationale for removing this field.
 
 [proposal]: https://git.glasklar.is/sigsum/project/documentation/-/blob/main/proposals/2024-11-proof-with-no-leaf-checksum.md
-
-
