@@ -1,27 +1,20 @@
 package server
 
 import (
+	"net/http"
 	"time"
+
+	"sigsum.org/sigsum-go/pkg/types"
 )
 
 const (
 	defaultTimeout = 30 * time.Second
 )
 
-type Metrics interface {
-	OnRequest(pattern string)
-	OnResponse(pattern string, status int, latency time.Duration)
-}
-
-type noMetrics struct{}
-
-func (_ noMetrics) OnRequest(_ string)                          {}
-func (_ noMetrics) OnResponse(_ string, _ int, _ time.Duration) {}
-
 type Config struct {
-	Prefix  string
-	Timeout time.Duration
-	Metrics Metrics
+	Prefix           string
+	Timeout          time.Duration
+	HandlerDecorator func(http.Handler, types.Endpoint) http.Handler
 }
 
 func (c *Config) withDefaults() Config {
@@ -29,8 +22,10 @@ func (c *Config) withDefaults() Config {
 	if config.Timeout == 0 {
 		config.Timeout = defaultTimeout
 	}
-	if config.Metrics == nil {
-		config.Metrics = noMetrics{}
+	if config.HandlerDecorator == nil {
+		config.HandlerDecorator = func(handler http.Handler, _ types.Endpoint) http.Handler {
+			return handler
+		}
 	}
 	return config
 }
