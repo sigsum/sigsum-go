@@ -78,7 +78,7 @@ func TestGet(t *testing.T) {
 		{url: "/foo/get-x", status: 200, response: "x-response\n"},
 		{url: "/foo/get-x", status: 405, usePost: true, response: "Method Not Allowed\n"},
 		{url: "/foo/get-xx", status: 404},
-		{url: "/foo/get-y", status: 301, htmlContentType: true},
+		{url: "/foo/get-y", status: 307, htmlContentType: true},
 		{url: "/foo/get-y/", status: 400, response: "(400) missing y\n"},
 		{url: "/foo/get-y/bar", status: 200, response: "y-response: bar\n"},
 	} {
@@ -87,9 +87,8 @@ func TestGet(t *testing.T) {
 			method = "POST"
 		}
 		result, body := queryServer(t, server, method, table.url, "")
-		if got, want := result.StatusCode, table.status; got != want {
-			t.Errorf("Unexpected status code for %q, got %d, want %d", table.url, got, want)
-		}
+		checkStatus(t, table.url, result.StatusCode, table.status)
+
 		contentType := "text/plain; charset=utf-8"
 		if table.htmlContentType {
 			// For internally generated redirects or errors.
@@ -207,4 +206,18 @@ func TestHandlerDecorator(t *testing.T) {
 	if got, want := body, "x-response\n"; got != want {
 		t.Errorf("Unexpected response, got %q, want %q", got, want)
 	}
+}
+
+func checkStatus(t *testing.T, url string, got, want int) {
+	t.Helper()
+	if got == want {
+		return
+	}
+	// Don't complain if we get 301 (Moved Permanently) rather
+	// than 307 (Temporary Redirect), since go-1.25 and earlier
+	// appears to produce 301.
+	if got == 301 && want == 307 {
+		return
+	}
+	t.Errorf("Unexpected status code for %q, got %d, want %d", url, got, want)
 }

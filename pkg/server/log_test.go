@@ -73,7 +73,7 @@ func TestGetInclusionProof(t *testing.T) {
 		status int
 		err    error
 	}{
-		{url: "/foo/get-inclusion-proof", status: 301},
+		{url: "/foo/get-inclusion-proof", status: 307},
 		{url: "/foo/get-inclusion-proof/", status: 400},
 		{url: "/foo/get-inclusion-proof/x", status: 400},
 		{url: "/foo/get-inclusion-proof/2/x", status: 400},
@@ -105,9 +105,7 @@ func TestGetInclusionProof(t *testing.T) {
 			}
 			result, body := queryServer(t, server, http.MethodGet, table.url, "")
 
-			if got, want := result.StatusCode, table.status; got != want {
-				t.Errorf("Unexpected status code for %q, got %d, want %d", table.url, got, want)
-			}
+			checkStatus(t, table.url, result.StatusCode, table.status)
 			if table.status != 200 {
 				return
 			}
@@ -135,7 +133,7 @@ func TestGetConsistencyProof(t *testing.T) {
 		status int
 		err    error
 	}{
-		{url: "/foo/get-consistency-proof", status: 301},
+		{url: "/foo/get-consistency-proof", status: 307},
 		{url: "/foo/get-consistency-proof/", status: 400},
 		{url: "/foo/get-consistency-proof/x", status: 400},
 		{url: "/foo/get-consistency-proof/2/x", status: 400},
@@ -167,9 +165,7 @@ func TestGetConsistencyProof(t *testing.T) {
 			}
 			result, body := queryServer(t, server, http.MethodGet, table.url, "")
 
-			if got, want := result.StatusCode, table.status; got != want {
-				t.Errorf("Unexpected status code for %q, got %d, want %d", table.url, got, want)
-			}
+			checkStatus(t, table.url, result.StatusCode, table.status)
 			if table.status != 200 {
 				return
 			}
@@ -190,7 +186,7 @@ func TestGetLeaves(t *testing.T) {
 		status int
 		err    error
 	}{
-		{url: "/foo/get-leaves", status: 301},
+		{url: "/foo/get-leaves", status: 307},
 		{url: "/foo/get-leaves/", status: 400},
 		{url: "/foo/get-leaves/x", status: 400},
 		{url: "/foo/get-leaves/2/x", status: 400},
@@ -230,9 +226,7 @@ func TestGetLeaves(t *testing.T) {
 			}
 			result, body := queryServer(t, server, http.MethodGet, table.url, "")
 
-			if got, want := result.StatusCode, table.status; got != want {
-				t.Errorf("Unexpected status code for %q, got %d, want %d", table.url, got, want)
-			}
+			checkStatus(t, table.url, result.StatusCode, table.status)
 			if table.status != 200 {
 				return
 			}
