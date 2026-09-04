@@ -5,6 +5,7 @@ module sigsum.org/sigsum-go
 go 1.25.0
 
 require (
+	filippo.io/edwards25519 v1.2.0
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
 	github.com/golang/mock v1.6.0
 	github.com/pborman/getopt/v2 v2.1.0
