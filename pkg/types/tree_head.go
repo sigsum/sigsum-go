@@ -50,7 +50,7 @@ func (th *TreeHead) FormatCheckpoint(origin string) string {
 }
 
 func SigsumCheckpointOrigin(publicKey *crypto.PublicKey) string {
-	return fmt.Sprintf("%s%x", CheckpointNamePrefix, crypto.HashBytes(publicKey[:]))
+	return fmt.Sprintf("%s%x", CheckpointNamePrefix, publicKey.KeyHash())
 }
 
 func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
@@ -144,7 +144,7 @@ func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
 // Deprecated: This backwards compatibility function should be deleted.
 func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 	// Prefix used temporarily, for version v0.1.15 and v0.2.0.
-	keyHash := crypto.HashBytes(key[:])
+	keyHash := key.KeyHash()
 	if crypto.Verify(key, []byte(sth.FormatCheckpoint(fmt.Sprintf("sigsum.org/v1/%x", &keyHash))), &sth.Signature) {
 		return true
 	}

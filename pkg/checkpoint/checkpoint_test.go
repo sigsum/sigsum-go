@@ -64,7 +64,7 @@ func TestCheckpointFromASCII(t *testing.T) {
 func TestCheckpointSigned(t *testing.T) {
 	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
 	pub := signer.Public()
-	origin := fmt.Sprintf("%s%x", types.CheckpointNamePrefix, crypto.HashBytes(pub[:]))
+	origin := fmt.Sprintf("%s%x", types.CheckpointNamePrefix, pub.KeyHash())
 	cp := Checkpoint{
 		Origin: origin,
 		KeyId:  NewLogKeyId(origin, &pub),

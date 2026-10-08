@@ -246,7 +246,7 @@ func collectProof(ctx context.Context, timeout time.Duration, policy *policy.Pol
 	sctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	pr := proof.SigsumProof{
-		LogKeyHash: crypto.HashBytes(submission.log.entity.PublicKey[:]),
+		LogKeyHash: submission.log.entity.PublicKey.KeyHash(),
 		Leaf:       submission.shortLeaf,
 	}
 	persisted, err := submission.log.client.AddLeaf(sctx, submission.request, submission.log.header)

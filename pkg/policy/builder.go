@@ -89,7 +89,7 @@ type addLog struct {
 }
 
 func (l *addLog) apply(b *builder) error {
-	h := crypto.HashBytes(l.entity.PublicKey[:])
+	h := l.entity.PublicKey.KeyHash()
 	if _, dup := b.logs[h]; dup {
 		return fmt.Errorf("duplicate log: %x\n", l.entity.PublicKey)
 	}
@@ -110,7 +110,7 @@ func (w *addWitness) apply(b *builder) error {
 	if b.ifdef(w.name) {
 		return fmt.Errorf("duplicate name: %q", w.name)
 	}
-	h := crypto.HashBytes(w.entity.PublicKey[:])
+	h := w.entity.PublicKey.KeyHash()
 	if _, dup := b.witnesses[h]; dup {
 		return fmt.Errorf("duplicate witness: %x\n", w.entity.PublicKey)
 	}

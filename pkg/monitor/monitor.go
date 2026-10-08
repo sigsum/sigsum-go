@@ -103,7 +103,7 @@ func (c *Config) filterLeaves(
 func MonitorLog(ctx context.Context, client *monitoringLogClient,
 	state MonitorState, c *Config) {
 	config := c.applyDefaults()
-	keyHash := crypto.HashBytes(client.logKey[:])
+	keyHash := client.logKey.KeyHash()
 	for ctx.Err() == nil {
 		updateCtx, cancel := context.WithTimeout(ctx, config.QueryInterval)
 		if state.TreeHead.Size == state.NextLeafIndex {
@@ -151,7 +151,7 @@ func StartMonitoring(
 	state map[crypto.Hash]MonitorState) <-chan struct{} {
 	var wg sync.WaitGroup
 	for _, l := range p.GetLogsWithUrl() {
-		keyHash := crypto.HashBytes(l.PublicKey[:])
+		keyHash := l.PublicKey.KeyHash()
 		initialState, ok := state[keyHash]
 		if !ok {
 			initialState = MonitorState{

@@ -60,7 +60,7 @@ func readPublicKeyFiles(fileNames []string, getPolicy bool) (map[crypto.Hash]cry
 		if err != nil {
 			return nil, "", fmt.Errorf("failed reading key: %v", err)
 		}
-		pubkeys[crypto.HashBytes(pub[:])] = pub
+		pubkeys[pub.KeyHash()] = pub
 		policyNames = append(policyNames, policyName)
 	}
 	if !getPolicy {

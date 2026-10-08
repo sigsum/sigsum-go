@@ -73,7 +73,7 @@ func TestSubmitSuccess(t *testing.T) {
 
 		pr := proofs[0]
 		if err := pr.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
-			crypto.HashBytes(submitPub[:]): submitPub}, p); err != nil {
+			submitPub.KeyHash(): submitPub}, p); err != nil {
 			t.Errorf("returned sigsum proof failed to verify: %v", err)
 		}
 	}

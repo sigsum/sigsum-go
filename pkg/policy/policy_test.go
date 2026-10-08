@@ -24,7 +24,7 @@ func TestLogPolicy(t *testing.T) {
 
 		cths = append(cths, types.CosignedTreeHead{SignedTreeHead: sth})
 		logKeys = append(logKeys, pub)
-		logHashes = append(logHashes, crypto.HashBytes(pub[:]))
+		logHashes = append(logHashes, pub.KeyHash())
 	}
 	p, err := NewKofNPolicy(logKeys[:2], nil, 0)
 	if err != nil {
@@ -69,7 +69,7 @@ func newTestData(t *testing.T, count int) testData {
 	td := testData{
 		sth:     sth,
 		logPub:  logPub,
-		logHash: crypto.HashBytes(logPub[:]),
+		logHash: logPub.KeyHash(),
 	}
 
 	origin := types.SigsumCheckpointOrigin(&logPub)
@@ -86,7 +86,7 @@ func newTestData(t *testing.T, count int) testData {
 
 		td.cosignatures = append(td.cosignatures, cosignature)
 		td.witnessKeys = append(td.witnessKeys, pub)
-		td.witnessHashes = append(td.witnessHashes, crypto.HashBytes(pub[:]))
+		td.witnessHashes = append(td.witnessHashes, pub.KeyHash())
 	}
 	return td
 }

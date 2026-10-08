@@ -49,7 +49,7 @@ func (req *Leaf) Verify() (types.Leaf, error) {
 	return types.Leaf{
 		Checksum:  crypto.HashBytes(req.Message[:]),
 		Signature: req.Signature,
-		KeyHash:   crypto.HashBytes(req.PublicKey[:]),
+		KeyHash:   req.PublicKey.KeyHash(),
 	}, nil
 }
 

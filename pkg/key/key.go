@@ -94,7 +94,7 @@ func parsePublicKeys(f io.Reader, getPolicy bool) (map[crypto.Hash]crypto.Public
 		if err != nil {
 			return nil, "", fmt.Errorf("invalid public key on line %d: %v", n, err)
 		}
-		keyHash := crypto.HashBytes(key[:])
+		keyHash := key.KeyHash()
 		if _, has := keys[keyHash]; has {
 			return nil, "", fmt.Errorf("duplicate public key on line %d", n)
 		}

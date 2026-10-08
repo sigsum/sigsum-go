@@ -45,7 +45,7 @@ witness W6 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 		if err != nil {
 			t.Fatalf("internal error, bad key %q", hex)
 		}
-		witnessHashes[i] = crypto.HashBytes(witnessKeys[i][:])
+		witnessHashes[i] = witnessKeys[i].KeyHash()
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -159,7 +159,7 @@ quorum G
 		if err != nil {
 			t.Fatalf("internal error, bad key %q", hex)
 		}
-		return crypto.HashBytes(key[:])
+		return key.KeyHash()
 	}
 	aHashes := []crypto.Hash{
 		kh("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"),

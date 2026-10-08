@@ -137,7 +137,7 @@ type witness struct {
 }
 
 func newWitness(signer crypto.Signer, pub *crypto.PublicKey, logPub *crypto.PublicKey, state *state) witness {
-	keyHash := crypto.HashBytes(pub[:])
+	keyHash := pub.KeyHash()
 	// Arbitrary name. TODO: Specify somewhere?
 	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", keyHash)
 	return witness{

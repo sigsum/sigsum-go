@@ -42,7 +42,7 @@ func VerifyLeafMessage(key *crypto.PublicKey, msg []byte, sig *crypto.Signature)
 }
 
 func (l *Leaf) Verify(key *crypto.PublicKey) bool {
-	if l.KeyHash != crypto.HashBytes(key[:]) {
+	if l.KeyHash != key.KeyHash() {
 		return false
 	}
 	return VerifyLeafChecksum(key, &l.Checksum, &l.Signature)

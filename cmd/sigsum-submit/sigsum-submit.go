@@ -189,7 +189,7 @@ func main() {
 				log.Fatal("Parsing proof file %q failed: %v", proofName, err)
 			}
 			if err := sigsumProof.Verify(msg, map[crypto.Hash]crypto.PublicKey{
-				crypto.HashBytes(publicKey[:]): *publicKey}, policy); err != nil {
+				publicKey.KeyHash(): *publicKey}, policy); err != nil {
 				log.Fatal("Existing proof file %q is not valid: %v", proofName, err)
 			}
 			return true

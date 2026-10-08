@@ -78,7 +78,7 @@ func TestLeafVerify(t *testing.T) {
 	leaf := Leaf{
 		Checksum:  checksum,
 		Signature: sig,
-		KeyHash:   crypto.HashBytes(pub[:]),
+		KeyHash:   pub.KeyHash(),
 	}
 	if !leaf.Verify(&pub) {
 		t.Errorf("failed verifying a valid statement")

@@ -132,7 +132,7 @@ Override the default behavior using the -k and -o options.
 			log.Fatal(err)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
-			_, err := fmt.Fprintf(f, "%x\n", crypto.HashBytes(publicKey[:]))
+			_, err := fmt.Fprintf(f, "%x\n", publicKey.KeyHash())
 			return err
 		})
 	case "to-hex":
