@@ -2,18 +2,18 @@ module sigsum.org/sigsum-go
 
 // We don't want to depend on golang version later than is available
 // in debian's stable or backports repos.
-go 1.25.0
+go 1.27
 
 require (
 	github.com/dchest/safefile v0.0.0-20151022103144-855e8d98f185
 	github.com/golang/mock v1.6.0
-	github.com/pborman/getopt/v2 v2.1.0
-	golang.org/x/net v0.58.0
-	golang.org/x/text v0.41.0
+	github.com/pborman/getopt/v2 v2.2.0
+	golang.org/x/net v0.60.0
+	golang.org/x/text v0.42.0
 )
 
 require (
-	golang.org/x/mod v0.38.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/tools v0.48.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 )
