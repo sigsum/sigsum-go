@@ -79,20 +79,22 @@ func (c *Config) filterLeaves(
 	matchedLeaves := []types.Leaf{}
 	for i, leaf := range leaves {
 		index := startIndex + uint64(i)
-		if key, ok := c.SubmitKeys[leaf.KeyHash]; ok {
-			if !leaf.Verify(&key) {
-				// Indicates log is misbehaving.
-				// Generate alert and continue
-				// processing remaining leaves. This
-				// is an issue where inconsistent
-				// verification conditions could
-				// matter, see
-				// https://hdevalence.ca/blog/2020-10-04-its-25519am
-				alertCallback(newAlert(AlertLogError, "invalid signature on leaf %d, keyhash %x", index, leaf.KeyHash))
-			} else {
-				matchedLeaves = append(matchedLeaves, leaf)
-				indices = append(indices, index)
+		if err := leaf.Verify(c.SubmitKeys); err != nil {
+			if err == types.ErrUnknownKeyHash {
+				// Ignore this leaf, not relevant.
+				continue
 			}
+			// Indicates log is misbehaving.
+			// Generate alert and continue
+			// processing remaining leaves. This
+			// is an issue where inconsistent
+			// verification conditions could
+			// matter, see
+			// https://hdevalence.ca/blog/2020-10-04-its-25519am
+			alertCallback(newAlert(AlertLogError, "invalid signature on leaf %d, keyhash %x", index, leaf.KeyHash))
+		} else {
+			matchedLeaves = append(matchedLeaves, leaf)
+			indices = append(indices, index)
 		}
 	}
 	return indices, matchedLeaves
