@@ -70,6 +70,8 @@ func TestLeafVerify(t *testing.T) {
 	checksum := validChecksum(t)
 	pub, signer := newKeyPair(t)
 
+	keys := map[crypto.Hash]crypto.PublicKey{crypto.HashBytes(pub[:]): pub}
+
 	sig, err := SignLeafChecksum(signer, &checksum)
 	if err != nil {
 		t.Fatal(err)
@@ -80,12 +82,12 @@ func TestLeafVerify(t *testing.T) {
 		Signature: sig,
 		KeyHash:   crypto.HashBytes(pub[:]),
 	}
-	if !leaf.Verify(&pub) {
-		t.Errorf("failed verifying a valid statement")
+	if err := leaf.Verify(keys); err != nil {
+		t.Errorf("failed verifying a valid statement: %v", err)
 	}
 
 	leaf.Checksum[0] += 1
-	if leaf.Verify(&pub) {
+	if err := leaf.Verify(keys); err == nil {
 		t.Errorf("succeeded verifying an invalid statement")
 	}
 }

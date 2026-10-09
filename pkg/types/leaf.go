@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -12,6 +13,8 @@ import (
 const (
 	TreeLeafNamespace = "sigsum.org/v1/tree-leaf"
 )
+
+var ErrUnknownKeyHash = errors.New("leaf key hash not known")
 
 type Leaf struct {
 	Checksum  crypto.Hash
@@ -41,11 +44,15 @@ func VerifyLeafMessage(key *crypto.PublicKey, msg []byte, sig *crypto.Signature)
 	return VerifyLeafChecksum(key, &checksum, sig)
 }
 
-func (l *Leaf) Verify(key *crypto.PublicKey) bool {
-	if l.KeyHash != crypto.HashBytes(key[:]) {
-		return false
+func (l *Leaf) Verify(keys map[crypto.Hash]crypto.PublicKey) error {
+	key, ok := keys[l.KeyHash]
+	if !ok {
+		return ErrUnknownKeyHash
 	}
-	return VerifyLeafChecksum(key, &l.Checksum, &l.Signature)
+	if !VerifyLeafChecksum(&key, &l.Checksum, &l.Signature) {
+		return fmt.Errorf("invalid leaf signature")
+	}
+	return nil
 }
 
 func (l *Leaf) ToBinary() []byte {

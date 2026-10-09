@@ -168,12 +168,8 @@ func (sp *SigsumProof) ToASCII(w io.Writer) error {
 func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKeys map[crypto.Hash]crypto.PublicKey, policy *policy.Policy) error {
 	checksum := crypto.HashBytes(msg[:])
 	leaf := sp.Leaf.ToLeaf(&checksum)
-	submitKey, ok := submitKeys[sp.Leaf.KeyHash]
-	if !ok {
-		return fmt.Errorf("unknown leaf key hash")
-	}
-	if !leaf.Verify(&submitKey) {
-		return fmt.Errorf("leaf signature not valid")
+	if err := leaf.Verify(submitKeys); err != nil {
+		return err
 	}
 	if err := policy.VerifyCosignedTreeHead(&sp.LogKeyHash, &sp.TreeHead); err != nil {
 		return err
