@@ -27,6 +27,10 @@ type (
 	PrivateKey [PrivateKeySize]byte
 )
 
+func (k PublicKey) Hash() Hash {
+	return HashBytes(k[:])
+}
+
 type Signer interface {
 	Sign([]byte) (Signature, error)
 	Public() PublicKey
