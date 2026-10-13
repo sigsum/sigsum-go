@@ -11,7 +11,7 @@ func TestValidateEd25519PublicKeyOk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateEd25519PublicKey(&pub); err != nil {
+	if err := validateEd25519PublicKey(&pub); err != nil {
 		t.Errorf("valid public key %x was rejected: %v", pub, err)
 	}
 }
@@ -68,7 +68,7 @@ func TestValidateEd25519PublicKeyNonCanonical(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := ValidateEd25519PublicKey(&pub); err == nil {
+		if err := validateEd25519PublicKey(&pub); err == nil {
 			t.Errorf("non-canonical key %x was not rejected", pub)
 		} else if in.valid {
 			if !strings.Contains(err.Error(), "non-canonical") {
@@ -96,7 +96,7 @@ func TestValidateEd25519PublicKeyLowOrder(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := ValidateEd25519PublicKey(&pub); err == nil {
+		if err := validateEd25519PublicKey(&pub); err == nil {
 			t.Errorf("low-order key %x was not rejected", pub)
 		} else if !strings.Contains(err.Error(), "low-order") {
 			t.Errorf("low-order key %x was rejected with unexpected error: %v", pub, err)

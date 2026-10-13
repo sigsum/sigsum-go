@@ -50,7 +50,7 @@ func (k PublicKey) Hash() Hash {
 }
 
 func (k PublicKey) Verify(msg []byte, sig *Signature) bool {
-	return ValidateEd25519PublicKey(&k) == nil &&
+	return validateEd25519PublicKey(&k) == nil &&
 		ed25519.Verify(ed25519.PublicKey(k[:]), msg, sig[:])
 }
 
