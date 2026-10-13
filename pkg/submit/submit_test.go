@@ -181,7 +181,7 @@ func TestSubmitWithFailure(t *testing.T) {
 
 func prepareResponse(t *testing.T, submitSigner, logSigner crypto.Signer, tree *merkle.Tree, i int) (crypto.Hash, types.SignedTreeHead, types.InclusionProof, requests.Leaf) {
 	msg := crypto.HashBytes([]byte{byte(i)})
-	signature, err := types.SignLeafMessage(submitSigner, msg[:])
+	signature, err := types.SignLeafMessage(submitSigner, &msg)
 	if err != nil {
 		t.Fatalf("signing message failed: %v", err)
 	}

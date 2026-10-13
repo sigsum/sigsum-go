@@ -34,13 +34,13 @@ func VerifyLeafChecksum(key *crypto.PublicKey, checksum *crypto.Hash, sig *crypt
 	return crypto.Verify(key, leafSignedData(checksum), sig)
 }
 
-func SignLeafMessage(signer crypto.Signer, msg []byte) (crypto.Signature, error) {
-	checksum := crypto.HashBytes(msg)
+func SignLeafMessage(signer crypto.Signer, msg *crypto.Hash) (crypto.Signature, error) {
+	checksum := crypto.HashBytes(msg[:])
 	return SignLeafChecksum(signer, &checksum)
 }
 
-func VerifyLeafMessage(key *crypto.PublicKey, msg []byte, sig *crypto.Signature) bool {
-	checksum := crypto.HashBytes(msg)
+func VerifyLeafMessage(key *crypto.PublicKey, msg *crypto.Hash, sig *crypto.Signature) bool {
+	checksum := crypto.HashBytes(msg[:])
 	return VerifyLeafChecksum(key, &checksum, sig)
 }
 

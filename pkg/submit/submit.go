@@ -101,7 +101,7 @@ func (c *Config) sleep(ctx context.Context) error {
 }
 
 func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, message *crypto.Hash) (proof.SigsumProof, error) {
-	signature, err := types.SignLeafMessage(signer, message[:])
+	signature, err := types.SignLeafMessage(signer, message)
 	if err != nil {
 		return proof.SigsumProof{}, err
 	}

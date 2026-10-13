@@ -43,7 +43,7 @@ func (req *Leaf) ToASCII(w io.Writer) error {
 
 // Verifies the request signature, and creates a corresponding leaf on success.
 func (req *Leaf) Verify() (types.Leaf, error) {
-	if !types.VerifyLeafMessage(&req.PublicKey, req.Message[:], &req.Signature) {
+	if !types.VerifyLeafMessage(&req.PublicKey, &req.Message, &req.Signature) {
 		return types.Leaf{}, fmt.Errorf("invalid signature")
 	}
 	return types.Leaf{

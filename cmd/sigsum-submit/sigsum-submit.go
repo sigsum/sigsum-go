@@ -71,7 +71,7 @@ func getLeafRequestSignerSource(keyFile string, inputFiles []string, rawHash boo
 			if err != nil {
 				log.Fatal("Reading message from stdin failed: %v", err)
 			}
-			signature, err := types.SignLeafMessage(signer, msg[:])
+			signature, err := types.SignLeafMessage(signer, &msg)
 			if err != nil {
 				log.Fatal("Signing failed: %v", err)
 			}
@@ -85,7 +85,7 @@ func getLeafRequestSignerSource(keyFile string, inputFiles []string, rawHash boo
 			if skip(inputFile, &msg, &publicKey) {
 				continue
 			}
-			signature, err := types.SignLeafMessage(signer, msg[:])
+			signature, err := types.SignLeafMessage(signer, &msg)
 			if err != nil {
 				log.Fatal("Signing failed: %v", err)
 			}
@@ -404,7 +404,7 @@ func readLeafRequest(r io.Reader) (requests.Leaf, error) {
 	if err := leaf.FromASCII(r); err != nil {
 		return requests.Leaf{}, err
 	}
-	if !types.VerifyLeafMessage(&leaf.PublicKey, leaf.Message[:], &leaf.Signature) {
+	if !types.VerifyLeafMessage(&leaf.PublicKey, &leaf.Message, &leaf.Signature) {
 		return requests.Leaf{}, fmt.Errorf("invalid leaf signature")
 	}
 	return leaf, nil

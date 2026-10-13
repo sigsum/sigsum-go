@@ -76,7 +76,7 @@ func (l *testLog) AddLeaf(_ context.Context, req requests.Leaf, _ *token.SubmitH
 }
 
 func makeLeafRequest(t *testing.T, signer crypto.Signer, msg *crypto.Hash) requests.Leaf {
-	signature, err := types.SignLeafMessage(signer, msg[:])
+	signature, err := types.SignLeafMessage(signer, msg)
 	if err != nil {
 		t.Fatalf("Leaf signing failed: %v\n", err)
 	}
