@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/key"
 )
 
@@ -36,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("signing failed: %v", err)
 	}
-	if !crypto.Verify(&publicKey, msg, &signature) {
+	if !publicKey.Verify(msg, &signature) {
 		log.Fatal("signature appears invalid!")
 	}
 }

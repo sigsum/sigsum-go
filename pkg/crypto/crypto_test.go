@@ -180,7 +180,7 @@ func TestSign(t *testing.T) {
 			signature[:], want[:])
 	}
 	publicKey := mustPublicKeyFromHex(t, "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c")
-	if !Verify(&publicKey, msg, &signature) {
+	if !publicKey.Verify(msg, &signature) {
 		t.Errorf("verify on valid message and signature failed")
 	}
 }
@@ -196,16 +196,16 @@ func TestVerify(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sign failed: %v", err)
 	}
-	if !Verify(&pub, message, &signature) {
+	if !pub.Verify(message, &signature) {
 		t.Errorf("verify on valid message and signature failed")
 	}
 	badSignature := signature
 	badSignature[3]++
-	if Verify(&pub, message, &badSignature) {
+	if pub.Verify(message, &badSignature) {
 		t.Errorf("verify on invalid signature succeeded")
 	}
 	message[3]++
-	if Verify(&pub, message, &signature) {
+	if pub.Verify(message, &signature) {
 		t.Errorf("verify on modified message succeeded")
 	}
 }
