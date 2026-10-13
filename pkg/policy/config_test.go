@@ -41,7 +41,7 @@ witness W6 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 	} {
 		var err error
-		witnessKeys[i], err = crypto.PublicKeyFromHex(hex)
+		witnessKeys[i], err = crypto.Ed25519PublicKeyFromHex(hex)
 		if err != nil {
 			t.Fatalf("internal error, bad key %q", hex)
 		}
@@ -71,24 +71,24 @@ witness W6 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 	if got, want := len(witnesses), 4; got != want {
 		t.Errorf("Unexpected number of witnesses with url in policy, got %d, expected %d", got, want)
 	} else {
-		urlByKey := func(witnesses []Entity, key *crypto.PublicKey) string {
+		urlByKey := func(witnesses []Entity, key crypto.PublicKey) string {
 			for _, w := range witnesses {
-				if w.PublicKey == *key {
+				if w.PublicKey.Equal(key) {
 					return w.URL
 				}
 			}
 			return "no-url"
 		}
-		if got, want := urlByKey(witnesses, &witnessKeys[0]), "http://w1"; got != want {
+		if got, want := urlByKey(witnesses, witnessKeys[0]), "http://w1"; got != want {
 			t.Errorf("Unexpected W1 witness url, got %v, want %v", got, want)
 		}
-		if got, want := urlByKey(witnesses, &witnessKeys[2]), "http://w3"; got != want {
+		if got, want := urlByKey(witnesses, witnessKeys[2]), "http://w3"; got != want {
 			t.Errorf("Unexpected W3 witness url, got %v, want %v", got, want)
 		}
-		if got, want := urlByKey(witnesses, &witnessKeys[3]), "https://w4/"; got != want {
+		if got, want := urlByKey(witnesses, witnessKeys[3]), "https://w4/"; got != want {
 			t.Errorf("Unexpected W4 witness url, got %v, want %v", got, want)
 		}
-		if got, want := urlByKey(witnesses, &witnessKeys[4]), "https://w5"; got != want {
+		if got, want := urlByKey(witnesses, witnessKeys[4]), "https://w5"; got != want {
 			t.Errorf("Unexpected W5 witness url, got %v, want %v", got, want)
 		}
 	}
@@ -155,7 +155,7 @@ quorum G
 		t.Fatalf("No quorum defined")
 	}
 	kh := func(hex string) crypto.Hash {
-		key, err := crypto.PublicKeyFromHex(hex)
+		key, err := crypto.Ed25519PublicKeyFromHex(hex)
 		if err != nil {
 			t.Fatalf("internal error, bad key %q", hex)
 		}

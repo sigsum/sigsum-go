@@ -28,7 +28,7 @@ func parseLog(args []string) (Setting, error) {
 	if len(args) < 1 || len(args) > 2 {
 		return nil, fmt.Errorf("invalid log policy line, public key required, url optional")
 	}
-	key, err := crypto.PublicKeyFromHex(args[0])
+	key, err := crypto.Ed25519PublicKeyFromHex(args[0])
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func parseWitness(args []string) (Setting, error) {
 		return nil, fmt.Errorf("invalid witness policy line, public key and name required, url optional")
 	}
 	name := args[0]
-	key, err := crypto.PublicKeyFromHex(args[1])
+	key, err := crypto.Ed25519PublicKeyFromHex(args[1])
 	if err != nil {
 		return nil, err
 	}

@@ -151,7 +151,7 @@ func logClientsFromConfig(config *Config) ([]logClient, error) {
 	for _, entity := range config.Policy.GetLogsWithUrl() {
 		var header *token.SubmitHeader
 		if config.RateLimitSigner != nil && len(config.Domain) > 0 {
-			signature, err := token.MakeToken(config.RateLimitSigner, &entity.PublicKey)
+			signature, err := token.MakeToken(config.RateLimitSigner, entity.PublicKey)
 			if err != nil {
 				return nil, fmt.Errorf("creating submit token failed: %v", err)
 			}

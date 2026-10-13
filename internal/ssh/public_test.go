@@ -7,7 +7,7 @@ import (
 )
 
 func TestParsePublicEd25519(t *testing.T) {
-	expKey, err := crypto.PublicKeyFromHex("314cb82ac8b5fe90cf18bf190afa4759b80779709f991f736f044d5e13bcbca6")
+	expKey, err := crypto.Ed25519PublicKeyFromHex("314cb82ac8b5fe90cf18bf190afa4759b80779709f991f736f044d5e13bcbca6")
 	if err != nil {
 		t.Fatalf("parsing test key failed: %v", err)
 	}
@@ -37,8 +37,8 @@ func TestParsePublicEd25519(t *testing.T) {
 		} else {
 			if !table.expSuccess {
 				t.Errorf("%q: unexpected success, should have failed", table.desc)
-			} else if key != expKey {
-				t.Errorf("%q: parsing gave wrong key: %x", table.desc, key)
+			} else if !key.Equal(expKey) {
+				t.Errorf("%q: parsing gave wrong key: %x", table.desc, key.Bytes())
 			} else if policyName != table.expPolicyName {
 				t.Errorf("%q: parsing gave wrong policy name: %q != %q", table.desc, policyName, table.expPolicyName)
 			}

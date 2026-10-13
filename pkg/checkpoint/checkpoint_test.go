@@ -18,8 +18,11 @@ var testTreeHead = types.TreeHead{
 }
 
 var testSignedTreeHead = types.SignedTreeHead{
-	TreeHead:  testTreeHead,
-	Signature: crypto.Signature{65, 5}, // Base64 "...EEF"
+	TreeHead: testTreeHead,
+	Signature: func() crypto.Signature {
+		sig := crypto.Ed25519Signature{65, 5} // Base64 "...EEF"
+		return sig[:]
+	}(),
 }
 var testCheckpoint = Checkpoint{
 	Origin:         testOrigin,
@@ -56,18 +59,18 @@ func TestCheckpointFromASCII(t *testing.T) {
 	if err := cp.FromASCII(bytes.NewBufferString(testCheckpointASCII)); err != nil {
 		t.Fatal(err)
 	}
-	if cp != testCheckpoint {
+	if !cp.Equal(&testCheckpoint) {
 		t.Errorf("FromASCII failed, got:\n%v,\nwanted:\n%v", cp, testCheckpoint)
 	}
 }
 
 func TestCheckpointSigned(t *testing.T) {
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 	origin := fmt.Sprintf("%s%x", types.CheckpointNamePrefix, pub.Hash())
 	cp := Checkpoint{
 		Origin: origin,
-		KeyId:  NewLogKeyId(origin, &pub),
+		KeyId:  NewLogKeyId(origin, pub),
 	}
 	var err error
 	cp.SignedTreeHead, err = testTreeHead.Sign(signer)
@@ -86,21 +89,21 @@ func TestCheckpointSigned(t *testing.T) {
 
 func TestCheckpointVerify(t *testing.T) {
 	// Key used to sign above checkpoint.
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 
 	var validCheckpoint Checkpoint
 	if err := validCheckpoint.FromASCII(bytes.NewBufferString(validCheckpointASCII)); err != nil {
 		t.Fatal(err)
 	}
-	if err := validCheckpoint.Verify(&pub); err != nil {
+	if err := validCheckpoint.Verify(pub); err != nil {
 		t.Fatal(err)
 	}
 
 	testInvalid := func(desc string, f func(cp *Checkpoint)) {
 		cp := validCheckpoint
 		f(&cp)
-		if err := cp.Verify(&pub); err == nil {
+		if err := cp.Verify(pub); err == nil {
 			t.Errorf("%s: bad checkpoint not rejected", desc)
 		}
 	}
@@ -124,7 +127,7 @@ func TestCheckpointVerify(t *testing.T) {
 
 func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 	// Key used to sign above checkpoint.
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 
 	paragraphs := strings.Split(validCheckpointASCII, "\n\n")
@@ -166,14 +169,14 @@ func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 			continue
 		}
 
-		if err := cp.Verify(&pub); err != nil {
+		if err := cp.Verify(pub); err != nil {
 			t.Error(err)
 		}
 	}
 }
 
 func TestCheckpointCosignVerify(t *testing.T) {
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 	timestamp := uint64(1234)
 	cosignature, err := testCheckpoint.Cosign(signer, timestamp)
@@ -183,14 +186,14 @@ func TestCheckpointCosignVerify(t *testing.T) {
 	if got, want := cosignature.Timestamp, timestamp; got != want {
 		t.Errorf("unexpected cosignature timestamp: got %d, want %d", got, want)
 	}
-	if !testCheckpoint.VerifyCosignature(&pub, &cosignature) {
+	if !testCheckpoint.VerifyCosignature(pub, &cosignature) {
 		t.Errorf("verifying cosignature failed")
 	}
 
 	keyName := "example.org/witness"
 	cls := CosignatureLine{
 		KeyName:     keyName,
-		KeyId:       NewWitnessKeyId(keyName, &pub),
+		KeyId:       NewWitnessKeyId(keyName, pub),
 		Cosignature: cosignature,
 	}
 	var buf bytes.Buffer
@@ -217,9 +220,9 @@ func TestCheckpointVerifyCosignatureByKey(t *testing.T) {
 	if got, want := len(cosignatures), 3; got != want {
 		t.Errorf("unexpected number of cosignatures: got %d, want: %d", got, want)
 	}
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
-	cosignature, err := testCheckpoint.VerifyCosignatureByKey(cosignatures, &pub)
+	cosignature, err := testCheckpoint.VerifyCosignatureByKey(cosignatures, pub)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +232,7 @@ func TestCheckpointVerifyCosignatureByKey(t *testing.T) {
 
 	// Try invalidating the cosignature.
 	cosignatures[1].Timestamp++
-	_, err = testCheckpoint.VerifyCosignatureByKey(cosignatures, &pub)
+	_, err = testCheckpoint.VerifyCosignatureByKey(cosignatures, pub)
 	if err == nil {
 		t.Errorf("bad cosignature not rejected")
 	}
@@ -276,7 +279,7 @@ mXfgRcJ0bG0j3CPdKwgGWtUzBUbX67saZGRmFuJGGsM=
 	if got, want := checkpointASCII, dbCheckpointBody; got != want {
 		t.Errorf("formatting roundtrip failed: got:\n%q\nwant:\n%q", got, want)
 	}
-	if !nv.PublicKey.Verify([]byte(checkpointASCII), &cp.Signature) {
+	if !nv.PublicKey.Verify([]byte(checkpointASCII), cp.Signature) {
 		t.Errorf("verifying checkpoint signature failed")
 	}
 }

@@ -50,14 +50,17 @@ type Checkpoint struct {
 	types.SignedTreeHead
 	Origin string // Checkpoint origin
 	KeyId  KeyId  // The key id associated with SignedTreeHead.Signature
+}
 
+func (cp *Checkpoint) Equal(o *Checkpoint) bool {
+	return cp.SignedTreeHead.Equal(&o.SignedTreeHead) && cp.Origin == o.Origin && cp.KeyId == o.KeyId
 }
 
 func (cp *Checkpoint) ToASCII(w io.Writer) error {
 	if _, err := fmt.Fprintf(w, "%s\n", cp.TreeHead.FormatCheckpoint(cp.Origin)); err != nil {
 		return err
 	}
-	return WriteEd25519Signature(w, cp.Origin, cp.KeyId, &cp.Signature)
+	return WriteEd25519Signature(w, cp.Origin, cp.KeyId, cp.Signature)
 }
 
 // The keyName identifies the signature line of interest. If keyName
@@ -143,7 +146,7 @@ func (cp *Checkpoint) FromASCII(r io.Reader) error {
 	return cp.Parse(&p)
 }
 
-func (cp *Checkpoint) Verify(publicKey *crypto.PublicKey) error {
+func (cp *Checkpoint) Verify(publicKey crypto.PublicKey) error {
 	if cp.KeyId != NewLogKeyId(cp.Origin, publicKey) {
 		return fmt.Errorf("unexpected checkpoint key id")
 	}
@@ -157,14 +160,14 @@ func (cp *Checkpoint) Cosign(signer crypto.Signer, timestamp uint64) (types.Cosi
 	return cp.TreeHead.Cosign(signer, cp.Origin, timestamp)
 }
 
-func (cp *Checkpoint) VerifyCosignature(publicKey *crypto.PublicKey, cosignature *types.Cosignature) bool {
+func (cp *Checkpoint) VerifyCosignature(publicKey crypto.PublicKey, cosignature *types.Cosignature) bool {
 	return cosignature.Verify(publicKey, cp.Origin, &cp.SignedTreeHead.TreeHead)
 }
 
 // Returns a verified cosignature identified by public key. The key
 // name on the signature line is ignored, except that it is used to
 // construct the key id.
-func (cp *Checkpoint) VerifyCosignatureByKey(signatures []CosignatureLine, publicKey *crypto.PublicKey) (types.Cosignature, error) {
+func (cp *Checkpoint) VerifyCosignatureByKey(signatures []CosignatureLine, publicKey crypto.PublicKey) (types.Cosignature, error) {
 	for _, signature := range signatures {
 		if keyId := NewWitnessKeyId(signature.KeyName, publicKey); signature.KeyId != keyId {
 			continue

@@ -13,6 +13,7 @@ import (
 
 	"sigsum.org/sigsum-go/internal/mocks"
 	"sigsum.org/sigsum-go/pkg/api"
+	"sigsum.org/sigsum-go/pkg/crypto"
 	"sigsum.org/sigsum-go/pkg/requests"
 	token "sigsum.org/sigsum-go/pkg/submit-token"
 )
@@ -240,16 +241,23 @@ func TestAddLeaf(t *testing.T) {
 			withHeader("Sigsum-Token", "foo.example.com 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"))).Return(
 		newResponse(http.StatusOK, ""), nil)
 
+	header := token.SubmitHeader{
+		Domain: "foo.example.com",
+		Token: func() crypto.Signature {
+			sig := crypto.Ed25519Signature{}
+			return sig[:]
+		}(),
+	}
+
+	req := requests.Leaf{PublicKey: &crypto.Ed25519PublicKey{}}
 	if persisted, err := client.AddLeaf(
-		context.Background(), requests.Leaf{},
-		&token.SubmitHeader{Domain: "foo.example.com"}); err != nil {
+		context.Background(), req, &header); err != nil {
 		t.Errorf("unexpected error for first AddLeaf request: %v", err)
 	} else if persisted {
 		t.Errorf("unexpected persisted response for first AddLeaf request")
 	}
 	if persisted, err := client.AddLeaf(
-		context.Background(), requests.Leaf{},
-		&token.SubmitHeader{Domain: "foo.example.com"}); err != nil {
+		context.Background(), req, &header); err != nil {
 		t.Errorf("unexpected error for second AddLeaf request: %v", err)
 	} else if !persisted {
 		t.Errorf("missing persisted response for second  AddLeaf request")

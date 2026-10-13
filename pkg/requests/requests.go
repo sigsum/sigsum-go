@@ -31,19 +31,23 @@ type ConsistencyProof struct {
 	NewSize uint64
 }
 
+func (req *Leaf) Equal(o *Leaf) bool {
+	return req.Message == o.Message && req.Signature.Equal(o.Signature) && req.PublicKey.Equal(o.PublicKey)
+}
+
 func (req *Leaf) ToASCII(w io.Writer) error {
-	if err := ascii.WriteLine(w, "message", req.Message[:]); err != nil {
+	if err := ascii.WriteHash(w, "message", &req.Message); err != nil {
 		return err
 	}
-	if err := ascii.WriteLine(w, "signature", req.Signature[:]); err != nil {
+	if err := ascii.WriteSignature(w, "signature", req.Signature); err != nil {
 		return err
 	}
-	return ascii.WriteLine(w, "public_key", req.PublicKey[:])
+	return ascii.WritePublicKey(w, "public_key", req.PublicKey)
 }
 
 // Verifies the request signature, and creates a corresponding leaf on success.
 func (req *Leaf) Verify() (types.Leaf, error) {
-	if !types.VerifyLeafMessage(&req.PublicKey, req.Message[:], &req.Signature) {
+	if !types.VerifyLeafMessage(req.PublicKey, req.Message[:], req.Signature) {
 		return types.Leaf{}, fmt.Errorf("invalid signature")
 	}
 	return types.Leaf{

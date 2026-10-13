@@ -21,7 +21,10 @@ var testAddCheckpoint = AddCheckpoint{
 				Size:     5,
 				RootHash: crypto.Hash{28, 14, 71}, // Base64 "HA5H...",
 			},
-			Signature: crypto.Signature{65, 5}, // Base64 "...EEF..."
+			Signature: func() crypto.Signature {
+				sig := crypto.Ed25519Signature{65, 5} // Base64 "...EEF..."
+				return sig[:]
+			}(),
 		},
 		Origin: "example.org/log",
 		KeyId:  [4]byte{12, 64, 3, 4}, // Base64 "DEADB..."

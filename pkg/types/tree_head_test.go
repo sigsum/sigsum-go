@@ -22,7 +22,7 @@ const (
 
 func TestTreeHeadFormatCheckpoint(t *testing.T) {
 	desc := "valid"
-	pub := crypto.PublicKey{}
+	pub := crypto.Ed25519PublicKey{}
 	th := validTreeHead(t)
 	if got, want := th.FormatCheckpoint(SigsumCheckpointOrigin(&pub)),
 		validTreeHeadCheckpoint(t); got != want {
@@ -65,7 +65,7 @@ func TestTreeHeadSign(t *testing.T) {
 			defer ctrl.Finish()
 			signer := mocksigner.NewMockSigner(ctrl)
 			signer.EXPECT().Sign(gomock.Any()).Return(table.wantSig, table.signErr)
-			signer.EXPECT().Public().Return(crypto.PublicKey{})
+			signer.EXPECT().Public().Return(&crypto.Ed25519PublicKey{})
 			sth, err := table.th.Sign(signer)
 			if got, want := err != nil, table.wantErr; got != want {
 				t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
@@ -78,7 +78,7 @@ func TestTreeHeadSign(t *testing.T) {
 				TreeHead:  table.th,
 				Signature: table.wantSig,
 			}
-			if got, want := sth, wantSTH; sth != wantSTH {
+			if got, want := sth, wantSTH; !sth.Equal(&wantSTH) {
 				t.Errorf("got sth\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
 			}
 		}()
@@ -123,7 +123,7 @@ func TestSignedTreeHeadFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := sth, table.want; got != want {
+		if got, want := sth, table.want; !got.Equal(&want) {
 			t.Errorf("got signed tree head\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -138,12 +138,12 @@ func TestTreeHeadSignAndVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !sth.Verify(&pub) {
+	if !sth.Verify(pub) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
 
 	sth.Size += 1
-	if sth.Verify(&pub) {
+	if sth.Verify(pub) {
 		t.Errorf("succeeded verifying an invalid signed tree head")
 	}
 }
@@ -157,12 +157,12 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 		},
 		Signature: mustSignatureFromHex(t, "c60e5151b9d0f0efaf57022c0ec306c0f0275afef69333cc89df4fda328c87949fcfa44564f35020938a4cd6c1c50bc0349b2f54b82f5f6104b9cd52be2cd90e"),
 	}
-	if !sth.Verify(&pub) {
+	if !sth.Verify(pub) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
 
 	sth.Size += 1
-	if sth.Verify(&pub) {
+	if sth.Verify(pub) {
 		t.Errorf("succeeded verifying an invalid signed tree head")
 	}
 }
@@ -177,12 +177,12 @@ func TestSignedTreeHeadVerifyVersion0(t *testing.T) {
 		},
 		Signature: mustSignatureFromHex(t, "7e2084ded0f7625136e6c811ac7eae2cb79613cadb12a6437b391cdae3a5c915dcd30b5b5fe4fbf417a2d607a4cfcb3612d7fd4ffe9453c0d29ec002a6d47709"),
 	}
-	if !sth.VerifyVersion0(&pub) {
+	if !sth.VerifyVersion0(pub) {
 		t.Errorf("failed verifying a valid signed tree head")
 	}
 
 	sth.Size += 1
-	if sth.VerifyVersion0(&pub) {
+	if sth.VerifyVersion0(pub) {
 		t.Errorf("succeeded verifying an invalid signed tree head")
 	}
 }
@@ -226,7 +226,7 @@ func TestCosignatureFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := req, table.want; got != want {
+		if got, want := req, table.want; !got.Equal(want) {
 			t.Errorf("got cosignature request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 		if got, want := keyHash, validKeyHash(t); got != want {
@@ -249,7 +249,7 @@ func TestCosignAndVerify(t *testing.T) {
 		t.Errorf("unexpected cosignature timestamp, wanted %d, got %d",
 			testCosignTimestamp, cosignature.Timestamp)
 	}
-	if !cosignature.Verify(&pub, origin, &th) {
+	if !cosignature.Verify(pub, origin, &th) {
 		t.Errorf("failed verifying a valid cosignature")
 	}
 
@@ -273,7 +273,7 @@ func TestCosignAndVerify(t *testing.T) {
 		},
 	} {
 		desc, mTh, mCs, mOrigin := f()
-		valid := mCs.Verify(&pub, mOrigin, &mTh)
+		valid := mCs.Verify(pub, mOrigin, &mTh)
 		if len(desc) > 0 && valid {
 			t.Errorf("%s: succeeded verifying invalid cosignature", desc)
 		} else if len(desc) == 0 && !valid {
@@ -412,7 +412,12 @@ func validCosignedTreeHead(t *testing.T) CosignedTreeHead {
 			Signature: newSigBufferInc(t),
 		},
 		Cosignatures: map[crypto.Hash]Cosignature{
-			crypto.Hash{}: Cosignature{},
+			crypto.Hash{}: Cosignature{
+				Signature: func() crypto.Signature {
+					sig := crypto.Ed25519Signature{}
+					return sig[:]
+				}(),
+			},
 			newHashBufferInc(t): Cosignature{
 				Timestamp: 1,
 				Signature: newSigBufferInc(t),
@@ -427,7 +432,7 @@ func validCosignedTreeHeadASCII(t *testing.T) string {
 		"size", 2,
 		"root_hash", newHashBufferInc(t),
 		"signature", newSigBufferInc(t),
-		"cosignature", crypto.Hash{}, 0, crypto.Signature{},
+		"cosignature", crypto.Hash{}, 0, crypto.Ed25519Signature{},
 		"cosignature", newHashBufferInc(t), 1, newSigBufferInc(t),
 	)
 }
@@ -447,7 +452,7 @@ func mustHashFromHex(t *testing.T, hex string) crypto.Hash {
 	return h
 }
 func mustSignatureFromHex(t *testing.T, hex string) crypto.Signature {
-	s, err := crypto.SignatureFromHex(hex)
+	s, err := crypto.Ed25519SignatureFromHex(hex)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -28,14 +28,14 @@ gX4rCMeNlFXpDyZqodB4AAAADm5pc3NlQGJseWdsYW5zAQIDBAUGBw==
 		mustDecodeHex(t, "300f45677b629f64237ecca512ad16a2fbfe95cf98af090aef4f5c14e3b7b54a"); got != want {
 		t.Errorf("unexpected private key: %x, expected %x", got, want)
 	}
-	if pub != signer.Public() {
+	if !pub.Equal(signer.Public()) {
 		t.Errorf("inconsistent public key, doesn't match signer.Public()")
 	}
 	pubFromFile, _, err := ParsePublicEd25519(testPub)
 	if err != nil {
 		t.Fatalf("failed to parse pubkey file")
 	}
-	if pub != pubFromFile {
+	if !pub.Equal(pubFromFile) {
 		t.Errorf("inconsistent public key, doesn't match pubkey file")
 	}
 }
@@ -51,7 +51,7 @@ AMY9liI/ehlhqkSxjXNHg1AXH30UH802SQBj7V1aS6vWAAAAAAECAwQF
 -----END OPENSSH PRIVATE KEY-----
 `)
 	nonce := [4]byte{'0', '1', '2', '3'}
-	priv := crypto.PrivateKey{0xde, 0xad, 0xbe, 0xef}
+	priv := crypto.Ed25519PrivateKey{0xde, 0xad, 0xbe, 0xef}
 	var buf bytes.Buffer
 
 	if err := writePrivateKeyFile(&buf, crypto.NewEd25519Signer(&priv), nonce); err != nil {
@@ -69,7 +69,7 @@ AMY9liI/ehlhqkSxjXNHg1AXH30UH802SQBj7V1aS6vWAAAAAAECAwQF
 	}
 }
 
-func mustDecodeHex(t *testing.T, s string) (out crypto.PrivateKey) {
+func mustDecodeHex(t *testing.T, s string) (out crypto.Ed25519PrivateKey) {
 	b, err := hex.DecodeString(s)
 	if err != nil {
 		t.Fatal(err)

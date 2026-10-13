@@ -17,11 +17,11 @@ import (
 )
 
 func TestSubmitSuccess(t *testing.T) {
-	logPub, logSigner, err := crypto.NewKeyPair()
+	logPub, logSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatalf("creating log key failed: %v", err)
 	}
-	submitPub, submitSigner, err := crypto.NewKeyPair()
+	submitPub, submitSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
@@ -84,11 +84,11 @@ func TestSubmitSuccess(t *testing.T) {
 }
 
 func TestSubmitWithFailure(t *testing.T) {
-	logPub, logSigner, err := crypto.NewKeyPair()
+	logPub, logSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatalf("creating log key failed: %v", err)
 	}
-	_, submitSigner, err := crypto.NewKeyPair()
+	_, submitSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
@@ -135,6 +135,13 @@ func TestSubmitWithFailure(t *testing.T) {
 		return
 	}
 
+	badSig := crypto.Ed25519Signature{1, 2, 3}
+	badSth := types.CosignedTreeHead{
+		SignedTreeHead: types.SignedTreeHead{
+			Signature: badSig[:],
+		},
+	}
+
 	// One log succeeds after a whole bunch of retrying
 	clientAlwaysFail.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, errors.New("mock error"))
 	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(false, nil)
@@ -153,7 +160,7 @@ func TestSubmitWithFailure(t *testing.T) {
 	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{}, errors.New("mock error"))
 
 	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
-	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{}, nil) // bad tree head
+	client.EXPECT().GetTreeHead(gomock.Any()).Return(badSth, nil)
 
 	client.EXPECT().AddLeaf(gomock.Any(), req, gomock.Any()).Return(true, nil)
 	client.EXPECT().GetTreeHead(gomock.Any()).Return(types.CosignedTreeHead{SignedTreeHead: sth}, nil)

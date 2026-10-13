@@ -13,7 +13,7 @@ func TestLogPolicy(t *testing.T) {
 	var logKeys []crypto.PublicKey
 	var logHashes []crypto.Hash
 	for i := 0; i < 3; i++ {
-		pub, s, err := crypto.NewKeyPair()
+		pub, s, err := crypto.NewEd25519KeyPair()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,7 +56,7 @@ type testData struct {
 
 func newTestData(t *testing.T, count int) testData {
 	th := types.TreeHead{Size: 3}
-	logPub, logSigner, err := crypto.NewKeyPair()
+	logPub, logSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,10 +72,10 @@ func newTestData(t *testing.T, count int) testData {
 		logHash: logPub.Hash(),
 	}
 
-	origin := types.SigsumCheckpointOrigin(&logPub)
+	origin := types.SigsumCheckpointOrigin(logPub)
 
 	for i := 0; i < count; i++ {
-		pub, s, err := crypto.NewKeyPair()
+		pub, s, err := crypto.NewEd25519KeyPair()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,6 +119,7 @@ func TestWitnessPolicy(t *testing.T) {
 		for _, i := range s.w {
 			cs := td.cosignatures[i]
 			if i == s.invalidate {
+				cs.Signature = append([]byte{}, cs.Signature...)
 				cs.Signature[3] ^= 1
 			}
 			present[td.witnessHashes[i]] = cs

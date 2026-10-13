@@ -75,7 +75,7 @@ func TestLeafFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := leaf, *table.want; got != want {
+		if got, want := leaf, *table.want; !got.Equal(&want) {
 			t.Errorf("got leaf request\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -232,8 +232,8 @@ func validLeaf(t *testing.T) *Leaf {
 	t.Helper()
 	return &Leaf{
 		Message:   *newHashBufferInc(t),
-		Signature: *newSigBufferInc(t),
-		PublicKey: *newPubBufferInc(t),
+		Signature: newSigBufferInc(t),
+		PublicKey: newPubBufferInc(t),
 	}
 }
 
@@ -241,8 +241,8 @@ func validLeafASCII(t *testing.T) string {
 	t.Helper()
 	return fmt.Sprintf("%s=%x\n%s=%x\n%s=%x\n",
 		"message", newHashBufferInc(t)[:],
-		"signature", newSigBufferInc(t)[:],
-		"public_key", newPubBufferInc(t)[:],
+		"signature", newSigBufferInc(t),
+		"public_key", newPubBufferInc(t).Bytes(),
 	)
 }
 
@@ -264,20 +264,20 @@ func newHashBufferInc(t *testing.T) *crypto.Hash {
 	return &buf
 }
 
-func newSigBufferInc(t *testing.T) *crypto.Signature {
+func newSigBufferInc(t *testing.T) crypto.Signature {
 	t.Helper()
 
-	var buf crypto.Signature
+	var buf crypto.Ed25519Signature
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
-	return &buf
+	return buf[:]
 }
 
-func newPubBufferInc(t *testing.T) *crypto.PublicKey {
+func newPubBufferInc(t *testing.T) crypto.PublicKey {
 	t.Helper()
 
-	var buf crypto.PublicKey
+	var buf crypto.Ed25519PublicKey
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}

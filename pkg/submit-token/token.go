@@ -25,6 +25,10 @@ type SubmitHeader struct {
 	Token  crypto.Signature
 }
 
+func (s *SubmitHeader) Equal(o SubmitHeader) bool {
+	return s.Domain == o.Domain && s.Token.Equal(o.Token)
+}
+
 func (s *SubmitHeader) ToHeader() string {
 	return fmt.Sprintf("%s %x", s.Domain, s.Token)
 }
@@ -38,20 +42,20 @@ func (s *SubmitHeader) FromHeader(header string) error {
 		return fmt.Errorf("malformed header, domain part empty")
 	}
 	var err error
-	s.Token, err = crypto.SignatureFromHex(parts[1])
+	s.Token, err = crypto.Ed25519SignatureFromHex(parts[1])
 	if err == nil {
 		s.Domain = parts[0]
 	}
 	return err
 }
 
-func MakeToken(signer crypto.Signer, logKey *crypto.PublicKey) (crypto.Signature, error) {
-	return signer.Sign(crypto.AttachNamespace(namespace, logKey[:]))
+func MakeToken(signer crypto.Signer, logKey crypto.PublicKey) (crypto.Signature, error) {
+	return signer.Sign(crypto.AttachNamespace(namespace, logKey.Bytes()))
 }
 
 // Verify a token using a given key, with no DNS loookup.
-func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token *crypto.Signature) error {
-	if !key.Verify(crypto.AttachNamespace(namespace, logKey[:]), token) {
+func VerifyToken(key crypto.PublicKey, logKey crypto.PublicKey, token crypto.Signature) error {
+	if !key.Verify(crypto.AttachNamespace(namespace, logKey.Bytes()), token) {
 		return fmt.Errorf("invalid token signature")
 	}
 	return nil
@@ -79,11 +83,11 @@ type DnsVerifier struct {
 	logKey    crypto.PublicKey
 }
 
-func NewDnsVerifier(logKey *crypto.PublicKey) *DnsVerifier {
+func NewDnsVerifier(logKey crypto.PublicKey) *DnsVerifier {
 	var resolver net.Resolver
 	return &DnsVerifier{
 		lookupTXT: resolver.LookupTXT,
-		logKey:    *logKey,
+		logKey:    logKey,
 	}
 }
 
@@ -98,14 +102,14 @@ func (dv *DnsVerifier) Verify(ctx context.Context, header *SubmitHeader) error {
 		ignoredKeys = len(rsps) - maxNumberOfKeys
 		rsps = rsps[:maxNumberOfKeys]
 	}
-	signedData := crypto.AttachNamespace(namespace, dv.logKey[:])
+	signedData := crypto.AttachNamespace(namespace, dv.logKey.Bytes())
 	for _, keyHex := range rsps {
-		key, err := crypto.PublicKeyFromHex(keyHex)
+		key, err := crypto.Ed25519PublicKeyFromHex(keyHex)
 		if err != nil {
 			badKeys++
 			continue
 		}
-		if key.Verify(signedData, &header.Token) {
+		if key.Verify(signedData, header.Token) {
 			return nil
 		}
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewLogKeyId(t *testing.T) {
-	keyId := NewLogKeyId("example.org/log", &crypto.PublicKey{})
+	keyId := NewLogKeyId("example.org/log", &crypto.Ed25519PublicKey{})
 	hash := crypto.HashBytes(bytes.Join([][]byte{
 		[]byte("example.org/log"),
 		[]byte{0xA, 0x1},
@@ -22,13 +22,13 @@ func TestNewLogKeyId(t *testing.T) {
 
 func TestWriteEd25519Signature(t *testing.T) {
 	origin := "example.org/log"
-	keyId := KeyId{117, 230, 157, 109}      // Base64 "deadb..."
-	signature := crypto.Signature{231, 159} // "...eef"
+	keyId := KeyId{117, 230, 157, 109}             // Base64 "deadb..."
+	signature := crypto.Ed25519Signature{231, 159} // "...eef"
 	want := `
 — example.org/log deadbeefAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 `[1:]
 	buf := bytes.Buffer{}
-	if err := WriteEd25519Signature(&buf, origin, keyId, &signature); err != nil {
+	if err := WriteEd25519Signature(&buf, origin, keyId, signature[:]); err != nil {
 		t.Fatal(err)
 	}
 
@@ -41,14 +41,14 @@ func TestParseEd25519SignatureLine(t *testing.T) {
 	for _, table := range []struct {
 		in     string
 		id     KeyId
-		sig    crypto.Signature
+		sig    crypto.Ed25519Signature
 		err    error
 		errMsg string
 	}{
 		{
 			in:  "— example.org/log deadbeefAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 			id:  KeyId{117, 230, 157, 109},
-			sig: crypto.Signature{231, 159},
+			sig: crypto.Ed25519Signature{231, 159},
 		},
 		{
 			in:  "— example.org/log2 deadbeefAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
@@ -91,7 +91,7 @@ func TestParseEd25519SignatureLine(t *testing.T) {
 		if got, want := keyId, table.id; got != want {
 			t.Errorf("bad key id on input %q, got %v, want %v", table.in, got, want)
 		}
-		if got, want := signature, table.sig; got != want {
+		if got, want := signature, table.sig[:]; !got.Equal(want) {
 			t.Errorf("bad signature on input %q, got %v, want %v", table.in, got, want)
 		}
 	}

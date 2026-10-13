@@ -27,9 +27,17 @@ type SignedTreeHead struct {
 	Signature crypto.Signature
 }
 
+func (sth *SignedTreeHead) Equal(o *SignedTreeHead) bool {
+	return sth.TreeHead == o.TreeHead && sth.Signature.Equal(o.Signature)
+}
+
 type Cosignature struct {
 	Timestamp uint64
 	Signature crypto.Signature
+}
+
+func (cs *Cosignature) Equal(o Cosignature) bool {
+	return cs.Timestamp == o.Timestamp && cs.Signature.Equal(o.Signature)
 }
 
 type CosignedTreeHead struct {
@@ -49,13 +57,13 @@ func (th *TreeHead) FormatCheckpoint(origin string) string {
 		base64.StdEncoding.EncodeToString(th.RootHash[:]))
 }
 
-func SigsumCheckpointOrigin(publicKey *crypto.PublicKey) string {
+func SigsumCheckpointOrigin(publicKey crypto.PublicKey) string {
 	return fmt.Sprintf("%s%x", CheckpointNamePrefix, publicKey.Hash())
 }
 
 func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
 	pub := signer.Public()
-	sig, err := signer.Sign([]byte(th.FormatCheckpoint(SigsumCheckpointOrigin(&pub))))
+	sig, err := signer.Sign([]byte(th.FormatCheckpoint(SigsumCheckpointOrigin(pub))))
 	if err != nil {
 		return SignedTreeHead{}, fmt.Errorf("failed signing tree head: %w", err)
 	}
@@ -116,7 +124,7 @@ func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
 	if err := sth.TreeHead.ToASCII(w); err != nil {
 		return err
 	}
-	return ascii.WriteSignature(w, "signature", &sth.Signature)
+	return ascii.WriteSignature(w, "signature", sth.Signature)
 }
 
 func (sth *SignedTreeHead) Parse(p *ascii.Parser) error {
@@ -137,30 +145,30 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 	return p.GetEOF()
 }
 
-func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
-	return key.Verify([]byte(sth.FormatCheckpoint(SigsumCheckpointOrigin(key))), &sth.Signature)
+func (sth *SignedTreeHead) Verify(key crypto.PublicKey) bool {
+	return key.Verify([]byte(sth.FormatCheckpoint(SigsumCheckpointOrigin(key))), sth.Signature)
 }
 
 // Deprecated: This backwards compatibility function should be deleted.
-func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
+func (sth *SignedTreeHead) VerifyVersion0(key crypto.PublicKey) bool {
 	// Prefix used temporarily, for version v0.1.15 and v0.2.0.
 	keyHash := key.Hash()
-	if key.Verify([]byte(sth.FormatCheckpoint(fmt.Sprintf("sigsum.org/v1/%x", &keyHash))), &sth.Signature) {
+	if key.Verify([]byte(sth.FormatCheckpoint(fmt.Sprintf("sigsum.org/v1/%x", &keyHash))), sth.Signature) {
 		return true
 	}
 	b := make([]byte, 40)
 	binary.BigEndian.PutUint64(b[:8], sth.Size)
 	copy(b[8:40], sth.RootHash[:])
 	return key.Verify(ssh.SignedData("signed-tree-head:v0@sigsum.org", b),
-		&sth.Signature)
+		sth.Signature)
 }
 
-func (cs *Cosignature) Verify(key *crypto.PublicKey, origin string, th *TreeHead) bool {
-	return key.Verify([]byte(th.toCosignedData(origin, cs.Timestamp)), &cs.Signature)
+func (cs *Cosignature) Verify(key crypto.PublicKey, origin string, th *TreeHead) bool {
+	return key.Verify([]byte(th.toCosignedData(origin, cs.Timestamp)), cs.Signature)
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer, keyHash *crypto.Hash) error {
-	return ascii.WriteLine(w, "cosignature", keyHash[:], cs.Timestamp, cs.Signature[:])
+	return ascii.WriteLine(w, "cosignature", keyHash[:], cs.Timestamp, cs.Signature)
 }
 
 func (cs *Cosignature) Parse(p *ascii.Parser) (crypto.Hash, error) {
@@ -176,7 +184,7 @@ func (cs *Cosignature) Parse(p *ascii.Parser) (crypto.Hash, error) {
 	if err != nil {
 		return crypto.Hash{}, err
 	}
-	cs.Signature, err = crypto.SignatureFromHex(v[2])
+	cs.Signature, err = crypto.Ed25519SignatureFromHex(v[2])
 	if err != nil {
 		return crypto.Hash{}, err
 	}

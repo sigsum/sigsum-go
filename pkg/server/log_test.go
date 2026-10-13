@@ -239,37 +239,33 @@ func TestGetLeaves(t *testing.T) {
 	}
 }
 
-// Matches a pointer if both are nil, or point to equal objects.
-type ptrMatcher[T comparable] struct {
-	ptr *T
+type tokenMatcher struct {
+	header *token.SubmitHeader
 }
 
-func (m ptrMatcher[T]) Matches(x any) bool {
-	if ptr, ok := x.(*T); ok {
-		if ptr == nil {
-			return m.ptr == nil
+func (m tokenMatcher) Matches(x any) bool {
+	if header, ok := x.(*token.SubmitHeader); ok {
+		if header == nil {
+			return m.header == nil
 		}
-		return m.ptr != nil && *m.ptr == *ptr
+		return m.header.Equal(*header)
 	}
 	return false
 }
 
-func (m ptrMatcher[T]) String() string {
-	if m.ptr == nil {
-		var zero T
-		return fmt.Sprintf("nil ptr to %T", zero)
-	}
-	return fmt.Sprintf("ptr to %#v", *m.ptr)
+func (m tokenMatcher) String() string {
+	return fmt.Sprintf("submit header to %v", m.header)
 }
 
 func TestAddLeaf(t *testing.T) {
+	sig := crypto.Ed25519Signature{2}
 	req := requests.Leaf{
 		Message:   crypto.Hash{1},
-		Signature: crypto.Signature{2},
-		PublicKey: crypto.PublicKey{3},
+		Signature: sig[:],
+		PublicKey: &crypto.Ed25519PublicKey{3},
 	}
 
-	tokenSignature, err := crypto.SignatureFromHex(
+	tokenSignature, err := crypto.Ed25519SignatureFromHex(
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
 	if err != nil {
 		t.Fatalf("internal test error: %v", err)
@@ -327,7 +323,7 @@ func TestAddLeaf(t *testing.T) {
 
 			if table.exp || table.err != nil {
 				log.EXPECT().AddLeaf(gomock.Any(), req,
-					ptrMatcher[token.SubmitHeader]{table.submitHeader}).Return(table.rsp, table.err)
+					tokenMatcher{table.submitHeader}).Return(table.rsp, table.err)
 			}
 			url := "/foo/add-leaf"
 			if table.url != "" {

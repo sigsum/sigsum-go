@@ -78,15 +78,15 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 	if !ok {
 		return fmt.Errorf("unknown log")
 	}
-	if !cth.Verify(&log.PublicKey) {
+	if !cth.Verify(log.PublicKey) {
 		return fmt.Errorf("invalid log signature")
 	}
-	origin := types.SigsumCheckpointOrigin(&log.PublicKey)
+	origin := types.SigsumCheckpointOrigin(log.PublicKey)
 	processor := newQuorumProcessor()
 	failed := 0
 	for keyHash, cs := range cth.Cosignatures {
 		if witness, ok := p.witnesses[keyHash]; ok {
-			if cs.Verify(&witness.PublicKey, origin, &cth.TreeHead) {
+			if cs.Verify(witness.PublicKey, origin, &cth.TreeHead) {
 				processor.addVerifiedWitness(keyHash)
 			} else {
 				failed++

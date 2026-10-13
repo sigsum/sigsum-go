@@ -36,7 +36,10 @@ func TestAddCheckpoint(t *testing.T) {
 				TreeHead: types.TreeHead{
 					Size:     5,
 					RootHash: crypto.Hash{4, 5, 6}},
-				Signature: crypto.Signature{7, 8, 9},
+				Signature: func() crypto.Signature {
+					sig := crypto.Ed25519Signature{7, 8, 9}
+					return sig[:]
+				}(),
 			},
 		},
 	}
@@ -45,7 +48,10 @@ func TestAddCheckpoint(t *testing.T) {
 		KeyId:   checkpoint.KeyId{0, 1, 2, 3},
 		Cosignature: types.Cosignature{
 			Timestamp: 11111,
-			Signature: crypto.Signature{16, 17, 18},
+			Signature: func() crypto.Signature {
+				sig := crypto.Ed25519Signature{16, 17, 18}
+				return sig[:]
+			}(),
 		},
 	}
 

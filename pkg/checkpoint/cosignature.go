@@ -17,11 +17,15 @@ type CosignatureLine struct {
 	types.Cosignature
 }
 
+func (csl *CosignatureLine) Equal(o *CosignatureLine) bool {
+	return csl.KeyName == o.KeyName && csl.KeyId == o.KeyId && csl.Cosignature.Equal(o.Cosignature)
+}
+
 func (csl *CosignatureLine) ToASCII(w io.Writer) error {
 	timestamp := [8]byte{}
 	binary.BigEndian.PutUint64(timestamp[:], csl.Timestamp)
 	return writeNoteSignature(w,
-		csl.KeyName, csl.KeyId, bytes.Join([][]byte{timestamp[:], csl.Signature[:]}, nil))
+		csl.KeyName, csl.KeyId, bytes.Join([][]byte{timestamp[:], csl.Signature}, nil))
 }
 
 func CosignatureLinesFromASCII(r io.Reader) ([]CosignatureLine, error) {
@@ -36,7 +40,7 @@ func CosignatureLinesFromASCII(r io.Reader) ([]CosignatureLine, error) {
 		if err != nil {
 			return nil, err
 		}
-		name, keyId, blob, err := parseNoteSignature(line, 8+crypto.SignatureSize)
+		name, keyId, blob, err := parseNoteSignature(line, 8+crypto.Ed25519SignatureSize)
 		if err != nil {
 			if err != ErrUnwantedSignature {
 				return nil, err
@@ -44,11 +48,13 @@ func CosignatureLinesFromASCII(r io.Reader) ([]CosignatureLine, error) {
 			continue
 		}
 		csl := CosignatureLine{
-			KeyName:     name,
-			KeyId:       keyId,
-			Cosignature: types.Cosignature{Timestamp: binary.BigEndian.Uint64(blob[:8])},
+			KeyName: name,
+			KeyId:   keyId,
+			Cosignature: types.Cosignature{
+				Timestamp: binary.BigEndian.Uint64(blob[:8]),
+				Signature: blob[8:],
+			},
 		}
-		copy(csl.Signature[:], blob[8:])
 		res = append(res, csl)
 	}
 }

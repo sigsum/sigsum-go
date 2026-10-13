@@ -88,11 +88,11 @@ Options:
 	case "generate", "gen":
 		var settings GenSettings
 		settings.parse(os.Args)
-		pub, signer, err := crypto.NewKeyPair()
+		pub, signer, err := crypto.NewEd25519KeyPair()
 		if err != nil {
 			log.Fatalf("Generating key failed: %v\n", err)
 		}
-		writeKeyFiles(settings.outputFile, &pub, signer)
+		writeKeyFiles(settings.outputFile, pub, signer)
 	case "verify":
 		var settings VerifySettings
 		settings.parse(os.Args)
@@ -102,7 +102,7 @@ Options:
 		}
 		signature := readSignatureFile(settings.signatureFile)
 		msg := readMessage(settings.namespace)
-		if !publicKey.Verify(msg, &signature) {
+		if !publicKey.Verify(msg, signature) {
 			log.Fatalf("Signature is not valid\n")
 		}
 	case "sign":
@@ -117,7 +117,7 @@ Options:
 		if err != nil {
 			log.Fatalf("Signing failed: %v", err)
 		}
-		writeSignatureFile(settings.outputFile, &signature)
+		writeSignatureFile(settings.outputFile, signature)
 
 	case "to-hash":
 		const usage = `
@@ -148,7 +148,7 @@ the default behavior using the -k and -o options.
 			log.Fatal(err)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
-			_, err := fmt.Fprintf(f, "%x\n", publicKey[:])
+			_, err := fmt.Fprintf(f, "%x\n", publicKey.Bytes())
 			return err
 		})
 	case "to-vkey":
@@ -163,9 +163,9 @@ the default behavior using the -k and -o options.
 			if settings.keyType != checkpoint.SigTypeEd25519 {
 				log.Fatal("Key name (-n) option is required for cosignature/v1 keys")
 			}
-			name = types.SigsumCheckpointOrigin(&publicKey)
+			name = types.SigsumCheckpointOrigin(publicKey)
 		}
-		nv := checkpoint.NewNoteVerifier(name, settings.keyType, &publicKey)
+		nv := checkpoint.NewNoteVerifier(name, settings.keyType, publicKey)
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
 			_, err := fmt.Fprintln(f, nv.String())
 			return err
@@ -178,12 +178,12 @@ the default behavior using the -k and -o options.
 `
 		var settings ExportSettings
 		settings.parse(os.Args, "Public key in hex format", "Public key in OpenSSH format", usage)
-		pub, err := crypto.PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
+		pub, err := crypto.Ed25519PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
 		if err != nil {
 			log.Fatalf("Invalid key: %v", err)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
-			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&pub))
+			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(pub))
 			return err
 		})
 	case "from-vkey":
@@ -205,12 +205,12 @@ the default behavior using the -k and -o options.
 			}
 			log.Printf("Key name %q, key type: 0x%02x (%s)", nv.Name, nv.Type, keyType)
 		}
-		if want := checkpoint.NewKeyId(nv.Name, nv.Type, &nv.PublicKey); nv.KeyId != want {
+		if want := checkpoint.NewKeyId(nv.Name, nv.Type, nv.PublicKey); nv.KeyId != want {
 			// TODO: Add --force to proceed regardless.
 			log.Fatalf("Verifier Key id %x is inconsistent with name and public key, expected %x", nv.KeyId, want)
 		}
 		withOutput(settings.outputFile, 0660, func(f io.Writer) error {
-			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(&nv.PublicKey))
+			_, err := fmt.Fprint(f, ssh.FormatPublicEd25519(nv.PublicKey))
 			return err
 		})
 	}
@@ -366,7 +366,7 @@ func withOutput(outputFile string, mode os.FileMode, f func(io.Writer) error) {
 	}
 }
 
-func writeKeyFiles(outputFile string, pub *crypto.PublicKey, signer *crypto.Ed25519Signer) {
+func writeKeyFiles(outputFile string, pub crypto.PublicKey, signer *crypto.Ed25519Signer) {
 	withOutput(outputFile, 0600, func(f io.Writer) error {
 		return ssh.WritePrivateKeyFile(f, signer)
 	})
@@ -381,9 +381,9 @@ func writeKeyFiles(outputFile string, pub *crypto.PublicKey, signer *crypto.Ed25
 	}
 }
 
-func writeSignatureFile(outputFile string, signature *crypto.Signature) {
+func writeSignatureFile(outputFile string, signature crypto.Signature) {
 	withOutput(outputFile, 0644, func(f io.Writer) error {
-		_, err := fmt.Fprintf(f, "%x\n", signature[:])
+		_, err := fmt.Fprintf(f, "%x\n", signature)
 		return err
 	})
 }
@@ -393,7 +393,7 @@ func readSignatureFile(fileName string) crypto.Signature {
 	if err != nil {
 		log.Fatalf("Reading file %q failed: %v", fileName, err)
 	}
-	signature, err := crypto.SignatureFromHex(strings.TrimSpace(string(contents)))
+	signature, err := crypto.Ed25519SignatureFromHex(strings.TrimSpace(string(contents)))
 	if err != nil {
 		log.Fatal(err)
 	}

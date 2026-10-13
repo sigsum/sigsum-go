@@ -43,7 +43,7 @@ func (l *ShortLeaf) Parse(p ascii.Parser) error {
 	if err != nil {
 		return fmt.Errorf("invalid submitter key hash: %v", err)
 	}
-	l.Signature, err = crypto.SignatureFromHex(v[1])
+	l.Signature, err = crypto.Ed25519SignatureFromHex(v[1])
 	if err != nil {
 		return fmt.Errorf("invalid leaf signature: %v", err)
 	}
@@ -64,7 +64,7 @@ func (l *ShortLeaf) ParseVersion1(p ascii.Parser) error {
 	if err != nil {
 		return fmt.Errorf("invalid submitter key hash: %v", err)
 	}
-	l.Signature, err = crypto.SignatureFromHex(v[2])
+	l.Signature, err = crypto.Ed25519SignatureFromHex(v[2])
 	if err != nil {
 		return fmt.Errorf("invalid leaf signature: %v", err)
 	}

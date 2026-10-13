@@ -36,7 +36,7 @@ func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.T
 		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-tree-head failed: %w", err)
 	}
 	// For now, only check log's signature. TODO: Also check cosignatures.
-	if !cth.Verify(&c.logKey) {
+	if !cth.Verify(c.logKey) {
 		return types.SignedTreeHead{}, newAlert(AlertInvalidLogSignature, "log signature invalid")
 	}
 	if cth.Size < treeHead.Size {

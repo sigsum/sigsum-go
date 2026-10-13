@@ -9,7 +9,7 @@ import (
 
 func writeItem(w io.Writer, item interface{}) error {
 	switch item := item.(type) {
-	case []byte:
+	case []byte, crypto.Signature:
 		_, err := fmt.Fprintf(w, "%x", item)
 		return err
 	case uint64:
@@ -19,7 +19,7 @@ func writeItem(w io.Writer, item interface{}) error {
 		_, err := fmt.Fprintf(w, "%d", item)
 		return err
 	default:
-		return fmt.Errorf("unsupported type: %t", item)
+		return fmt.Errorf("unsupported type: %T", item)
 	}
 }
 
@@ -51,10 +51,10 @@ func WriteHash(w io.Writer, name string, h *crypto.Hash) error {
 	return WriteLine(w, name, (*h)[:])
 }
 
-func WritePublicKey(w io.Writer, name string, k *crypto.PublicKey) error {
-	return WriteLine(w, name, (*k)[:])
+func WritePublicKey(w io.Writer, name string, k crypto.PublicKey) error {
+	return WriteLine(w, name, k.Bytes())
 }
 
-func WriteSignature(w io.Writer, name string, s *crypto.Signature) error {
-	return WriteLine(w, name, (*s)[:])
+func WriteSignature(w io.Writer, name string, s crypto.Signature) error {
+	return WriteLine(w, name, s)
 }

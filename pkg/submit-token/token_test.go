@@ -24,15 +24,15 @@ func lookupTXTWithResponses(name string, responses []string) func(context.Contex
 		return responses, nil
 	}
 }
-func verifierWithResponses(logKey *crypto.PublicKey, queryName string, responses []string) *DnsVerifier {
+func verifierWithResponses(logKey crypto.PublicKey, queryName string, responses []string) *DnsVerifier {
 	return &DnsVerifier{
 		lookupTXT: lookupTXTWithResponses(queryName, responses),
-		logKey:    *logKey,
+		logKey:    logKey,
 	}
 }
 
 func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {
-	pub, signer, err := crypto.NewKeyPair()
+	pub, signer, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,8 +72,8 @@ func TestSubmitHeaderFromHeader(t *testing.T) {
 		} else {
 			if table.exp == nil {
 				t.Errorf("%s: unexpected non-failure, got result: %x\n", table.desc, header)
-			} else if got, want := header, *table.exp; got != want {
-				t.Errorf("%s: unexpected result, got: %x, wanted: %x\n", table.desc, got, want)
+			} else if got, want := header, *table.exp; !got.Equal(want) {
+				t.Errorf("%s: unexpected result, got: %v, wanted: %v\n", table.desc, got, want)
 			}
 		}
 	}
@@ -97,15 +97,15 @@ func TestSubmitHeaderToHeader(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	logKeyHex := "cda2517e17dcba133eb0e71bf77473f94a77d7e61b1de4e1e64adfd0938d6182"
-	logKey, err := crypto.PublicKeyFromHex(logKeyHex)
+	logKey, err := crypto.Ed25519PublicKeyFromHex(logKeyHex)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
 	pub, signer := newKeyPair(t)
-	hexKey := hex.EncodeToString(pub[:])
+	hexKey := hex.EncodeToString(pub.Bytes())
 
-	signature, err := MakeToken(signer, &logKey)
+	signature, err := MakeToken(signer, logKey)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -113,7 +113,7 @@ func TestVerify(t *testing.T) {
 	testOne := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string,
 		check func(err error) error) {
 		t.Helper()
-		if err := check(verifierWithResponses(&logKey, registeredDomain, records).Verify(
+		if err := check(verifierWithResponses(logKey, registeredDomain, records).Verify(
 			context.Background(), &SubmitHeader{Domain: tokenDomain, Token: *signature})); err != nil {
 			t.Errorf("%s: %v", desc, err)
 		}
@@ -162,7 +162,7 @@ func TestVerify(t *testing.T) {
 }
 
 func mustSignatureFromHex(t *testing.T, ascii string) crypto.Signature {
-	sig, err := crypto.SignatureFromHex(ascii)
+	sig, err := crypto.Ed25519SignatureFromHex(ascii)
 	if err != nil {
 		t.Fatal(err)
 	}

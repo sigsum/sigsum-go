@@ -51,10 +51,10 @@ func main() {
 		log.Fatal(err)
 	}
 	state := state{fileName: settings.stateFile}
-	if err := state.Load(&pub, &logPub); err != nil {
+	if err := state.Load(pub, logPub); err != nil {
 		log.Fatal(err)
 	}
-	witness := newWitness(signer, &pub, &logPub, &state)
+	witness := newWitness(signer, pub, logPub, &state)
 
 	httpServer := http.Server{
 		Addr:    settings.hostAndPort,
@@ -136,7 +136,7 @@ type witness struct {
 	state   *state
 }
 
-func newWitness(signer crypto.Signer, pub *crypto.PublicKey, logPub *crypto.PublicKey, state *state) witness {
+func newWitness(signer crypto.Signer, pub crypto.PublicKey, logPub crypto.PublicKey, state *state) witness {
 	keyHash := pub.Hash()
 	// Arbitrary name. TODO: Specify somewhere?
 	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", keyHash)
@@ -145,7 +145,7 @@ func newWitness(signer crypto.Signer, pub *crypto.PublicKey, logPub *crypto.Publ
 		keyHash: keyHash,
 		keyName: keyName,
 		keyId:   checkpoint.NewWitnessKeyId(keyName, pub),
-		logPub:  *logPub,
+		logPub:  logPub,
 		origin:  types.SigsumCheckpointOrigin(logPub),
 		state:   state,
 	}
@@ -156,7 +156,7 @@ func (w *witness) AddCheckpoint(_ context.Context, req requests.AddCheckpoint) (
 		return nil, api.ErrNotFound
 	}
 
-	if err := req.Checkpoint.Verify(&w.logPub); err != nil {
+	if err := req.Checkpoint.Verify(w.logPub); err != nil {
 		return nil, api.ErrForbidden.WithError(err)
 	}
 	cs, err := w.state.Update(&req.Checkpoint.SignedTreeHead, req.OldSize, &req.Proof, &w.keyHash,
@@ -184,7 +184,7 @@ type state struct {
 	th types.TreeHead
 }
 
-func (s *state) Load(pub, logPub *crypto.PublicKey) error {
+func (s *state) Load(pub, logPub crypto.PublicKey) error {
 	f, err := os.Open(s.fileName)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -206,7 +206,7 @@ func (s *state) Load(pub, logPub *crypto.PublicKey) error {
 		return fmt.Errorf("Invalid log signature on stored tree head")
 	}
 
-	cs, ok := cth.Cosignatures[crypto.HashBytes(pub[:])]
+	cs, ok := cth.Cosignatures[pub.Hash()]
 	if !ok {
 		return fmt.Errorf("No matching cosignature on stored tree head")
 	}

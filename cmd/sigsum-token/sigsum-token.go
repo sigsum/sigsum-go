@@ -78,7 +78,7 @@ Options:
 			log.Fatal(err)
 		}
 
-		signature, err := token.MakeToken(signer, &logKey)
+		signature, err := token.MakeToken(signer, logKey)
 		if err != nil {
 			log.Fatalf("Signing failed: %v", err)
 		}
@@ -98,7 +98,7 @@ Options:
 			log.Fatal(err)
 		}
 		withOutput(settings.outputFile, func(w io.Writer) error {
-			_, err := fmt.Fprintf(w, "%s IN TXT \"%x\"\n", token.Label, logKey)
+			_, err := fmt.Fprintf(w, "%s IN TXT \"%x\"\n", token.Label, logKey.Bytes())
 			return err
 		})
 	case "verify":
@@ -139,12 +139,12 @@ Options:
 				domain = &settings.domain
 			}
 		}
-		signature, err := crypto.SignatureFromHex(signatureHex)
+		signature, err := crypto.Ed25519SignatureFromHex(signatureHex)
 		if err != nil {
 			log.Fatalf("Invalid hex signature: %v", err)
 		}
 		if domain != nil {
-			if err := token.NewDnsVerifier(&logKey).Verify(
+			if err := token.NewDnsVerifier(logKey).Verify(
 				context.Background(),
 				&token.SubmitHeader{Domain: *domain, Token: signature}); err != nil {
 				log.Fatalf("Verifying with domain %q failed: %v", *domain, err)
@@ -155,7 +155,7 @@ Options:
 			if err != nil {
 				log.Fatal(err)
 			}
-			if err := token.VerifyToken(&key, &logKey, &signature); err != nil {
+			if err := token.VerifyToken(key, logKey, signature); err != nil {
 				log.Fatalf("Verifying using given key failed: %v", err)
 			}
 		}

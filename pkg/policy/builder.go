@@ -91,7 +91,7 @@ type addLog struct {
 func (l *addLog) apply(b *builder) error {
 	h := l.entity.PublicKey.Hash()
 	if _, dup := b.logs[h]; dup {
-		return fmt.Errorf("duplicate log: %x\n", l.entity.PublicKey)
+		return fmt.Errorf("duplicate log: %x\n", l.entity.PublicKey.Bytes())
 	}
 	b.logs[h] = l.entity
 	return nil
@@ -112,7 +112,7 @@ func (w *addWitness) apply(b *builder) error {
 	}
 	h := w.entity.PublicKey.Hash()
 	if _, dup := b.witnesses[h]; dup {
-		return fmt.Errorf("duplicate witness: %x\n", w.entity.PublicKey)
+		return fmt.Errorf("duplicate witness: %x\n", w.entity.PublicKey.Bytes())
 	}
 	b.witnesses[h] = w.entity
 	b.names[w.name] = &leafWitness{h}

@@ -33,7 +33,7 @@ func writePrivateKeyFile(w io.Writer, signer *crypto.Ed25519Signer, nonce [4]byt
 	pub := signer.Public()
 	priv := signer.Private()
 
-	pubBlob := serializePublicEd25519(&pub)
+	pubBlob := serializePublicEd25519(pub)
 
 	blob := bytes.Join([][]byte{
 		// Prefix + first copy of public key
@@ -62,7 +62,7 @@ func writePrivateKeyFile(w io.Writer, signer *crypto.Ed25519Signer, nonce [4]byt
 		// key once more.
 		serializeUint32(64), // Length of private + public key
 		priv[:],
-		pub[:],
+		pub.Bytes(),
 		// Empty comment.
 		serializeUint32(0),
 		// Padding
@@ -85,57 +85,57 @@ func ParsePrivateKeyFile(ascii []byte) (crypto.PublicKey, *crypto.Ed25519Signer,
 	parseBlob := func(blob []byte) (crypto.PublicKey, *crypto.Ed25519Signer, error) {
 		blob = skipPrefix(blob, opensshPrivateKeyPrefix)
 		if blob == nil {
-			return crypto.PublicKey{}, nil, fmt.Errorf("invalid or encrypted private key")
+			return nil, nil, fmt.Errorf("invalid or encrypted private key")
 		}
 		publicKeyBlob, blob := parseString(blob)
 		if blob == nil {
-			return crypto.PublicKey{}, nil, fmt.Errorf("invalid private key, pubkey missing")
+			return nil, nil, fmt.Errorf("invalid private key, pubkey missing")
 		}
 		pub, err := parsePublicEd25519(publicKeyBlob)
 		if err != nil {
-			return crypto.PublicKey{}, nil, fmt.Errorf("invalid private key, pubkey invalid: %w", err)
+			return nil, nil, fmt.Errorf("invalid private key, pubkey invalid: %w", err)
 		}
 		length, blob := parseUint32(blob)
 		if blob == nil || int64(length) != int64(len(blob)) ||
 			length%8 != 0 {
-			return crypto.PublicKey{}, nil, fmt.Errorf("invalid private key")
+			return nil, nil, fmt.Errorf("invalid private key")
 		}
 		n1, blob := parseUint32(blob)
 		n2, blob := parseUint32(blob)
 		if blob == nil || n1 != n2 {
-			return crypto.PublicKey{}, nil, fmt.Errorf("invalid private key, bad nonce")
+			return nil, nil, fmt.Errorf("invalid private key, bad nonce")
 		}
 		blob = skipPrefix(blob, publicKeyBlob)
 		if blob == nil {
-			return crypto.PublicKey{}, nil, fmt.Errorf("invalid private key, inconsistent public key")
+			return nil, nil, fmt.Errorf("invalid private key, inconsistent public key")
 		}
 		keys, blob := parseString(blob)
 		if blob == nil {
-			return crypto.PublicKey{}, nil, fmt.Errorf("invalid private key, private key missing")
+			return nil, nil, fmt.Errorf("invalid private key, private key missing")
 		}
 		// The keys blob consists of the 32-byte private key +
 		// 32 byte public key.
 		if len(keys) != 64 {
-			return crypto.PublicKey{}, nil, fmt.Errorf("unexpected private key size: %d", len(keys))
+			return nil, nil, fmt.Errorf("unexpected private key size: %d", len(keys))
 		}
-		if !bytes.Equal(pub[:], keys[32:]) {
-			return crypto.PublicKey{}, nil, fmt.Errorf("inconsistent public key")
+		if !bytes.Equal(pub.Bytes(), keys[32:]) {
+			return nil, nil, fmt.Errorf("inconsistent public key")
 		}
-		var privateKey crypto.PrivateKey
+		var privateKey crypto.Ed25519PrivateKey
 		copy(privateKey[:], keys[:32])
 		signer := crypto.NewEd25519Signer(&privateKey)
-		if signer.Public() != pub {
-			return crypto.PublicKey{}, nil, fmt.Errorf("inconsistent private key")
+		if !signer.Public().Equal(pub) {
+			return nil, nil, fmt.Errorf("inconsistent private key")
 		}
 
 		return pub, signer, nil
 	}
 	block, _ := pem.Decode(ascii)
 	if block == nil {
-		return crypto.PublicKey{}, nil, NoPEMError
+		return nil, nil, NoPEMError
 	}
 	if block.Type != pemPrivateKeyTag {
-		return crypto.PublicKey{}, nil, fmt.Errorf("unexpected PEM tag: %q", block.Type)
+		return nil, nil, fmt.Errorf("unexpected PEM tag: %q", block.Type)
 	}
 	return parseBlob(block.Bytes)
 }

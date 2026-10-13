@@ -12,8 +12,11 @@ var testCosignature = CosignatureLine{
 	KeyName: "example.org/witness-key",
 	KeyId:   [4]byte{117, 230, 157, 109}, // Base64 "deadb..."
 	Cosignature: types.Cosignature{
-		Timestamp: 0xe79ff9d79a75ca1d,             // "...eef+deadcod..."
-		Signature: crypto.Signature{253, 202, 29}, // ".../cod"
+		Timestamp: 0xe79ff9d79a75ca1d, // "...eef+deadcod..."
+		Signature: func() crypto.Signature {
+			sig := crypto.Ed25519Signature{253, 202, 29} // ".../cod"
+			return sig[:]
+		}(),
 	},
 }
 
@@ -46,7 +49,7 @@ func TestCosignatureLinesFromASCII(t *testing.T) {
 			t.Errorf("failed input %d: %v", i, err)
 		} else if len(cosignatures) != 1 {
 			t.Errorf("unexpected response count input %d: got: %v", i, cosignatures)
-		} else if got, want := cosignatures[0], testCosignature; got != want {
+		} else if got, want := cosignatures[0], testCosignature; !got.Equal(&want) {
 			t.Errorf("unexpected response for input %d: got:\n%v\nwant:\n%v", i, got, want)
 		}
 	}

@@ -48,7 +48,7 @@ func ParsePrivateKey(ascii string) (crypto.Signer, string, error) {
 	_, signer, err := ssh.ParsePrivateKeyFile([]byte(ascii))
 	if err == ssh.NoPEMError {
 		// TODO: Delete support for raw keys.
-		signer, err = crypto.SignerFromHex(ascii)
+		signer, err = crypto.Ed25519SignerFromHex(ascii)
 	}
 	return signer, "", err
 }
@@ -61,11 +61,11 @@ func ReadPublicKeyFile(fileName string) (crypto.PublicKey, error) {
 func ReadPublicKeyFileWithPolicyName(fileName string) (crypto.PublicKey, string, error) {
 	contents, err := os.ReadFile(fileName)
 	if err != nil {
-		return crypto.PublicKey{}, "", err
+		return nil, "", err
 	}
 	key, policyName, err := ParsePublicKeyWithPolicyName(string(contents))
 	if err != nil {
-		return crypto.PublicKey{}, "", fmt.Errorf("parsing public key file %q failed: %v",
+		return nil, "", fmt.Errorf("parsing public key file %q failed: %v",
 			fileName, err)
 	}
 	return key, policyName, nil

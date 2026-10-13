@@ -73,12 +73,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	origin := types.SigsumCheckpointOrigin(&pub)
+	origin := types.SigsumCheckpointOrigin(pub)
 
 	if err := (&checkpoint.Checkpoint{
 		SignedTreeHead: sth,
 		Origin:         origin,
-		KeyId:          checkpoint.NewLogKeyId(origin, &pub),
+		KeyId:          checkpoint.NewLogKeyId(origin, pub),
 	}).ToASCII(os.Stdout); err != nil {
 		log.Fatal(err)
 	}

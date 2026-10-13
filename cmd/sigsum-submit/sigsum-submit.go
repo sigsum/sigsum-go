@@ -48,7 +48,7 @@ type Settings struct {
 type LeafSink func(name string, leaf *requests.Leaf)
 
 // The name argument corresponds to the filename, or an empty string for stdin.
-type LeafSkip func(name string, msg *crypto.Hash, publicKey *crypto.PublicKey) bool
+type LeafSkip func(name string, msg *crypto.Hash, publicKey crypto.PublicKey) bool
 
 // A LeafSource represents the input processing, either reading signed
 // leaf requests from file, or signing leaf requests based on input files
@@ -82,7 +82,7 @@ func getLeafRequestSignerSource(keyFile string, inputFiles []string, rawHash boo
 	return func(skip LeafSkip, sink LeafSink) {
 		for _, inputFile := range inputFiles {
 			msg := readMessageFile(inputFile, rawHash)
-			if skip(inputFile, &msg, &publicKey) {
+			if skip(inputFile, &msg, publicKey) {
 				continue
 			}
 			signature, err := types.SignLeafMessage(signer, msg[:])
@@ -118,7 +118,7 @@ func getLeafRequestSource(inputFiles []string) (LeafSource, string, error) {
 			if len(inputFile) == 0 {
 				log.Fatal("Invalid input file name %q", ".req")
 			}
-			if !skip(inputFile, &leaf.Message, &leaf.PublicKey) {
+			if !skip(inputFile, &leaf.Message, leaf.PublicKey) {
 				sink(inputFile, &leaf)
 			}
 		}
@@ -171,7 +171,7 @@ func main() {
 			}
 		}
 
-		skip := func(inputName string, msg *crypto.Hash, publicKey *crypto.PublicKey) bool {
+		skip := func(inputName string, msg *crypto.Hash, publicKey crypto.PublicKey) bool {
 			if len(inputName) == 0 {
 				return false
 			}
@@ -189,7 +189,7 @@ func main() {
 				log.Fatal("Parsing proof file %q failed: %v", proofName, err)
 			}
 			if err := sigsumProof.Verify(msg, map[crypto.Hash]crypto.PublicKey{
-				publicKey.Hash(): *publicKey}, policy); err != nil {
+				publicKey.Hash(): publicKey}, policy); err != nil {
 				log.Fatal("Existing proof file %q is not valid: %v", proofName, err)
 			}
 			return true
@@ -234,7 +234,7 @@ func main() {
 				}
 			}
 		}
-		source(func(_ string, _ *crypto.Hash, _ *crypto.PublicKey) bool { return false }, sink)
+		source(func(_ string, _ *crypto.Hash, _ crypto.PublicKey) bool { return false }, sink)
 	}
 }
 
@@ -404,7 +404,7 @@ func readLeafRequest(r io.Reader) (requests.Leaf, error) {
 	if err := leaf.FromASCII(r); err != nil {
 		return requests.Leaf{}, err
 	}
-	if !types.VerifyLeafMessage(&leaf.PublicKey, leaf.Message[:], &leaf.Signature) {
+	if !types.VerifyLeafMessage(leaf.PublicKey, leaf.Message[:], leaf.Signature) {
 		return requests.Leaf{}, fmt.Errorf("invalid leaf signature")
 	}
 	return leaf, nil
@@ -443,13 +443,13 @@ func checkTokenDomain(ctx context.Context, domain string, pubkey crypto.PublicKe
 	}
 	var badKeys int
 	for _, keyHex := range rsps {
-		key, err := crypto.PublicKeyFromHex(keyHex)
+		key, err := crypto.Ed25519PublicKeyFromHex(keyHex)
 
 		if err != nil {
 			badKeys++
 			continue
 		}
-		if key == pubkey {
+		if key.Equal(pubkey) {
 			return nil
 		}
 	}

@@ -70,7 +70,7 @@ func TestLeafVerify(t *testing.T) {
 	checksum := validChecksum(t)
 	pub, signer := newKeyPair(t)
 
-	keys := map[crypto.Hash]crypto.PublicKey{crypto.HashBytes(pub[:]): pub}
+	keys := map[crypto.Hash]crypto.PublicKey{pub.Hash(): pub}
 
 	sig, err := SignLeafChecksum(signer, &checksum)
 	if err != nil {
@@ -131,7 +131,7 @@ func TestLeafFromBinary(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := leaf, table.want; got != want {
+		if got, want := leaf, table.want; !got.Equal(&want) {
 			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -181,7 +181,7 @@ func TestLeafFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := leaf, table.want; got != want {
+		if got, want := leaf, table.want; !got.Equal(&want) {
 			t.Errorf("got leaf\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -246,7 +246,7 @@ func TestLeavesFromASCII(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		if got, want := leaves, table.want; !slices.Equal(got, want) {
+		if got, want := leaves, table.want; !slices.EqualFunc(got, want, func(a, b Leaf) bool { return a.Equal(&b) }) {
 			t.Errorf("got leaves\n\t%v\nbut wanted\n\t%v\nin test %q\n", got, want, table.desc)
 		}
 	}
@@ -298,13 +298,21 @@ func invalidLeafASCII(t *testing.T) string {
 
 func validLeaves(t *testing.T) []Leaf {
 	t.Helper()
-	return []Leaf{validLeaf(t), Leaf{}}
+	return []Leaf{
+		validLeaf(t),
+		Leaf{
+			Signature: func() crypto.Signature {
+				sig := crypto.Ed25519Signature{}
+				return sig[:]
+			}(),
+		},
+	}
 }
 
 func validLeavesASCII(t *testing.T) string {
 	t.Helper()
 	return validLeafASCII(t) + fmt.Sprintf("%s=%x %x %x\n",
-		"leaf", crypto.Hash{}, crypto.Signature{}, crypto.Hash{})
+		"leaf", crypto.Hash{}, crypto.Ed25519Signature{}, crypto.Hash{})
 }
 
 func invalidLeavesASCII(t *testing.T, key string) string {
@@ -324,7 +332,7 @@ func invalidLeavesASCII(t *testing.T, key string) string {
 }
 
 func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {
-	pub, signer, err := crypto.NewKeyPair()
+	pub, signer, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,19 +352,9 @@ func newHashBufferInc(t *testing.T) crypto.Hash {
 func newSigBufferInc(t *testing.T) crypto.Signature {
 	t.Helper()
 
-	var buf crypto.Signature
+	var buf crypto.Ed25519Signature
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
-	return buf
-}
-
-func newPubBufferInc(t *testing.T) crypto.PublicKey {
-	t.Helper()
-
-	var buf crypto.PublicKey
-	for i := 0; i < len(buf); i++ {
-		buf[i] = byte(i)
-	}
-	return buf
+	return buf[:]
 }

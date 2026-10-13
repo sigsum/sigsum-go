@@ -17,9 +17,12 @@ type NoteVerifier struct {
 	PublicKey crypto.PublicKey
 }
 
+func (nv *NoteVerifier) Equal(o *NoteVerifier) bool {
+	return nv.Name == o.Name && nv.KeyId == o.KeyId && nv.Type == o.Type && nv.PublicKey.Equal(o.PublicKey)
+}
 func (nv *NoteVerifier) String() string {
 	return fmt.Sprintf("%s+%x+%s", nv.Name, nv.KeyId,
-		base64.StdEncoding.EncodeToString(bytes.Join([][]byte{[]byte{byte(nv.Type)}, nv.PublicKey[:]}, nil)))
+		base64.StdEncoding.EncodeToString(bytes.Join([][]byte{[]byte{byte(nv.Type)}, nv.PublicKey.Bytes()}, nil)))
 }
 
 // A note verifier should be parsed as <name>+<hash>+<keydata>
@@ -59,18 +62,20 @@ func (nv *NoteVerifier) FromString(in string) error {
 		return fmt.Errorf("unsupported key type 0x%02x", nv.Type)
 	}
 
-	if got, want := len(blob), crypto.PublicKeySize; got != want {
+	if got, want := len(blob), crypto.Ed25519PublicKeySize; got != want {
 		return fmt.Errorf("unexpected key blob length: got %d, want %d", got, want)
 	}
-	copy(nv.PublicKey[:], blob)
+	var pub crypto.Ed25519PublicKey
+	copy(pub[:], blob)
+	nv.PublicKey = &pub
 	return nil
 }
 
-func NewNoteVerifier(keyName string, keyType SignatureType, publicKey *crypto.PublicKey) NoteVerifier {
+func NewNoteVerifier(keyName string, keyType SignatureType, publicKey crypto.PublicKey) NoteVerifier {
 	return NoteVerifier{
 		Name:      keyName,
 		Type:      keyType,
 		KeyId:     NewKeyId(keyName, keyType, publicKey),
-		PublicKey: *publicKey,
+		PublicKey: publicKey,
 	}
 }
