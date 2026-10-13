@@ -31,7 +31,7 @@ func SignLeafChecksum(signer crypto.Signer, checksum *crypto.Hash) (crypto.Signa
 }
 
 func VerifyLeafChecksum(key *crypto.PublicKey, checksum *crypto.Hash, sig *crypto.Signature) bool {
-	return crypto.Verify(key, leafSignedData(checksum), sig)
+	return key.Verify(leafSignedData(checksum), sig)
 }
 
 func SignLeafMessage(signer crypto.Signer, msg []byte) (crypto.Signature, error) {

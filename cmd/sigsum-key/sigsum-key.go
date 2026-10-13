@@ -102,7 +102,7 @@ Options:
 		}
 		signature := readSignatureFile(settings.signatureFile)
 		msg := readMessage(settings.namespace)
-		if !crypto.Verify(&publicKey, msg, &signature) {
+		if !publicKey.Verify(msg, &signature) {
 			log.Fatalf("Signature is not valid\n")
 		}
 	case "sign":

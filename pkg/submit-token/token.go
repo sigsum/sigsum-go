@@ -51,7 +51,7 @@ func MakeToken(signer crypto.Signer, logKey *crypto.PublicKey) (crypto.Signature
 
 // Verify a token using a given key, with no DNS loookup.
 func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token *crypto.Signature) error {
-	if !crypto.Verify(key, crypto.AttachNamespace(namespace, logKey[:]), token) {
+	if !key.Verify(crypto.AttachNamespace(namespace, logKey[:]), token) {
 		return fmt.Errorf("invalid token signature")
 	}
 	return nil
@@ -105,7 +105,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, header *SubmitHeader) error {
 			badKeys++
 			continue
 		}
-		if crypto.Verify(&key, signedData, &header.Token) {
+		if key.Verify(signedData, &header.Token) {
 			return nil
 		}
 	}

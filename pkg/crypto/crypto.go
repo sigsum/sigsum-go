@@ -27,10 +27,6 @@ type (
 	PrivateKey [PrivateKeySize]byte
 )
 
-func (k PublicKey) Hash() Hash {
-	return HashBytes(k[:])
-}
-
 type Signer interface {
 	Sign([]byte) (Signature, error)
 	Public() PublicKey
@@ -49,8 +45,12 @@ func HashFile(f io.Reader) (digest Hash, err error) {
 	return
 }
 
-func Verify(pub *PublicKey, msg []byte, sig *Signature) bool {
-	return ed25519.Verify(ed25519.PublicKey(pub[:]), msg, sig[:])
+func (k PublicKey) Hash() Hash {
+	return HashBytes(k[:])
+}
+
+func (k PublicKey) Verify(msg []byte, sig *Signature) bool {
+	return ed25519.Verify(ed25519.PublicKey(k[:]), msg, sig[:])
 }
 
 type Ed25519Signer struct {
