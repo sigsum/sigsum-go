@@ -49,8 +49,28 @@ func (k PublicKey) Hash() Hash {
 	return HashBytes(k[:])
 }
 
+// Rejecting public keys representing low-order points helps prevent
+// log poisoning. According to RFC 8032, a signature {R, S} is valid if
+//
+//   [S]B = R + k A'
+//
+// where A' is the public key and
+//
+//   k = SHA512(dom2(F, C) || R || A || PH(M))
+//
+// In a log-poisoning attack, all of R, S and A are directly
+// controlled by the attacker, while M is essentially a hash of an
+// attacker-controlled value. If A' is of low order, the attacker can
+// choose S freely and pick one of the few possible values for k A'
+// (e.g., k A' = 0). The attacker can then compute a matching R, and
+// finally try a few different messages until one is found that
+// results in the right value of k A'.
 func (k PublicKey) Verify(msg []byte, sig *Signature) bool {
+	// These validation criteria are intended to be consistent
+	// with ed25519-dalek's verify_strict(). See
+	// https://github.com/C2SP/CCTV/tree/main/ed25519.
 	return validateEd25519PublicKey(&k) == nil &&
+		validateEd25519Signature(sig) == nil &&
 		ed25519.Verify(ed25519.PublicKey(k[:]), msg, sig[:])
 }
 
