@@ -44,6 +44,4 @@ using the `sigsum-policy` program.
 The Go library (exported packages under `./pkg`) is intended for
 applications that want to implement Sigsum logging, without going via
 the command line tools. Important changes are documented in the NEWS
-file, but we are not yet able to promise API stability (as indicated
-by the "v0.*" module version). There's no documentation beyond the
-source code comments.
+file. There's no documentation beyond the source code comments.

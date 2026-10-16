@@ -1,3 +1,38 @@
+NEWS for Sigsum-go, v1.0.0
+
+	This is a major release, advertising a library API that is
+	intended to be stable, with only bugfixes and
+	backwards-compatible extensions going into v1.x.y.
+
+	The most notable library changes since the previous release
+	are deletion of the Metrics interface and stricter validation
+	of Ed25519 signatures.
+
+	Except for rejection of some out-of-spec Ed25519 signatures,
+	there are no changes in behavior of the command line tools.
+
+	Incompatible changes:
+
+	* Building now requires go version 1.27 or later.
+
+	* When verifying Ed25519 signatures, reject points in
+          non-canonical encoding, and points of low-order. The Verify
+          function has also been moved to be a method on the PublicKey
+          type.
+
+	* In the struct server.Config, the server.Metrics interface is
+	  deleted, replaced by a simpler and more general callback
+	  HandlerDecorator.
+
+	* The Leaf.Verify method now takes a key map as argument and
+	  returns an error object, with a specific error if the mapping
+	  doesn't include any key for the leaf's key hash.
+
+	Documentation updates:
+
+	* Document that in a Sigsum proof, the cosignature key hashes
+          must be distinct.
+
 NEWS for Sigsum tools, v0.14.1
 
 	This release fixes bugs and adds a few new library features.
