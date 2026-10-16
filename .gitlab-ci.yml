@@ -38,7 +38,7 @@ make-shellcheck:
 # Succeeds if no changes are suggested by gofmt -d .
 gofmt:
   stage: test
-  script: if (gofmt -d . | grep .) ; then exit 1 ; fi
+  script: gofmt -d . | grep . || exit 1
 
 codespell:
   image: debian:testing
