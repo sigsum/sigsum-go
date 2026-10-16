@@ -17,15 +17,15 @@ import (
 )
 
 func TestSubmitSuccess(t *testing.T) {
-	logPub, logSigner, err := crypto.NewKeyPair()
+	logPub, logSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatalf("creating log key failed: %v", err)
 	}
-	submitPub, submitSigner, err := crypto.NewKeyPair()
+	submitPub, submitSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
-	p, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
+	p, err := policy.NewKofNPolicy([]crypto.Ed25519PublicKey{logPub}, nil, 0)
 	if err != nil {
 		t.Fatalf("creating policy failed: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestSubmitSuccess(t *testing.T) {
 		}
 
 		pr := proofs[0]
-		if err := pr.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
+		if err := pr.Verify(&msg, map[crypto.Hash]crypto.Ed25519PublicKey{
 			submitPub.Hash(): submitPub}, p); err != nil {
 			t.Errorf("returned sigsum proof failed to verify: %v", err)
 		}
@@ -84,15 +84,15 @@ func TestSubmitSuccess(t *testing.T) {
 }
 
 func TestSubmitWithFailure(t *testing.T) {
-	logPub, logSigner, err := crypto.NewKeyPair()
+	logPub, logSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatalf("creating log key failed: %v", err)
 	}
-	_, submitSigner, err := crypto.NewKeyPair()
+	_, submitSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatalf("creating submit key failed: %v", err)
 	}
-	p, err := policy.NewKofNPolicy([]crypto.PublicKey{logPub}, nil, 0)
+	p, err := policy.NewKofNPolicy([]crypto.Ed25519PublicKey{logPub}, nil, 0)
 	if err != nil {
 		t.Fatalf("creating policy failed: %v", err)
 	}

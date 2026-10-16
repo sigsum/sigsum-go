@@ -11,7 +11,7 @@ func TestNoteVerifierString(t *testing.T) {
 		Name:      "example.org/key",
 		KeyId:     KeyId{1, 2, 3, 4},
 		Type:      SigTypeCosignature,
-		PublicKey: crypto.PublicKey{0x01, 0x45, 0x2c, 0x83, 0x46, 0x34, 0x44, 0x92, 0xf8},
+		PublicKey: crypto.Ed25519PublicKey{0x01, 0x45, 0x2c, 0x83, 0x46, 0x34, 0x44, 0x92, 0xf8},
 	}
 	want := "example.org/key+01020304+BAFFLINGNESS+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	got := nv.String()
@@ -27,7 +27,7 @@ func TestNoteVerifierFromString(t *testing.T) {
 		Name:      "example.org/key",
 		KeyId:     KeyId{1, 2, 3, 4},
 		Type:      SigTypeCosignature,
-		PublicKey: crypto.PublicKey{0x01, 0x45, 0x2c, 0x83, 0x46, 0x34, 0x44, 0x92, 0xf8},
+		PublicKey: crypto.Ed25519PublicKey{0x01, 0x45, 0x2c, 0x83, 0x46, 0x34, 0x44, 0x92, 0xf8},
 	}
 	if err := nv.FromString("example.org/key+01020304+BAFFLINGNESS+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"); err != nil {
 		t.Fatal(err)
@@ -40,7 +40,7 @@ func TestNoteVerifierFromString(t *testing.T) {
 func TestNewNoteVerifier(t *testing.T) {
 	nv := NewNoteVerifier("example.org/key",
 		SigTypeCosignature,
-		&crypto.PublicKey{0x01, 0x45, 0x2c, 0x83, 0x46, 0x34, 0x44, 0x92, 0xf8})
+		&crypto.Ed25519PublicKey{0x01, 0x45, 0x2c, 0x83, 0x46, 0x34, 0x44, 0x92, 0xf8})
 	// The below key id is consistent with output from
 	// (echo "example.org/key" ;
 	//  echo 'BAFFLINGNESS+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' |

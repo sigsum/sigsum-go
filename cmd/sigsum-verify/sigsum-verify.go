@@ -28,7 +28,7 @@ func main() {
 	log.SetFlags(0)
 	var settings Settings
 	settings.parse(os.Args)
-	var submitKeys map[crypto.Hash]crypto.PublicKey
+	var submitKeys map[crypto.Hash]crypto.Ed25519PublicKey
 	policyNameFromPubKeys := ""
 	var err error
 	// Care about policy from pubkeys only if no policy option was specified

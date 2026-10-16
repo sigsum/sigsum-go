@@ -31,7 +31,7 @@ func TestSignLeaf(t *testing.T) {
 		desc     string
 		checksum crypto.Hash
 		signErr  error
-		wantSig  crypto.Signature
+		wantSig  crypto.Ed25519Signature
 		wantErr  bool
 	}{
 		{
@@ -70,7 +70,7 @@ func TestLeafVerify(t *testing.T) {
 	checksum := validChecksum(t)
 	pub, signer := newKeyPair(t)
 
-	keys := map[crypto.Hash]crypto.PublicKey{crypto.HashBytes(pub[:]): pub}
+	keys := map[crypto.Hash]crypto.Ed25519PublicKey{pub.Hash(): pub}
 
 	sig, err := SignLeafChecksum(signer, &checksum)
 	if err != nil {
@@ -304,7 +304,7 @@ func validLeaves(t *testing.T) []Leaf {
 func validLeavesASCII(t *testing.T) string {
 	t.Helper()
 	return validLeafASCII(t) + fmt.Sprintf("%s=%x %x %x\n",
-		"leaf", crypto.Hash{}, crypto.Signature{}, crypto.Hash{})
+		"leaf", crypto.Hash{}, crypto.Ed25519Signature{}, crypto.Hash{})
 }
 
 func invalidLeavesASCII(t *testing.T, key string) string {
@@ -323,8 +323,8 @@ func invalidLeavesASCII(t *testing.T, key string) string {
 	}
 }
 
-func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {
-	pub, signer, err := crypto.NewKeyPair()
+func newKeyPair(t *testing.T) (crypto.Ed25519PublicKey, crypto.Signer) {
+	pub, signer, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,20 +341,20 @@ func newHashBufferInc(t *testing.T) crypto.Hash {
 	return buf
 }
 
-func newSigBufferInc(t *testing.T) crypto.Signature {
+func newSigBufferInc(t *testing.T) crypto.Ed25519Signature {
 	t.Helper()
 
-	var buf crypto.Signature
+	var buf crypto.Ed25519Signature
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
 	return buf
 }
 
-func newPubBufferInc(t *testing.T) crypto.PublicKey {
+func newPubBufferInc(t *testing.T) crypto.Ed25519PublicKey {
 	t.Helper()
 
-	var buf crypto.PublicKey
+	var buf crypto.Ed25519PublicKey
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}

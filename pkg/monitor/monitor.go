@@ -51,7 +51,7 @@ type Config struct {
 	BatchSize uint64
 	// Keys of interest. If nil, all keys are of interest (but no
 	// signatures are verified).
-	SubmitKeys map[crypto.Hash]crypto.PublicKey
+	SubmitKeys map[crypto.Hash]crypto.Ed25519PublicKey
 	Callbacks  Callbacks
 }
 

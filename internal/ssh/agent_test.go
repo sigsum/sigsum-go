@@ -91,7 +91,7 @@ func TestRequest(t *testing.T) {
 }
 
 func TestSignEd25519(t *testing.T) {
-	privateKey := crypto.PrivateKey{17}
+	privateKey := crypto.Ed25519PrivateKey{17}
 	signer := crypto.NewEd25519Signer(&privateKey)
 	publicKey := signer.Public()
 
@@ -142,7 +142,7 @@ func TestSignEd25519Fail(t *testing.T) {
 		mockConn := mockConnection{readBuf: table.wireResponse, writeBuf: []byte{}}
 		c := Connection{&mockConn}
 
-		signature, err := c.SignEd25519(&crypto.PublicKey{}, []byte("msg"))
+		signature, err := c.SignEd25519(&crypto.Ed25519PublicKey{}, []byte("msg"))
 		if err == nil {
 			t.Errorf("%q: unexpected success, got signature %x\n", table.desc, signature)
 		} else if !strings.Contains(err.Error(), table.expError) {

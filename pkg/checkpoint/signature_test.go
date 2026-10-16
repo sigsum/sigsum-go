@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewLogKeyId(t *testing.T) {
-	keyId := NewLogKeyId("example.org/log", &crypto.PublicKey{})
+	keyId := NewLogKeyId("example.org/log", &crypto.Ed25519PublicKey{})
 	hash := crypto.HashBytes(bytes.Join([][]byte{
 		[]byte("example.org/log"),
 		[]byte{0xA, 0x1},
@@ -22,8 +22,8 @@ func TestNewLogKeyId(t *testing.T) {
 
 func TestWriteEd25519Signature(t *testing.T) {
 	origin := "example.org/log"
-	keyId := KeyId{117, 230, 157, 109}      // Base64 "deadb..."
-	signature := crypto.Signature{231, 159} // "...eef"
+	keyId := KeyId{117, 230, 157, 109}             // Base64 "deadb..."
+	signature := crypto.Ed25519Signature{231, 159} // "...eef"
 	want := `
 — example.org/log deadbeefAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 `[1:]
@@ -41,14 +41,14 @@ func TestParseEd25519SignatureLine(t *testing.T) {
 	for _, table := range []struct {
 		in     string
 		id     KeyId
-		sig    crypto.Signature
+		sig    crypto.Ed25519Signature
 		err    error
 		errMsg string
 	}{
 		{
 			in:  "— example.org/log deadbeefAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 			id:  KeyId{117, 230, 157, 109},
-			sig: crypto.Signature{231, 159},
+			sig: crypto.Ed25519Signature{231, 159},
 		},
 		{
 			in:  "— example.org/log2 deadbeefAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",

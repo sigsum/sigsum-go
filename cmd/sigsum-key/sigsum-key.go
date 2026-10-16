@@ -88,7 +88,7 @@ Options:
 	case "generate", "gen":
 		var settings GenSettings
 		settings.parse(os.Args)
-		pub, signer, err := crypto.NewKeyPair()
+		pub, signer, err := crypto.NewEd25519KeyPair()
 		if err != nil {
 			log.Fatalf("Generating key failed: %v\n", err)
 		}
@@ -178,7 +178,7 @@ the default behavior using the -k and -o options.
 `
 		var settings ExportSettings
 		settings.parse(os.Args, "Public key in hex format", "Public key in OpenSSH format", usage)
-		pub, err := crypto.PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
+		pub, err := crypto.Ed25519PublicKeyFromHex(strings.TrimSpace(readInput(settings.keyFile)))
 		if err != nil {
 			log.Fatalf("Invalid key: %v", err)
 		}
@@ -366,7 +366,7 @@ func withOutput(outputFile string, mode os.FileMode, f func(io.Writer) error) {
 	}
 }
 
-func writeKeyFiles(outputFile string, pub *crypto.PublicKey, signer *crypto.Ed25519Signer) {
+func writeKeyFiles(outputFile string, pub *crypto.Ed25519PublicKey, signer *crypto.Ed25519Signer) {
 	withOutput(outputFile, 0600, func(f io.Writer) error {
 		return ssh.WritePrivateKeyFile(f, signer)
 	})
@@ -381,19 +381,19 @@ func writeKeyFiles(outputFile string, pub *crypto.PublicKey, signer *crypto.Ed25
 	}
 }
 
-func writeSignatureFile(outputFile string, signature *crypto.Signature) {
+func writeSignatureFile(outputFile string, signature *crypto.Ed25519Signature) {
 	withOutput(outputFile, 0644, func(f io.Writer) error {
 		_, err := fmt.Fprintf(f, "%x\n", signature[:])
 		return err
 	})
 }
 
-func readSignatureFile(fileName string) crypto.Signature {
+func readSignatureFile(fileName string) crypto.Ed25519Signature {
 	contents, err := os.ReadFile(fileName)
 	if err != nil {
 		log.Fatalf("Reading file %q failed: %v", fileName, err)
 	}
-	signature, err := crypto.SignatureFromHex(strings.TrimSpace(string(contents)))
+	signature, err := crypto.Ed25519SignatureFromHex(strings.TrimSpace(string(contents)))
 	if err != nil {
 		log.Fatal(err)
 	}

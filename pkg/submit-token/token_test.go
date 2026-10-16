@@ -24,15 +24,15 @@ func lookupTXTWithResponses(name string, responses []string) func(context.Contex
 		return responses, nil
 	}
 }
-func verifierWithResponses(logKey *crypto.PublicKey, queryName string, responses []string) *DnsVerifier {
+func verifierWithResponses(logKey *crypto.Ed25519PublicKey, queryName string, responses []string) *DnsVerifier {
 	return &DnsVerifier{
 		lookupTXT: lookupTXTWithResponses(queryName, responses),
 		logKey:    *logKey,
 	}
 }
 
-func newKeyPair(t *testing.T) (crypto.PublicKey, crypto.Signer) {
-	pub, signer, err := crypto.NewKeyPair()
+func newKeyPair(t *testing.T) (crypto.Ed25519PublicKey, crypto.Signer) {
+	pub, signer, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestSubmitHeaderToHeader(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	logKeyHex := "cda2517e17dcba133eb0e71bf77473f94a77d7e61b1de4e1e64adfd0938d6182"
-	logKey, err := crypto.PublicKeyFromHex(logKeyHex)
+	logKey, err := crypto.Ed25519PublicKeyFromHex(logKeyHex)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -110,7 +110,7 @@ func TestVerify(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	testOne := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string,
+	testOne := func(desc, tokenDomain string, signature *crypto.Ed25519Signature, registeredDomain string, records []string,
 		check func(err error) error) {
 		t.Helper()
 		if err := check(verifierWithResponses(&logKey, registeredDomain, records).Verify(
@@ -118,17 +118,17 @@ func TestVerify(t *testing.T) {
 			t.Errorf("%s: %v", desc, err)
 		}
 	}
-	testValid := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string) {
+	testValid := func(desc, tokenDomain string, signature *crypto.Ed25519Signature, registeredDomain string, records []string) {
 		t.Helper()
 		testOne("valid: "+desc, tokenDomain, signature, "_sigsum_v1."+registeredDomain, records,
 			func(err error) error { return err })
 	}
-	testValidFallback := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string) {
+	testValidFallback := func(desc, tokenDomain string, signature *crypto.Ed25519Signature, registeredDomain string, records []string) {
 		t.Helper()
 		testOne("valid: "+desc+" (fallback)", tokenDomain, signature, "_sigsum_v0."+registeredDomain, records,
 			func(err error) error { return err })
 	}
-	testInvalid := func(desc, tokenDomain string, signature *crypto.Signature, registeredDomain string, records []string, msg string) {
+	testInvalid := func(desc, tokenDomain string, signature *crypto.Ed25519Signature, registeredDomain string, records []string, msg string) {
 		t.Helper()
 		testOne("invalid: "+desc, tokenDomain, signature, "_sigsum_v1."+registeredDomain, records,
 			func(err error) error {
@@ -161,8 +161,8 @@ func TestVerify(t *testing.T) {
 		"ignored keys: 1")
 }
 
-func mustSignatureFromHex(t *testing.T, ascii string) crypto.Signature {
-	sig, err := crypto.SignatureFromHex(ascii)
+func mustSignatureFromHex(t *testing.T, ascii string) crypto.Ed25519Signature {
+	sig, err := crypto.Ed25519SignatureFromHex(ascii)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,10 +10,10 @@ import (
 func TestLogPolicy(t *testing.T) {
 	th := types.TreeHead{Size: 3}
 	var cths []types.CosignedTreeHead
-	var logKeys []crypto.PublicKey
+	var logKeys []crypto.Ed25519PublicKey
 	var logHashes []crypto.Hash
 	for i := 0; i < 3; i++ {
-		pub, s, err := crypto.NewKeyPair()
+		pub, s, err := crypto.NewEd25519KeyPair()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,16 +47,16 @@ func TestLogPolicy(t *testing.T) {
 
 type testData struct {
 	sth           types.SignedTreeHead
-	logPub        crypto.PublicKey
+	logPub        crypto.Ed25519PublicKey
 	logHash       crypto.Hash
-	witnessKeys   []crypto.PublicKey
+	witnessKeys   []crypto.Ed25519PublicKey
 	witnessHashes []crypto.Hash
 	cosignatures  []types.Cosignature
 }
 
 func newTestData(t *testing.T, count int) testData {
 	th := types.TreeHead{Size: 3}
-	logPub, logSigner, err := crypto.NewKeyPair()
+	logPub, logSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func newTestData(t *testing.T, count int) testData {
 	origin := types.SigsumCheckpointOrigin(&logPub)
 
 	for i := 0; i < count; i++ {
-		pub, s, err := crypto.NewKeyPair()
+		pub, s, err := crypto.NewEd25519KeyPair()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,7 +95,7 @@ func TestWitnessPolicy(t *testing.T) {
 	td := newTestData(t, 6)
 
 	// Four known witnesses, at least 3 cosignatures required.
-	p, err := NewKofNPolicy([]crypto.PublicKey{td.logPub},
+	p, err := NewKofNPolicy([]crypto.Ed25519PublicKey{td.logPub},
 		td.witnessKeys[:4], 3)
 	if err != nil {
 		t.Fatal(err)

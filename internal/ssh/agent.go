@@ -23,7 +23,7 @@ type Connection struct {
 }
 
 type Signer struct {
-	publicKey crypto.PublicKey
+	publicKey crypto.Ed25519PublicKey
 	conn      *Connection
 }
 
@@ -63,7 +63,7 @@ func (c *Connection) request(msg []byte) ([]byte, error) {
 	return buffer, nil
 }
 
-func (c Connection) SignEd25519(publicKey *crypto.PublicKey, msg []byte) (crypto.Signature, error) {
+func (c Connection) SignEd25519(publicKey *crypto.Ed25519PublicKey, msg []byte) (crypto.Ed25519Signature, error) {
 	buffer, err := c.request(bytes.Join([][]byte{
 		[]byte{sshAgentSignRequest},
 		serializeString(serializePublicEd25519(publicKey)),
@@ -71,45 +71,45 @@ func (c Connection) SignEd25519(publicKey *crypto.PublicKey, msg []byte) (crypto
 		serializeUint32(0), // flags
 	}, nil))
 	if err != nil {
-		return crypto.Signature{}, err
+		return crypto.Ed25519Signature{}, err
 	}
 
 	switch msgType, body := buffer[0], buffer[1:]; msgType {
 	case sshAgentFailure:
-		return crypto.Signature{}, fmt.Errorf("ssh-agent refused signature request")
+		return crypto.Ed25519Signature{}, fmt.Errorf("ssh-agent refused signature request")
 	case sshAgentSignResponse:
 		return parseSignature(body)
 	default:
-		return crypto.Signature{}, fmt.Errorf("unexpected ssh-agent response, type %d", msgType)
+		return crypto.Ed25519Signature{}, fmt.Errorf("unexpected ssh-agent response, type %d", msgType)
 	}
 }
 
-func (c Connection) NewSigner(publicKey *crypto.PublicKey) (*Signer, error) {
+func (c Connection) NewSigner(publicKey *crypto.Ed25519PublicKey) (*Signer, error) {
 	// TODO: Use SSH_AGENTC_REQUEST_IDENIFIER to list public keys,
 	// and fail if given key is not on the list.
 	return &Signer{publicKey: *publicKey, conn: &c}, nil
 }
 
-func (s *Signer) Sign(message []byte) (crypto.Signature, error) {
+func (s *Signer) Sign(message []byte) (crypto.Ed25519Signature, error) {
 	return s.conn.SignEd25519(&s.publicKey, message)
 }
 
-func (s *Signer) Public() crypto.PublicKey {
+func (s *Signer) Public() crypto.Ed25519PublicKey {
 	return s.publicKey
 }
 
-func parseSignature(blob []byte) (crypto.Signature, error) {
+func parseSignature(blob []byte) (crypto.Ed25519Signature, error) {
 	signature := skipPrefix(blob, bytes.Join([][]byte{
 		serializeUint32(83), // length of signature
 		serializeString("ssh-ed25519"),
-		serializeUint32(crypto.SignatureSize)}, nil))
+		serializeUint32(crypto.Ed25519SignatureSize)}, nil))
 	if signature == nil {
-		return crypto.Signature{}, fmt.Errorf("invalid signature blob")
+		return crypto.Ed25519Signature{}, fmt.Errorf("invalid signature blob")
 	}
-	if len(signature) != crypto.SignatureSize {
-		return crypto.Signature{}, fmt.Errorf("bad signature length: %d", len(signature))
+	if len(signature) != crypto.Ed25519SignatureSize {
+		return crypto.Ed25519Signature{}, fmt.Errorf("bad signature length: %d", len(signature))
 	}
-	var ret crypto.Signature
+	var ret crypto.Ed25519Signature
 	copy(ret[:], signature)
 	return ret, nil
 }

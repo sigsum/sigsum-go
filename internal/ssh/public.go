@@ -9,26 +9,26 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
-func serializePublicEd25519(pub *crypto.PublicKey) []byte {
+func serializePublicEd25519(pub *crypto.Ed25519PublicKey) []byte {
 	return bytes.Join([][]byte{
 		serializeString("ssh-ed25519"),
 		serializeString(pub[:])},
 		nil)
 }
 
-func parsePublicEd25519(blob []byte) (crypto.PublicKey, error) {
+func parsePublicEd25519(blob []byte) (crypto.Ed25519PublicKey, error) {
 	pub := skipPrefix(blob, bytes.Join([][]byte{
 		serializeString("ssh-ed25519"),
-		serializeUint32(crypto.PublicKeySize),
+		serializeUint32(crypto.Ed25519PublicKeySize),
 	}, nil))
 
 	if pub == nil {
-		return crypto.PublicKey{}, fmt.Errorf("invalid public key blob prefix")
+		return crypto.Ed25519PublicKey{}, fmt.Errorf("invalid public key blob prefix")
 	}
-	if len(pub) != crypto.PublicKeySize {
-		return crypto.PublicKey{}, fmt.Errorf("invalid public key length: %v", len(blob))
+	if len(pub) != crypto.Ed25519PublicKeySize {
+		return crypto.Ed25519PublicKey{}, fmt.Errorf("invalid public key length: %v", len(blob))
 	}
-	var ret crypto.PublicKey
+	var ret crypto.Ed25519PublicKey
 	copy(ret[:], pub)
 	return ret, nil
 }
@@ -61,36 +61,36 @@ func getPolicy(field string) (string, error) {
 }
 
 // Returns public key and policy name, in case a "sigsum-policy=" option is found
-func ParsePublicEd25519(asciiKey string) (crypto.PublicKey, string, error) {
+func ParsePublicEd25519(asciiKey string) (crypto.Ed25519PublicKey, string, error) {
 	// Split into fields, recognizing exclusively ascii space and TAB
 	fields := strings.FieldsFunc(asciiKey, func(c rune) bool {
 		return c == ' ' || c == '\t'
 	})
 	if len(fields) < 2 {
-		return crypto.PublicKey{}, "", fmt.Errorf("invalid public key, splitting line failed")
+		return crypto.Ed25519PublicKey{}, "", fmt.Errorf("invalid public key, splitting line failed")
 	}
 	policyName, err := getPolicy(fields[0])
 	if err != nil {
-		return crypto.PublicKey{}, "", err
+		return crypto.Ed25519PublicKey{}, "", err
 	}
 	if policyName != "" {
 		fields = fields[1:]
 		if len(fields) < 2 {
-			return crypto.PublicKey{}, "", fmt.Errorf("invalid public key after stripping policy")
+			return crypto.Ed25519PublicKey{}, "", fmt.Errorf("invalid public key after stripping policy")
 		}
 	}
 	if fields[0] != "ssh-ed25519" {
-		return crypto.PublicKey{}, "", fmt.Errorf("unsupported public key type: %v", fields[0])
+		return crypto.Ed25519PublicKey{}, "", fmt.Errorf("unsupported public key type: %v", fields[0])
 	}
 	blob, err := base64.StdEncoding.DecodeString(fields[1])
 	if err != nil {
-		return crypto.PublicKey{}, "", err
+		return crypto.Ed25519PublicKey{}, "", err
 	}
 	pubkey, err := parsePublicEd25519(blob)
 	return pubkey, policyName, err
 }
 
-func FormatPublicEd25519(pub *crypto.PublicKey) string {
+func FormatPublicEd25519(pub *crypto.Ed25519PublicKey) string {
 	return "ssh-ed25519 " +
 		base64.StdEncoding.EncodeToString(serializePublicEd25519(pub)) +
 		" sigsum key\n"

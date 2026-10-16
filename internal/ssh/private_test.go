@@ -51,7 +51,7 @@ AMY9liI/ehlhqkSxjXNHg1AXH30UH802SQBj7V1aS6vWAAAAAAECAwQF
 -----END OPENSSH PRIVATE KEY-----
 `)
 	nonce := [4]byte{'0', '1', '2', '3'}
-	priv := crypto.PrivateKey{0xde, 0xad, 0xbe, 0xef}
+	priv := crypto.Ed25519PrivateKey{0xde, 0xad, 0xbe, 0xef}
 	var buf bytes.Buffer
 
 	if err := writePrivateKeyFile(&buf, crypto.NewEd25519Signer(&priv), nonce); err != nil {
@@ -69,7 +69,7 @@ AMY9liI/ehlhqkSxjXNHg1AXH30UH802SQBj7V1aS6vWAAAAAAECAwQF
 	}
 }
 
-func mustDecodeHex(t *testing.T, s string) (out crypto.PrivateKey) {
+func mustDecodeHex(t *testing.T, s string) (out crypto.Ed25519PrivateKey) {
 	b, err := hex.DecodeString(s)
 	if err != nil {
 		t.Fatal(err)

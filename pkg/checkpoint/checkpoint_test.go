@@ -19,7 +19,7 @@ var testTreeHead = types.TreeHead{
 
 var testSignedTreeHead = types.SignedTreeHead{
 	TreeHead:  testTreeHead,
-	Signature: crypto.Signature{65, 5}, // Base64 "...EEF"
+	Signature: crypto.Ed25519Signature{65, 5}, // Base64 "...EEF"
 }
 var testCheckpoint = Checkpoint{
 	Origin:         testOrigin,
@@ -62,7 +62,7 @@ func TestCheckpointFromASCII(t *testing.T) {
 }
 
 func TestCheckpointSigned(t *testing.T) {
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 	origin := fmt.Sprintf("%s%x", types.CheckpointNamePrefix, pub.Hash())
 	cp := Checkpoint{
@@ -86,7 +86,7 @@ func TestCheckpointSigned(t *testing.T) {
 
 func TestCheckpointVerify(t *testing.T) {
 	// Key used to sign above checkpoint.
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 
 	var validCheckpoint Checkpoint
@@ -124,7 +124,7 @@ func TestCheckpointVerify(t *testing.T) {
 
 func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 	// Key used to sign above checkpoint.
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 
 	paragraphs := strings.Split(validCheckpointASCII, "\n\n")
@@ -173,7 +173,7 @@ func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 }
 
 func TestCheckpointCosignVerify(t *testing.T) {
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 	timestamp := uint64(1234)
 	cosignature, err := testCheckpoint.Cosign(signer, timestamp)
@@ -217,7 +217,7 @@ func TestCheckpointVerifyCosignatureByKey(t *testing.T) {
 	if got, want := len(cosignatures), 3; got != want {
 		t.Errorf("unexpected number of cosignatures: got %d, want: %d", got, want)
 	}
-	signer := crypto.NewEd25519Signer(&crypto.PrivateKey{17})
+	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
 	pub := signer.Public()
 	cosignature, err := testCheckpoint.VerifyCosignatureByKey(cosignatures, &pub)
 	if err != nil {

@@ -12,8 +12,8 @@ var testCosignature = CosignatureLine{
 	KeyName: "example.org/witness-key",
 	KeyId:   [4]byte{117, 230, 157, 109}, // Base64 "deadb..."
 	Cosignature: types.Cosignature{
-		Timestamp: 0xe79ff9d79a75ca1d,             // "...eef+deadcod..."
-		Signature: crypto.Signature{253, 202, 29}, // ".../cod"
+		Timestamp: 0xe79ff9d79a75ca1d,                    // "...eef+deadcod..."
+		Signature: crypto.Ed25519Signature{253, 202, 29}, // ".../cod"
 	},
 }
 

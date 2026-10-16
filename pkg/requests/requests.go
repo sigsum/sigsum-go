@@ -12,8 +12,8 @@ import (
 
 type Leaf struct {
 	Message   crypto.Hash
-	Signature crypto.Signature
-	PublicKey crypto.PublicKey
+	Signature crypto.Ed25519Signature
+	PublicKey crypto.Ed25519PublicKey
 }
 
 type Leaves struct {

@@ -45,13 +45,13 @@ func TestInvalidHashFromHex(t *testing.T) {
 	}
 }
 
-func TestValidPublicKeyFromHex(t *testing.T) {
+func TestValidEd25519PublicKeyFromHex(t *testing.T) {
 	b := incBytes(32)
 	s := hex.EncodeToString(b)
 	for _, in := range []string{
 		s, strings.ToUpper(s),
 	} {
-		hash, err := PublicKeyFromHex(in)
+		hash, err := Ed25519PublicKeyFromHex(in)
 		if err != nil {
 			t.Errorf("error on input %q: %v", in, err)
 		}
@@ -61,13 +61,13 @@ func TestValidPublicKeyFromHex(t *testing.T) {
 	}
 }
 
-func TestInvalidPublicKeyFromHex(t *testing.T) {
+func TestInvalidEd25519PublicKeyFromHex(t *testing.T) {
 	b := incBytes(33)
 	s := hex.EncodeToString(b)
 	for _, in := range []string{
 		"", "0x11", "123z", s[:63], s[:65], s[:66],
 	} {
-		hash, err := PublicKeyFromHex(in)
+		hash, err := Ed25519PublicKeyFromHex(in)
 		if err == nil {
 			t.Errorf("no error on invalid input %q, got %x",
 				in, hash)
@@ -75,13 +75,13 @@ func TestInvalidPublicKeyFromHex(t *testing.T) {
 	}
 }
 
-func TestValidSignatureFromHex(t *testing.T) {
+func TestValidEd25519SignatureFromHex(t *testing.T) {
 	b := incBytes(64)
 	s := hex.EncodeToString(b)
 	for _, in := range []string{
 		s, strings.ToUpper(s),
 	} {
-		hash, err := SignatureFromHex(in)
+		hash, err := Ed25519SignatureFromHex(in)
 		if err != nil {
 			t.Errorf("error on input %q: %v", in, err)
 		}
@@ -91,13 +91,13 @@ func TestValidSignatureFromHex(t *testing.T) {
 	}
 }
 
-func TestInvalidSignatureFromHex(t *testing.T) {
+func TestInvalidEd25519SignatureFromHex(t *testing.T) {
 	b := incBytes(65)
 	s := hex.EncodeToString(b)
 	for _, in := range []string{
 		"", "0x11", "123z", s[:127], s[:129], s[:130],
 	} {
-		hash, err := SignatureFromHex(in)
+		hash, err := Ed25519SignatureFromHex(in)
 		if err == nil {
 			t.Errorf("no error on invalid input %q, got %x",
 				in, hash)
@@ -138,16 +138,16 @@ func TestHash(t *testing.T) {
 	}
 }
 
-func mustSignatureFromHex(t *testing.T, s string) Signature {
-	signature, err := SignatureFromHex(s)
+func mustSignatureFromHex(t *testing.T, s string) Ed25519Signature {
+	signature, err := Ed25519SignatureFromHex(s)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return signature
 }
 
-func mustPublicKeyFromHex(t *testing.T, s string) PublicKey {
-	pub, err := PublicKeyFromHex(s)
+func mustPublicKeyFromHex(t *testing.T, s string) Ed25519PublicKey {
+	pub, err := Ed25519PublicKeyFromHex(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func mustPublicKeyFromHex(t *testing.T, s string) PublicKey {
 }
 
 func mustSignerFromHex(t *testing.T, s string) Signer {
-	signer, err := SignerFromHex(s)
+	signer, err := Ed25519SignerFromHex(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func mustSignerFromHex(t *testing.T, s string) Signer {
 // Basic sanity check, not intended as a thorough ed25519 test. Uses
 // second line from https://ed25519.cr.yp.to/python/sign.input (single
 // byte message).
-func TestSign(t *testing.T) {
+func TestSignEd25519(t *testing.T) {
 	signer := mustSignerFromHex(t, "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb")
 	msg := []byte{0x72}
 	signature, err := signer.Sign(msg)
@@ -185,9 +185,9 @@ func TestSign(t *testing.T) {
 	}
 }
 
-func TestVerify(t *testing.T) {
-	var secret PrivateKey
-	copy(secret[:], incBytes(PrivateKeySize))
+func TestVerifyEd25519(t *testing.T) {
+	var secret Ed25519PrivateKey
+	copy(secret[:], incBytes(Ed25519PrivateKeySize))
 	signer := NewEd25519Signer(&secret)
 	pub := signer.Public()
 

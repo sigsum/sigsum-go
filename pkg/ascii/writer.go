@@ -51,10 +51,10 @@ func WriteHash(w io.Writer, name string, h *crypto.Hash) error {
 	return WriteLine(w, name, (*h)[:])
 }
 
-func WritePublicKey(w io.Writer, name string, k *crypto.PublicKey) error {
+func WritePublicKey(w io.Writer, name string, k *crypto.Ed25519PublicKey) error {
 	return WriteLine(w, name, (*k)[:])
 }
 
-func WriteSignature(w io.Writer, name string, s *crypto.Signature) error {
+func WriteSignature(w io.Writer, name string, s *crypto.Ed25519Signature) error {
 	return WriteLine(w, name, (*s)[:])
 }

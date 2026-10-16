@@ -14,7 +14,7 @@ type NoteVerifier struct {
 	Name      string
 	KeyId     KeyId
 	Type      SignatureType
-	PublicKey crypto.PublicKey
+	PublicKey crypto.Ed25519PublicKey
 }
 
 func (nv *NoteVerifier) String() string {
@@ -59,14 +59,14 @@ func (nv *NoteVerifier) FromString(in string) error {
 		return fmt.Errorf("unsupported key type 0x%02x", nv.Type)
 	}
 
-	if got, want := len(blob), crypto.PublicKeySize; got != want {
+	if got, want := len(blob), crypto.Ed25519PublicKeySize; got != want {
 		return fmt.Errorf("unexpected key blob length: got %d, want %d", got, want)
 	}
 	copy(nv.PublicKey[:], blob)
 	return nil
 }
 
-func NewNoteVerifier(keyName string, keyType SignatureType, publicKey *crypto.PublicKey) NoteVerifier {
+func NewNoteVerifier(keyName string, keyType SignatureType, publicKey *crypto.Ed25519PublicKey) NoteVerifier {
 	return NoteVerifier{
 		Name:      keyName,
 		Type:      keyType,

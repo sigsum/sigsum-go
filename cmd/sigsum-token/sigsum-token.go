@@ -139,7 +139,7 @@ Options:
 				domain = &settings.domain
 			}
 		}
-		signature, err := crypto.SignatureFromHex(signatureHex)
+		signature, err := crypto.Ed25519SignatureFromHex(signatureHex)
 		if err != nil {
 			log.Fatalf("Invalid hex signature: %v", err)
 		}

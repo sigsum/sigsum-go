@@ -15,11 +15,11 @@ import (
 // A monitoringLogClient can retrieve tree heads and leaves from a log,
 // and it verifies consistency and inclusion of anything it returns.
 type monitoringLogClient struct {
-	logKey crypto.PublicKey // Identifies the log monitored.
+	logKey crypto.Ed25519PublicKey // Identifies the log monitored.
 	client api.Log
 }
 
-func newMonitoringLogClient(logKey *crypto.PublicKey, URL string) *monitoringLogClient {
+func newMonitoringLogClient(logKey *crypto.Ed25519PublicKey, URL string) *monitoringLogClient {
 	return &monitoringLogClient{
 		logKey: *logKey,
 		client: client.New(client.Config{URL: URL, UserAgent: "sigsum-monitor"}),

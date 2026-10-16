@@ -89,8 +89,8 @@ func makeLeafRequest(t *testing.T, signer crypto.Signer, msg *crypto.Hash) reque
 
 // Test for successful case.
 func TestGetTreeHead(t *testing.T) {
-	logSigner := crypto.NewEd25519Signer(&crypto.PrivateKey{2})
-	leafSigner := crypto.NewEd25519Signer(&crypto.PrivateKey{3})
+	logSigner := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{2})
+	leafSigner := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{3})
 	log := testLog{signer: logSigner, tree: merkle.NewTree()}
 
 	monitorClient := monitoringLogClient{
@@ -121,8 +121,8 @@ func TestGetTreeHead(t *testing.T) {
 
 // Test for invalid answers from log.
 func TestGetTreeHeadErrors(t *testing.T) {
-	logSigner := crypto.NewEd25519Signer(&crypto.PrivateKey{2})
-	leafSigner := crypto.NewEd25519Signer(&crypto.PrivateKey{3})
+	logSigner := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{2})
+	leafSigner := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{3})
 	log := testLog{signer: logSigner, tree: merkle.NewTree()}
 
 	addLeaves(t, &log, leafSigner, 0, 20)

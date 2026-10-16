@@ -23,17 +23,17 @@ var ErrUnwantedSignature = errors.New("unwanted signature")
 
 type KeyId [4]byte
 
-func NewKeyId(keyName string, sigType SignatureType, publicKey *crypto.PublicKey) (res KeyId) {
+func NewKeyId(keyName string, sigType SignatureType, publicKey *crypto.Ed25519PublicKey) (res KeyId) {
 	hash := crypto.HashBytes(bytes.Join([][]byte{[]byte(keyName), []byte{0xA, byte(sigType)}, publicKey[:]}, nil))
 	copy(res[:], hash[:4])
 	return
 }
 
-func NewLogKeyId(keyName string, publicKey *crypto.PublicKey) (res KeyId) {
+func NewLogKeyId(keyName string, publicKey *crypto.Ed25519PublicKey) (res KeyId) {
 	return NewKeyId(keyName, SigTypeEd25519, publicKey)
 }
 
-func NewWitnessKeyId(keyName string, publicKey *crypto.PublicKey) (res KeyId) {
+func NewWitnessKeyId(keyName string, publicKey *crypto.Ed25519PublicKey) (res KeyId) {
 	return NewKeyId(keyName, SigTypeCosignature, publicKey)
 }
 
@@ -62,7 +62,7 @@ func parseNoteSignature(line string, signatureSize int) (string, KeyId, []byte, 
 	return fields[1], keyId, blob[4:], nil
 }
 
-func WriteEd25519Signature(w io.Writer, origin string, keyId KeyId, signature *crypto.Signature) error {
+func WriteEd25519Signature(w io.Writer, origin string, keyId KeyId, signature *crypto.Ed25519Signature) error {
 	return writeNoteSignature(w, origin, keyId, signature[:])
 }
 
@@ -71,15 +71,15 @@ func WriteEd25519Signature(w io.Writer, origin string, keyId KeyId, signature *c
 // consistent with an Ed25519 signature line, returns the keyId and
 // signature. If line is syntactically valid but doesn't match these
 // requirements, ErrUnwantedSignature is returned.
-func ParseEd25519SignatureLine(line, keyName string) (KeyId, crypto.Signature, error) {
-	name, keyId, blob, err := parseNoteSignature(line, crypto.SignatureSize)
+func ParseEd25519SignatureLine(line, keyName string) (KeyId, crypto.Ed25519Signature, error) {
+	name, keyId, blob, err := parseNoteSignature(line, crypto.Ed25519SignatureSize)
 	if err != nil {
-		return KeyId{}, crypto.Signature{}, err
+		return KeyId{}, crypto.Ed25519Signature{}, err
 	}
 	if name != keyName {
-		return KeyId{}, crypto.Signature{}, ErrUnwantedSignature
+		return KeyId{}, crypto.Ed25519Signature{}, ErrUnwantedSignature
 	}
-	var signature crypto.Signature
+	var signature crypto.Ed25519Signature
 	copy(signature[:], blob)
 
 	return keyId, signature, nil

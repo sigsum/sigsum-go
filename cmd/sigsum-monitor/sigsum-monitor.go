@@ -48,13 +48,13 @@ func (_ callbacks) Alert(logKeyHash crypto.Hash, e error) {
 	}
 }
 
-func readPublicKeyFiles(fileNames []string, getPolicy bool) (map[crypto.Hash]crypto.PublicKey, string, error) {
+func readPublicKeyFiles(fileNames []string, getPolicy bool) (map[crypto.Hash]crypto.Ed25519PublicKey, string, error) {
 	var policyNames []string
 	policyName := ""
 	if len(fileNames) == 0 {
 		return nil, "", nil
 	}
-	pubkeys := make(map[crypto.Hash]crypto.PublicKey)
+	pubkeys := make(map[crypto.Hash]crypto.Ed25519PublicKey)
 	for _, f := range fileNames {
 		pub, policyName, err := key.ReadPublicKeyFileWithPolicyName(f)
 		if err != nil {

@@ -76,20 +76,20 @@ func (p *Parser) GetHash(name string) (crypto.Hash, error) {
 	return crypto.HashFromHex(v)
 }
 
-func (p *Parser) GetPublicKey(name string) (crypto.PublicKey, error) {
+func (p *Parser) GetPublicKey(name string) (crypto.Ed25519PublicKey, error) {
 	v, err := p.next(name)
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return crypto.Ed25519PublicKey{}, err
 	}
-	return crypto.PublicKeyFromHex(v)
+	return crypto.Ed25519PublicKeyFromHex(v)
 }
 
-func (p *Parser) GetSignature(name string) (crypto.Signature, error) {
+func (p *Parser) GetSignature(name string) (crypto.Ed25519Signature, error) {
 	v, err := p.next(name)
 	if err != nil {
-		return crypto.Signature{}, err
+		return crypto.Ed25519Signature{}, err
 	}
-	return crypto.SignatureFromHex(v)
+	return crypto.Ed25519SignatureFromHex(v)
 }
 
 func (p *Parser) GetValues(name string, count int) ([]string, error) {
