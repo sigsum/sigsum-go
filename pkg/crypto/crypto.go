@@ -14,22 +14,22 @@ import (
 )
 
 const (
-	HashSize       = sha256.Size
-	SignatureSize  = ed25519.SignatureSize
-	PublicKeySize  = ed25519.PublicKeySize
-	PrivateKeySize = ed25519.SeedSize
+	HashSize              = sha256.Size
+	Ed25519SignatureSize  = ed25519.SignatureSize
+	Ed25519PublicKeySize  = ed25519.PublicKeySize
+	Ed25519PrivateKeySize = ed25519.SeedSize
 )
 
 type (
-	Hash       [HashSize]byte
-	Signature  [SignatureSize]byte
-	PublicKey  [PublicKeySize]byte
-	PrivateKey [PrivateKeySize]byte
+	Hash              [HashSize]byte
+	Ed25519Signature  [Ed25519SignatureSize]byte
+	Ed25519PublicKey  [Ed25519PublicKeySize]byte
+	Ed25519PrivateKey [Ed25519PrivateKeySize]byte
 )
 
 type Signer interface {
-	Sign([]byte) (Signature, error)
-	Public() PublicKey
+	Sign([]byte) (Ed25519Signature, error)
+	Public() Ed25519PublicKey
 }
 
 func HashBytes(b []byte) Hash {
@@ -45,7 +45,7 @@ func HashFile(f io.Reader) (digest Hash, err error) {
 	return
 }
 
-func (k PublicKey) Hash() Hash {
+func (k Ed25519PublicKey) Hash() Hash {
 	return HashBytes(k[:])
 }
 
@@ -65,7 +65,7 @@ func (k PublicKey) Hash() Hash {
 // (e.g., k A' = 0). The attacker can then compute a matching R, and
 // finally try a few different messages until one is found that
 // results in the right value of k A'.
-func (k PublicKey) Verify(msg []byte, sig *Signature) bool {
+func (k Ed25519PublicKey) Verify(msg []byte, sig *Ed25519Signature) bool {
 	// These validation criteria are intended to be consistent
 	// with ed25519-dalek's verify_strict(). See
 	// https://github.com/C2SP/CCTV/tree/main/ed25519.
@@ -78,42 +78,42 @@ type Ed25519Signer struct {
 	secret ed25519.PrivateKey
 }
 
-func NewEd25519Signer(key *PrivateKey) *Ed25519Signer {
+func NewEd25519Signer(key *Ed25519PrivateKey) *Ed25519Signer {
 	return &Ed25519Signer{secret: ed25519.NewKeyFromSeed((*key)[:])}
 }
 
-func (s *Ed25519Signer) Sign(msg []byte) (Signature, error) {
+func (s *Ed25519Signer) Sign(msg []byte) (Ed25519Signature, error) {
 	sig, err := s.secret.Sign(nil, msg, crypto.Hash(0))
 	if err != nil {
-		return Signature{}, err
+		return Ed25519Signature{}, err
 	}
-	if len(sig) != SignatureSize {
-		return Signature{}, fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
+	if len(sig) != Ed25519SignatureSize {
+		return Ed25519Signature{}, fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
 	}
-	var ret Signature
+	var ret Ed25519Signature
 	copy(ret[:], sig)
 	return ret, nil
 }
 
-func (s *Ed25519Signer) Public() (ret PublicKey) {
+func (s *Ed25519Signer) Public() (ret Ed25519PublicKey) {
 	copy(ret[:], s.secret.Public().(ed25519.PublicKey))
 	return
 }
 
-func (s *Ed25519Signer) Private() (ret PrivateKey) {
+func (s *Ed25519Signer) Private() (ret Ed25519PrivateKey) {
 	copy(ret[:], s.secret.Seed())
 	return
 }
 
-func NewKeyPair() (PublicKey, *Ed25519Signer, error) {
-	var secret PrivateKey
+func NewEd25519KeyPair() (Ed25519PublicKey, *Ed25519Signer, error) {
+	var secret Ed25519PrivateKey
 	n, err := rand.Read(secret[:])
 	if err != nil {
-		return PublicKey{}, nil, err
+		return Ed25519PublicKey{}, nil, err
 	}
-	if n != PrivateKeySize {
-		return PublicKey{}, nil, fmt.Errorf("key generation failed, got only %d out of %d random bytes",
-			n, PrivateKeySize)
+	if n != Ed25519PrivateKeySize {
+		return Ed25519PublicKey{}, nil, fmt.Errorf("key generation failed, got only %d out of %d random bytes",
+			n, Ed25519PrivateKeySize)
 	}
 	signer := NewEd25519Signer(&secret)
 	return signer.Public(), signer, nil
@@ -136,18 +136,18 @@ func HashFromHex(s string) (h Hash, err error) {
 	return
 }
 
-func PublicKeyFromHex(s string) (pub PublicKey, err error) {
+func Ed25519PublicKeyFromHex(s string) (pub Ed25519PublicKey, err error) {
 	err = decodeHex(pub[:], s)
 	return
 }
 
-func SignatureFromHex(s string) (sig Signature, err error) {
+func Ed25519SignatureFromHex(s string) (sig Ed25519Signature, err error) {
 	err = decodeHex(sig[:], s)
 	return
 }
 
-func SignerFromHex(s string) (*Ed25519Signer, error) {
-	var secret PrivateKey
+func Ed25519SignerFromHex(s string) (*Ed25519Signer, error) {
+	var secret Ed25519PrivateKey
 	err := decodeHex(secret[:], s)
 	if err != nil {
 		return nil, err

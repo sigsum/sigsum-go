@@ -153,7 +153,7 @@ node_hash=15cdc42440689a6f7599e09f61a4d638420cb58662f5994def1624ea4d923879
 	if err := proof.FromASCII(bytes.NewBufferString(proofASCII)); err != nil {
 		t.Fatal(err)
 	}
-	if err := proof.VerifyNoCosignatures(&msg, map[crypto.Hash]crypto.PublicKey{
+	if err := proof.VerifyNoCosignatures(&msg, map[crypto.Hash]crypto.Ed25519PublicKey{
 		submitKey.Hash(): submitKey}, &logKey); err != nil {
 		t.Error(err)
 	}
@@ -187,18 +187,18 @@ node_hash=a5c3752be610d605ce5c64ee2e28ee5b94a1cc0a68742f18f24c9b5c82d07298
 	if err := proof.FromASCII(bytes.NewBufferString(proofASCII)); err != nil {
 		t.Fatal(err)
 	}
-	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{logKey}, []crypto.PublicKey{witnessKey}, 1)
+	policy, err := policy.NewKofNPolicy([]crypto.Ed25519PublicKey{logKey}, []crypto.Ed25519PublicKey{witnessKey}, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := proof.Verify(&msg, map[crypto.Hash]crypto.PublicKey{
+	if err := proof.Verify(&msg, map[crypto.Hash]crypto.Ed25519PublicKey{
 		submitKey.Hash(): submitKey}, policy); err != nil {
 		t.Error(err)
 	}
 	// TODO: Test invalidating proof in different ways.
 }
 
-func mustParsePublicKey(t *testing.T, ascii string) crypto.PublicKey {
+func mustParsePublicKey(t *testing.T, ascii string) crypto.Ed25519PublicKey {
 	key, err := key.ParsePublicKey(ascii)
 	if err != nil {
 		t.Fatal(err)

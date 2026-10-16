@@ -22,7 +22,7 @@ const (
 // Represents the contents of the HTTP Sigsum-Submit: header-
 type SubmitHeader struct {
 	Domain string
-	Token  crypto.Signature
+	Token  crypto.Ed25519Signature
 }
 
 func (s *SubmitHeader) ToHeader() string {
@@ -38,19 +38,19 @@ func (s *SubmitHeader) FromHeader(header string) error {
 		return fmt.Errorf("malformed header, domain part empty")
 	}
 	var err error
-	s.Token, err = crypto.SignatureFromHex(parts[1])
+	s.Token, err = crypto.Ed25519SignatureFromHex(parts[1])
 	if err == nil {
 		s.Domain = parts[0]
 	}
 	return err
 }
 
-func MakeToken(signer crypto.Signer, logKey *crypto.PublicKey) (crypto.Signature, error) {
+func MakeToken(signer crypto.Signer, logKey *crypto.Ed25519PublicKey) (crypto.Ed25519Signature, error) {
 	return signer.Sign(crypto.AttachNamespace(namespace, logKey[:]))
 }
 
 // Verify a token using a given key, with no DNS loookup.
-func VerifyToken(key *crypto.PublicKey, logKey *crypto.PublicKey, token *crypto.Signature) error {
+func VerifyToken(key *crypto.Ed25519PublicKey, logKey *crypto.Ed25519PublicKey, token *crypto.Ed25519Signature) error {
 	if !key.Verify(crypto.AttachNamespace(namespace, logKey[:]), token) {
 		return fmt.Errorf("invalid token signature")
 	}
@@ -76,10 +76,10 @@ func LookupDomain(ctx context.Context,
 type DnsVerifier struct {
 	// Usually, net.Resolver.LookupTXT, but set differently for testing.
 	lookupTXT func(ctx context.Context, name string) ([]string, error)
-	logKey    crypto.PublicKey
+	logKey    crypto.Ed25519PublicKey
 }
 
-func NewDnsVerifier(logKey *crypto.PublicKey) *DnsVerifier {
+func NewDnsVerifier(logKey *crypto.Ed25519PublicKey) *DnsVerifier {
 	var resolver net.Resolver
 	return &DnsVerifier{
 		lookupTXT: resolver.LookupTXT,
@@ -100,7 +100,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, header *SubmitHeader) error {
 	}
 	signedData := crypto.AttachNamespace(namespace, dv.logKey[:])
 	for _, keyHex := range rsps {
-		key, err := crypto.PublicKeyFromHex(keyHex)
+		key, err := crypto.Ed25519PublicKeyFromHex(keyHex)
 		if err != nil {
 			badKeys++
 			continue

@@ -22,7 +22,7 @@ const (
 
 func TestTreeHeadFormatCheckpoint(t *testing.T) {
 	desc := "valid"
-	pub := crypto.PublicKey{}
+	pub := crypto.Ed25519PublicKey{}
 	th := validTreeHead(t)
 	if got, want := th.FormatCheckpoint(SigsumCheckpointOrigin(&pub)),
 		validTreeHeadCheckpoint(t); got != want {
@@ -45,7 +45,7 @@ func TestTreeHeadSign(t *testing.T) {
 		desc    string
 		th      TreeHead
 		signErr error
-		wantSig crypto.Signature
+		wantSig crypto.Ed25519Signature
 		wantErr bool
 	}{
 		{
@@ -65,7 +65,7 @@ func TestTreeHeadSign(t *testing.T) {
 			defer ctrl.Finish()
 			signer := mocksigner.NewMockSigner(ctrl)
 			signer.EXPECT().Sign(gomock.Any()).Return(table.wantSig, table.signErr)
-			signer.EXPECT().Public().Return(crypto.PublicKey{})
+			signer.EXPECT().Public().Return(crypto.Ed25519PublicKey{})
 			sth, err := table.th.Sign(signer)
 			if got, want := err != nil, table.wantErr; got != want {
 				t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
@@ -427,12 +427,12 @@ func validCosignedTreeHeadASCII(t *testing.T) string {
 		"size", 2,
 		"root_hash", newHashBufferInc(t),
 		"signature", newSigBufferInc(t),
-		"cosignature", crypto.Hash{}, 0, crypto.Signature{},
+		"cosignature", crypto.Hash{}, 0, crypto.Ed25519Signature{},
 		"cosignature", newHashBufferInc(t), 1, newSigBufferInc(t),
 	)
 }
 
-func mustParsePublicKey(t *testing.T, sshKey string) crypto.PublicKey {
+func mustParsePublicKey(t *testing.T, sshKey string) crypto.Ed25519PublicKey {
 	pub, err := key.ParsePublicKey(sshKey)
 	if err != nil {
 		t.Fatal(err)
@@ -446,8 +446,8 @@ func mustHashFromHex(t *testing.T, hex string) crypto.Hash {
 	}
 	return h
 }
-func mustSignatureFromHex(t *testing.T, hex string) crypto.Signature {
-	s, err := crypto.SignatureFromHex(hex)
+func mustSignatureFromHex(t *testing.T, hex string) crypto.Ed25519Signature {
+	s, err := crypto.Ed25519SignatureFromHex(hex)
 	if err != nil {
 		t.Fatal(err)
 	}

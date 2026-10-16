@@ -7,7 +7,7 @@ import (
 )
 
 func TestParsePublicEd25519(t *testing.T) {
-	expKey, err := crypto.PublicKeyFromHex("314cb82ac8b5fe90cf18bf190afa4759b80779709f991f736f044d5e13bcbca6")
+	expKey, err := crypto.Ed25519PublicKeyFromHex("314cb82ac8b5fe90cf18bf190afa4759b80779709f991f736f044d5e13bcbca6")
 	if err != nil {
 		t.Fatalf("parsing test key failed: %v", err)
 	}

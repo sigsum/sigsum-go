@@ -29,11 +29,11 @@ func validateEd25519Point(b []byte) error {
 	return nil
 }
 
-func validateEd25519PublicKey(key *PublicKey) error {
+func validateEd25519PublicKey(key *Ed25519PublicKey) error {
 	return validateEd25519Point(key[:])
 }
 
-func validateEd25519Signature(sig *Signature) error {
+func validateEd25519Signature(sig *Ed25519Signature) error {
 	// First half of the signature represents R which should be a
 	// valid point.
 	return validateEd25519Point(sig[:32])

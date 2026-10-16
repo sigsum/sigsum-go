@@ -131,12 +131,12 @@ type witness struct {
 	keyHash crypto.Hash
 	keyName string
 	keyId   checkpoint.KeyId
-	logPub  crypto.PublicKey
+	logPub  crypto.Ed25519PublicKey
 	origin  string
 	state   *state
 }
 
-func newWitness(signer crypto.Signer, pub *crypto.PublicKey, logPub *crypto.PublicKey, state *state) witness {
+func newWitness(signer crypto.Signer, pub *crypto.Ed25519PublicKey, logPub *crypto.Ed25519PublicKey, state *state) witness {
 	keyHash := pub.Hash()
 	// Arbitrary name. TODO: Specify somewhere?
 	keyName := fmt.Sprintf("sigsum.org/v1/witness/%x", keyHash)
@@ -184,7 +184,7 @@ type state struct {
 	th types.TreeHead
 }
 
-func (s *state) Load(pub, logPub *crypto.PublicKey) error {
+func (s *state) Load(pub, logPub *crypto.Ed25519PublicKey) error {
 	f, err := os.Open(s.fileName)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {

@@ -36,7 +36,7 @@ func CosignatureLinesFromASCII(r io.Reader) ([]CosignatureLine, error) {
 		if err != nil {
 			return nil, err
 		}
-		name, keyId, blob, err := parseNoteSignature(line, 8+crypto.SignatureSize)
+		name, keyId, blob, err := parseNoteSignature(line, 8+crypto.Ed25519SignatureSize)
 		if err != nil {
 			if err != ErrUnwantedSignature {
 				return nil, err

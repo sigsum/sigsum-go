@@ -21,7 +21,7 @@ const (
 
 // Variant of types.Leaf, without checksum.
 type ShortLeaf struct {
-	Signature crypto.Signature
+	Signature crypto.Ed25519Signature
 	KeyHash   crypto.Hash
 }
 
@@ -43,7 +43,7 @@ func (l *ShortLeaf) Parse(p ascii.Parser) error {
 	if err != nil {
 		return fmt.Errorf("invalid submitter key hash: %v", err)
 	}
-	l.Signature, err = crypto.SignatureFromHex(v[1])
+	l.Signature, err = crypto.Ed25519SignatureFromHex(v[1])
 	if err != nil {
 		return fmt.Errorf("invalid leaf signature: %v", err)
 	}
@@ -64,7 +64,7 @@ func (l *ShortLeaf) ParseVersion1(p ascii.Parser) error {
 	if err != nil {
 		return fmt.Errorf("invalid submitter key hash: %v", err)
 	}
-	l.Signature, err = crypto.SignatureFromHex(v[2])
+	l.Signature, err = crypto.Ed25519SignatureFromHex(v[2])
 	if err != nil {
 		return fmt.Errorf("invalid leaf signature: %v", err)
 	}
@@ -165,7 +165,7 @@ func (sp *SigsumProof) ToASCII(w io.Writer) error {
 	return sp.Inclusion.ToASCII(w)
 }
 
-func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKeys map[crypto.Hash]crypto.PublicKey, policy *policy.Policy) error {
+func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKeys map[crypto.Hash]crypto.Ed25519PublicKey, policy *policy.Policy) error {
 	checksum := crypto.HashBytes(msg[:])
 	leaf := sp.Leaf.ToLeaf(&checksum)
 	if err := leaf.Verify(submitKeys); err != nil {
@@ -178,8 +178,8 @@ func (sp *SigsumProof) Verify(msg *crypto.Hash, submitKeys map[crypto.Hash]crypt
 	return sp.Inclusion.Verify(&leafHash, &sp.TreeHead.TreeHead)
 }
 
-func (sp *SigsumProof) VerifyNoCosignatures(msg *crypto.Hash, submitKeys map[crypto.Hash]crypto.PublicKey, logKey *crypto.PublicKey) error {
-	policy, err := policy.NewKofNPolicy([]crypto.PublicKey{*logKey}, nil, 0)
+func (sp *SigsumProof) VerifyNoCosignatures(msg *crypto.Hash, submitKeys map[crypto.Hash]crypto.Ed25519PublicKey, logKey *crypto.Ed25519PublicKey) error {
+	policy, err := policy.NewKofNPolicy([]crypto.Ed25519PublicKey{*logKey}, nil, 0)
 	if err != nil {
 		return fmt.Errorf("internal error: %v", err)
 	}

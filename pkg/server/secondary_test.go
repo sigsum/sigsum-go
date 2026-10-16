@@ -18,7 +18,7 @@ func TestGetSecondaryTreeHead(t *testing.T) {
 			Size:     3,
 			RootHash: crypto.Hash{1},
 		},
-		Signature: crypto.Signature{2},
+		Signature: crypto.Ed25519Signature{2},
 	}
 
 	ctrl := gomock.NewController(t)

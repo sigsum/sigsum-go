@@ -24,12 +24,12 @@ type TreeHead struct {
 
 type SignedTreeHead struct {
 	TreeHead
-	Signature crypto.Signature
+	Signature crypto.Ed25519Signature
 }
 
 type Cosignature struct {
 	Timestamp uint64
-	Signature crypto.Signature
+	Signature crypto.Ed25519Signature
 }
 
 type CosignedTreeHead struct {
@@ -49,7 +49,7 @@ func (th *TreeHead) FormatCheckpoint(origin string) string {
 		base64.StdEncoding.EncodeToString(th.RootHash[:]))
 }
 
-func SigsumCheckpointOrigin(publicKey *crypto.PublicKey) string {
+func SigsumCheckpointOrigin(publicKey *crypto.Ed25519PublicKey) string {
 	return fmt.Sprintf("%s%x", CheckpointNamePrefix, publicKey.Hash())
 }
 
@@ -137,12 +137,12 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 	return p.GetEOF()
 }
 
-func (sth *SignedTreeHead) Verify(key *crypto.PublicKey) bool {
+func (sth *SignedTreeHead) Verify(key *crypto.Ed25519PublicKey) bool {
 	return key.Verify([]byte(sth.FormatCheckpoint(SigsumCheckpointOrigin(key))), &sth.Signature)
 }
 
 // Deprecated: This backwards compatibility function should be deleted.
-func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
+func (sth *SignedTreeHead) VerifyVersion0(key *crypto.Ed25519PublicKey) bool {
 	// Prefix used temporarily, for version v0.1.15 and v0.2.0.
 	keyHash := key.Hash()
 	if key.Verify([]byte(sth.FormatCheckpoint(fmt.Sprintf("sigsum.org/v1/%x", &keyHash))), &sth.Signature) {
@@ -155,7 +155,7 @@ func (sth *SignedTreeHead) VerifyVersion0(key *crypto.PublicKey) bool {
 		&sth.Signature)
 }
 
-func (cs *Cosignature) Verify(key *crypto.PublicKey, origin string, th *TreeHead) bool {
+func (cs *Cosignature) Verify(key *crypto.Ed25519PublicKey, origin string, th *TreeHead) bool {
 	return key.Verify([]byte(th.toCosignedData(origin, cs.Timestamp)), &cs.Signature)
 }
 
@@ -176,7 +176,7 @@ func (cs *Cosignature) Parse(p *ascii.Parser) (crypto.Hash, error) {
 	if err != nil {
 		return crypto.Hash{}, err
 	}
-	cs.Signature, err = crypto.SignatureFromHex(v[2])
+	cs.Signature, err = crypto.Ed25519SignatureFromHex(v[2])
 	if err != nil {
 		return crypto.Hash{}, err
 	}

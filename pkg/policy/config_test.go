@@ -31,7 +31,7 @@ quorum G3
   log cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 witness W6 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 `))
-	witnessKeys := make([]crypto.PublicKey, 5)
+	witnessKeys := make([]crypto.Ed25519PublicKey, 5)
 	witnessHashes := make([]crypto.Hash, 5)
 	for i, hex := range []string{
 		"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -41,7 +41,7 @@ witness W6 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 	} {
 		var err error
-		witnessKeys[i], err = crypto.PublicKeyFromHex(hex)
+		witnessKeys[i], err = crypto.Ed25519PublicKeyFromHex(hex)
 		if err != nil {
 			t.Fatalf("internal error, bad key %q", hex)
 		}
@@ -71,7 +71,7 @@ witness W6 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 	if got, want := len(witnesses), 4; got != want {
 		t.Errorf("Unexpected number of witnesses with url in policy, got %d, expected %d", got, want)
 	} else {
-		urlByKey := func(witnesses []Entity, key *crypto.PublicKey) string {
+		urlByKey := func(witnesses []Entity, key *crypto.Ed25519PublicKey) string {
 			for _, w := range witnesses {
 				if w.PublicKey == *key {
 					return w.URL
@@ -155,7 +155,7 @@ quorum G
 		t.Fatalf("No quorum defined")
 	}
 	kh := func(hex string) crypto.Hash {
-		key, err := crypto.PublicKeyFromHex(hex)
+		key, err := crypto.Ed25519PublicKeyFromHex(hex)
 		if err != nil {
 			t.Fatalf("internal error, bad key %q", hex)
 		}

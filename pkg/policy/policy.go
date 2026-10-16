@@ -9,7 +9,7 @@ import (
 )
 
 type Entity struct {
-	PublicKey crypto.PublicKey
+	PublicKey crypto.Ed25519PublicKey
 	URL       string
 }
 
@@ -148,7 +148,7 @@ func NewPolicy(settings ...Setting) (*Policy, error) {
 	return b.finish()
 }
 
-func NewKofNPolicy(logs, witnesses []crypto.PublicKey, k int) (*Policy, error) {
+func NewKofNPolicy(logs, witnesses []crypto.Ed25519PublicKey, k int) (*Policy, error) {
 	var settings []Setting
 
 	if k > len(witnesses) {

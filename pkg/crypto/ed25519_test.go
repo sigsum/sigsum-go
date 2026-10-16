@@ -7,7 +7,7 @@ import (
 )
 
 func TestValidateEd25519PublicKeyOk(t *testing.T) {
-	pub, _, err := NewKeyPair()
+	pub, _, err := NewEd25519KeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestValidateEd25519PublicKeyNonCanonical(t *testing.T) {
 		// See https://eprint.iacr.org/2020/1244.pdf, table 6b.
 		{true, "0100000000000000000000000000000000000000000000000000000000000080"},
 	} {
-		pub, err := PublicKeyFromHex(in.hex)
+		pub, err := Ed25519PublicKeyFromHex(in.hex)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -92,7 +92,7 @@ func TestValidateEd25519PublicKeyLowOrder(t *testing.T) {
 		"26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05", // Order 8
 		"26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85", // Order 8
 	} {
-		pub, err := PublicKeyFromHex(hex)
+		pub, err := Ed25519PublicKeyFromHex(hex)
 		if err != nil {
 			t.Fatal(err)
 		}

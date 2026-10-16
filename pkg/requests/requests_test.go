@@ -264,20 +264,20 @@ func newHashBufferInc(t *testing.T) *crypto.Hash {
 	return &buf
 }
 
-func newSigBufferInc(t *testing.T) *crypto.Signature {
+func newSigBufferInc(t *testing.T) *crypto.Ed25519Signature {
 	t.Helper()
 
-	var buf crypto.Signature
+	var buf crypto.Ed25519Signature
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}
 	return &buf
 }
 
-func newPubBufferInc(t *testing.T) *crypto.PublicKey {
+func newPubBufferInc(t *testing.T) *crypto.Ed25519PublicKey {
 	t.Helper()
 
-	var buf crypto.PublicKey
+	var buf crypto.Ed25519PublicKey
 	for i := 0; i < len(buf); i++ {
 		buf[i] = byte(i)
 	}

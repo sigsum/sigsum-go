@@ -48,7 +48,7 @@ type Settings struct {
 type LeafSink func(name string, leaf *requests.Leaf)
 
 // The name argument corresponds to the filename, or an empty string for stdin.
-type LeafSkip func(name string, msg *crypto.Hash, publicKey *crypto.PublicKey) bool
+type LeafSkip func(name string, msg *crypto.Hash, publicKey *crypto.Ed25519PublicKey) bool
 
 // A LeafSource represents the input processing, either reading signed
 // leaf requests from file, or signing leaf requests based on input files
@@ -171,7 +171,7 @@ func main() {
 			}
 		}
 
-		skip := func(inputName string, msg *crypto.Hash, publicKey *crypto.PublicKey) bool {
+		skip := func(inputName string, msg *crypto.Hash, publicKey *crypto.Ed25519PublicKey) bool {
 			if len(inputName) == 0 {
 				return false
 			}
@@ -188,7 +188,7 @@ func main() {
 			if err := sigsumProof.FromASCII(f); err != nil {
 				log.Fatal("Parsing proof file %q failed: %v", proofName, err)
 			}
-			if err := sigsumProof.Verify(msg, map[crypto.Hash]crypto.PublicKey{
+			if err := sigsumProof.Verify(msg, map[crypto.Hash]crypto.Ed25519PublicKey{
 				publicKey.Hash(): *publicKey}, policy); err != nil {
 				log.Fatal("Existing proof file %q is not valid: %v", proofName, err)
 			}
@@ -234,7 +234,7 @@ func main() {
 				}
 			}
 		}
-		source(func(_ string, _ *crypto.Hash, _ *crypto.PublicKey) bool { return false }, sink)
+		source(func(_ string, _ *crypto.Hash, _ *crypto.Ed25519PublicKey) bool { return false }, sink)
 	}
 }
 
@@ -435,7 +435,7 @@ func withOutputFile(outputFile string, writer func(f io.Writer) error) error {
 }
 
 // Warn if corresponding public key isn't registered for the domain.
-func checkTokenDomain(ctx context.Context, domain string, pubkey crypto.PublicKey) error {
+func checkTokenDomain(ctx context.Context, domain string, pubkey crypto.Ed25519PublicKey) error {
 	resolver := net.Resolver{}
 	rsps, err := token.LookupDomain(ctx, resolver.LookupTXT, domain)
 	if err != nil {
@@ -443,7 +443,7 @@ func checkTokenDomain(ctx context.Context, domain string, pubkey crypto.PublicKe
 	}
 	var badKeys int
 	for _, keyHex := range rsps {
-		key, err := crypto.PublicKeyFromHex(keyHex)
+		key, err := crypto.Ed25519PublicKeyFromHex(keyHex)
 
 		if err != nil {
 			badKeys++

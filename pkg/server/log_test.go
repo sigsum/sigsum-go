@@ -24,12 +24,12 @@ func TestGetTreeHead(t *testing.T) {
 				Size:     3,
 				RootHash: crypto.Hash{1},
 			},
-			Signature: crypto.Signature{2},
+			Signature: crypto.Ed25519Signature{2},
 		},
 		Cosignatures: map[crypto.Hash]types.Cosignature{
 			crypto.Hash{3}: types.Cosignature{
 				Timestamp: 17,
-				Signature: crypto.Signature{4},
+				Signature: crypto.Ed25519Signature{4},
 			},
 		},
 	}
@@ -265,11 +265,11 @@ func (m ptrMatcher[T]) String() string {
 func TestAddLeaf(t *testing.T) {
 	req := requests.Leaf{
 		Message:   crypto.Hash{1},
-		Signature: crypto.Signature{2},
-		PublicKey: crypto.PublicKey{3},
+		Signature: crypto.Ed25519Signature{2},
+		PublicKey: crypto.Ed25519PublicKey{3},
 	}
 
-	tokenSignature, err := crypto.SignatureFromHex(
+	tokenSignature, err := crypto.Ed25519SignatureFromHex(
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
 	if err != nil {
 		t.Fatalf("internal test error: %v", err)
