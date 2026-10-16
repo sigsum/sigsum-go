@@ -13,7 +13,9 @@ stages:
 
 make-all:
   stage: build
-  script: make check
+  script:
+    - exit 1
+    - make check
 
 make-check:
   stage: test
