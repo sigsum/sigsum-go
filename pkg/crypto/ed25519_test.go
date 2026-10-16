@@ -14,12 +14,12 @@ func TestValidEd25519PublicKeyFromHex(t *testing.T) {
 	for _, in := range []string{
 		s, strings.ToUpper(s),
 	} {
-		hash, err := Ed25519PublicKeyFromHex(in)
+		pub, err := Ed25519PublicKeyFromHex(in)
 		if err != nil {
 			t.Errorf("error on input %q: %v", in, err)
 		}
-		if !bytes.Equal(b, hash[:]) {
-			t.Errorf("fail on input %q, wanted %x, got %x", in, b, hash)
+		if !bytes.Equal(b, pub[:]) {
+			t.Errorf("fail on input %q, wanted %x, got %x", in, b, pub)
 		}
 	}
 }
@@ -44,12 +44,12 @@ func TestValidEd25519SignatureFromHex(t *testing.T) {
 	for _, in := range []string{
 		s, strings.ToUpper(s),
 	} {
-		hash, err := Ed25519SignatureFromHex(in)
+		sig, err := Ed25519SignatureFromHex(in)
 		if err != nil {
 			t.Errorf("error on input %q: %v", in, err)
 		}
-		if !bytes.Equal(b, hash[:]) {
-			t.Errorf("fail on input %q, wanted %x, got %x", in, b, hash)
+		if !bytes.Equal(b, sig[:]) {
+			t.Errorf("fail on input %q, wanted %x, got %x", in, b, sig)
 		}
 	}
 }
@@ -60,10 +60,10 @@ func TestInvalidEd25519SignatureFromHex(t *testing.T) {
 	for _, in := range []string{
 		"", "0x11", "123z", s[:127], s[:129], s[:130],
 	} {
-		hash, err := Ed25519SignatureFromHex(in)
+		sig, err := Ed25519SignatureFromHex(in)
 		if err == nil {
 			t.Errorf("no error on invalid input %q, got %x",
-				in, hash)
+				in, sig)
 		}
 	}
 }
