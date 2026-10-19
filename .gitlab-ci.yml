@@ -38,7 +38,7 @@ make-shellcheck:
 # Succeeds if no changes are suggested by gofmt -d .
 gofmt:
   stage: test
-  script: gofmt -d . | (grep . && exit 1 || exit 0)
+  script: gofmt -d $(git ls-files '*.go') | (grep . && exit 1 || exit 0)
 
 codespell:
   image: debian:testing
