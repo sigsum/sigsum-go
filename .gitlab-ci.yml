@@ -35,10 +35,10 @@ make-shellcheck:
   stage: test
   script: cd tests && make shellcheck
 
-# Succeeds if no changes are suggested by gofmt -d .
+# Succeeds if no changes are suggested by gofmt
 gofmt:
   stage: test
-  script: if gofmt -d . | grep . ; then false ; else true ; fi
+  script: gofmt -d $(git ls-files '*.go') | (! grep .)
 
 codespell:
   image: debian:testing
