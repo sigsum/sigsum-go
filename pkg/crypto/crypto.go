@@ -52,11 +52,11 @@ func (k Ed25519PublicKey) Hash() Hash {
 // Rejecting public keys representing low-order points helps prevent
 // log poisoning. According to RFC 8032, a signature {R, S} is valid if
 //
-//   [S]B = R + k A'
+//	[S]B = R + k A'
 //
 // where A' is the public key and
 //
-//   k = SHA512(dom2(F, C) || R || A || PH(M))
+//	k = SHA512(dom2(F, C) || R || A || PH(M))
 //
 // In a log-poisoning attack, all of R, S and A are directly
 // controlled by the attacker, while M is essentially a hash of an
