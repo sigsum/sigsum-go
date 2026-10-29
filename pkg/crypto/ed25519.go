@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ed25519"
-	"crypto/rand"
 	"fmt"
 
 	"filippo.io/edwards25519"
@@ -81,16 +80,11 @@ func (s *Ed25519Signer) Private() (ret Ed25519PrivateKey) {
 }
 
 func NewEd25519KeyPair() (Ed25519PublicKey, *Ed25519Signer, error) {
-	var secret Ed25519PrivateKey
-	n, err := rand.Read(secret[:])
+	_, priv, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		return Ed25519PublicKey{}, nil, err
 	}
-	if n != Ed25519PrivateKeySize {
-		return Ed25519PublicKey{}, nil, fmt.Errorf("key generation failed, got only %d out of %d random bytes",
-			n, Ed25519PrivateKeySize)
-	}
-	signer := NewEd25519Signer(&secret)
+	signer := &Ed25519Signer{priv}
 	return signer.Public(), signer, nil
 }
 

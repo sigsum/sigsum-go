@@ -116,6 +116,19 @@ func TestVerifyEd25519(t *testing.T) {
 	}
 }
 
+func TestPrivateEd25519(t *testing.T) {
+	pub, signer, err := NewEd25519KeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	priv := signer.Private()
+	signer2 := NewEd25519Signer(&priv)
+	if got := signer2.Public(); got != pub {
+		t.Errorf("roundtrip via .Private() and NewEd25519Signer failed. got: %x, want: %x",
+			got, pub)
+	}
+}
+
 func mustEd25519SignatureFromHex(t *testing.T, s string) Ed25519Signature {
 	signature, err := Ed25519SignatureFromHex(s)
 	if err != nil {
