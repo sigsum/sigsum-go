@@ -279,14 +279,14 @@ func TestVerifyMLDSA44(t *testing.T) {
 			"DDCDFF3FCFF1121424F5C64666A80878C93E6EDEEEFF1F700000000000000000"+
 			"00000000000000C1F2F41")
 
-	if !pub.Verify(msg, &sig) {
+	if !pub.Verify(msg, sig[:]) {
 		t.Errorf("MLDSA44 signature verification failed")
 	}
-	if pub.Verify(msg[:1], &sig) {
+	if pub.Verify(msg[:1], sig[:]) {
 		t.Errorf("MLDSA44 signature on wrong message not rejected")
 	}
 	sig[17] ^= 1
-	if pub.Verify(msg, &sig) {
+	if pub.Verify(msg, sig[:]) {
 		t.Errorf("bad MLDSA44 signature not rejected")
 	}
 }
@@ -301,14 +301,14 @@ func TestSignMLDSA44(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !pub.Verify(msg, &sig) {
+	if !pub.Verify(msg, sig) {
 		t.Errorf("MLDSA44 signature verification failed")
 	}
-	if pub.Verify(msg[:1], &sig) {
+	if pub.Verify(msg[:1], sig) {
 		t.Errorf("MLDSA44 signature on wrong message not rejected")
 	}
 	sig[17] ^= 1
-	if pub.Verify(msg, &sig) {
+	if pub.Verify(msg, sig) {
 		t.Errorf("bad MLDSA44 signature not rejected")
 	}
 }

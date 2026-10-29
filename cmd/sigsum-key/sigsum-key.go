@@ -102,7 +102,7 @@ Options:
 		}
 		signature := readSignatureFile(settings.signatureFile)
 		msg := readMessage(settings.namespace)
-		if !publicKey.Verify(msg, &signature) {
+		if !publicKey.Verify(msg, signature[:]) {
 			log.Fatalf("Signature is not valid\n")
 		}
 	case "sign":
@@ -117,7 +117,7 @@ Options:
 		if err != nil {
 			log.Fatalf("Signing failed: %v", err)
 		}
-		writeSignatureFile(settings.outputFile, &signature)
+		writeSignatureFile(settings.outputFile, signature[:])
 
 	case "to-hash":
 		const usage = `
@@ -381,9 +381,9 @@ func writeKeyFiles(outputFile string, pub *crypto.Ed25519PublicKey, signer *cryp
 	}
 }
 
-func writeSignatureFile(outputFile string, signature *crypto.Ed25519Signature) {
+func writeSignatureFile(outputFile string, signature crypto.Signature) {
 	withOutput(outputFile, 0644, func(f io.Writer) error {
-		_, err := fmt.Fprintf(f, "%x\n", signature[:])
+		_, err := fmt.Fprintf(f, "%x\n", signature)
 		return err
 	})
 }

@@ -19,12 +19,12 @@ func (k MLDSA44PublicKey) Hash() Hash {
 	return HashBytes(k[:])
 }
 
-func (k MLDSA44PublicKey) Verify(msg []byte, sig *MLDSA44Signature) bool {
+func (k MLDSA44PublicKey) Verify(msg []byte, sig Signature) bool {
 	pub, err := mldsa.NewPublicKey(mldsa.MLDSA44(), k[:])
 	if err != nil {
 		return false
 	}
-	return mldsa.Verify(pub, msg, sig[:], nil) == nil
+	return mldsa.Verify(pub, msg, sig, nil) == nil
 }
 
 type MLDSA44Signer struct {
@@ -39,15 +39,15 @@ func NewMLDSA44Signer(key *MLDSA44PrivateKey) *MLDSA44Signer {
 	return &MLDSA44Signer{secret: secret}
 }
 
-func (s *MLDSA44Signer) Sign(msg []byte) (MLDSA44Signature, error) {
+func (s *MLDSA44Signer) Sign(msg []byte) (Signature, error) {
 	sig, err := s.secret.Sign(nil, msg, nil)
 	if err != nil {
-		return MLDSA44Signature{}, err
+		return nil, err
 	}
 	if len(sig) != MLDSA44SignatureSize {
-		return MLDSA44Signature{}, fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
+		return nil, fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
 	}
-	return MLDSA44Signature(sig), nil
+	return sig, nil
 }
 
 func (s *MLDSA44Signer) Public() MLDSA44PublicKey {

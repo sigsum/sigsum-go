@@ -276,7 +276,7 @@ mXfgRcJ0bG0j3CPdKwgGWtUzBUbX67saZGRmFuJGGsM=
 	if got, want := checkpointASCII, dbCheckpointBody; got != want {
 		t.Errorf("formatting roundtrip failed: got:\n%q\nwant:\n%q", got, want)
 	}
-	if !nv.PublicKey.Verify([]byte(checkpointASCII), &cp.Signature) {
+	if !nv.PublicKey.Verify([]byte(checkpointASCII), cp.Signature[:]) {
 		t.Errorf("verifying checkpoint signature failed")
 	}
 }

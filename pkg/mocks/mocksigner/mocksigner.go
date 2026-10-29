@@ -49,10 +49,10 @@ func (mr *MockSignerMockRecorder) Public() *gomock.Call {
 }
 
 // Sign mocks base method.
-func (m *MockSigner) Sign(arg0 []byte) (crypto.Ed25519Signature, error) {
+func (m *MockSigner) Sign(arg0 []byte) (crypto.Signature, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Sign", arg0)
-	ret0, _ := ret[0].(crypto.Ed25519Signature)
+	ret0, _ := ret[0].(crypto.Signature)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
