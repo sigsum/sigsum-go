@@ -404,7 +404,7 @@ func readLeafRequest(r io.Reader) (requests.Leaf, error) {
 	if err := leaf.FromASCII(r); err != nil {
 		return requests.Leaf{}, err
 	}
-	if !types.VerifyLeafMessage(&leaf.PublicKey, leaf.Message[:], &leaf.Signature) {
+	if !types.VerifyLeafMessage(&leaf.PublicKey, leaf.Message[:], leaf.Signature[:]) {
 		return requests.Leaf{}, fmt.Errorf("invalid leaf signature")
 	}
 	return leaf, nil

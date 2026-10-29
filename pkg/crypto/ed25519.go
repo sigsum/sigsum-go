@@ -40,13 +40,13 @@ func (k Ed25519PublicKey) Hash() Hash {
 // (e.g., k A' = 0). The attacker can then compute a matching R, and
 // finally try a few different messages until one is found that
 // results in the right value of k A'.
-func (k Ed25519PublicKey) Verify(msg []byte, sig *Ed25519Signature) bool {
+func (k Ed25519PublicKey) Verify(msg []byte, sig Signature) bool {
 	// These validation criteria are intended to be consistent
 	// with ed25519-dalek's verify_strict(). See
 	// https://github.com/C2SP/CCTV/tree/main/ed25519.
 	return validateEd25519PublicKey(&k) == nil &&
 		validateEd25519Signature(sig) == nil &&
-		ed25519.Verify(ed25519.PublicKey(k[:]), msg, sig[:])
+		ed25519.Verify(ed25519.PublicKey(k[:]), msg, sig)
 }
 
 type Ed25519Signer struct {
@@ -57,17 +57,16 @@ func NewEd25519Signer(key *Ed25519PrivateKey) *Ed25519Signer {
 	return &Ed25519Signer{secret: ed25519.NewKeyFromSeed((*key)[:])}
 }
 
-func (s *Ed25519Signer) Sign(msg []byte) (Ed25519Signature, error) {
+func (s *Ed25519Signer) Sign(msg []byte) (Signature, error) {
 	sig, err := s.secret.Sign(nil, msg, crypto.Hash(0))
 	if err != nil {
-		return Ed25519Signature{}, err
+		return nil, err
 	}
 	if len(sig) != Ed25519SignatureSize {
-		return Ed25519Signature{}, fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
+		return nil, fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
 	}
-	var ret Ed25519Signature
-	copy(ret[:], sig)
-	return ret, nil
+
+	return sig, nil
 }
 
 func (s *Ed25519Signer) Public() (ret Ed25519PublicKey) {
@@ -139,7 +138,10 @@ func validateEd25519PublicKey(key *Ed25519PublicKey) error {
 	return validateEd25519Point(key[:])
 }
 
-func validateEd25519Signature(sig *Ed25519Signature) error {
+func validateEd25519Signature(sig Signature) error {
+	if got := len(sig); got != Ed25519SignatureSize {
+		return fmt.Errorf("bad size for Ed25519 signature: %d", got)
+	}
 	// First half of the signature represents R which should be a
 	// valid point.
 	return validateEd25519Point(sig[:32])

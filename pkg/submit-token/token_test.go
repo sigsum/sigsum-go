@@ -1,6 +1,7 @@
 package token
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"log"
@@ -72,7 +73,7 @@ func TestSubmitHeaderFromHeader(t *testing.T) {
 		} else {
 			if table.exp == nil {
 				t.Errorf("%s: unexpected non-failure, got result: %x\n", table.desc, header)
-			} else if got, want := header, *table.exp; got != want {
+			} else if got, want := header, *table.exp; got.Domain != want.Domain || !bytes.Equal(got.Token, want.Token) {
 				t.Errorf("%s: unexpected result, got: %x, wanted: %x\n", table.desc, got, want)
 			}
 		}
@@ -110,25 +111,25 @@ func TestVerify(t *testing.T) {
 		log.Fatal(err.Error())
 	}
 
-	testOne := func(desc, tokenDomain string, signature *crypto.Ed25519Signature, registeredDomain string, records []string,
+	testOne := func(desc, tokenDomain string, signature crypto.Signature, registeredDomain string, records []string,
 		check func(err error) error) {
 		t.Helper()
 		if err := check(verifierWithResponses(&logKey, registeredDomain, records).Verify(
-			context.Background(), &SubmitHeader{Domain: tokenDomain, Token: *signature})); err != nil {
+			context.Background(), &SubmitHeader{Domain: tokenDomain, Token: signature})); err != nil {
 			t.Errorf("%s: %v", desc, err)
 		}
 	}
-	testValid := func(desc, tokenDomain string, signature *crypto.Ed25519Signature, registeredDomain string, records []string) {
+	testValid := func(desc, tokenDomain string, signature crypto.Signature, registeredDomain string, records []string) {
 		t.Helper()
 		testOne("valid: "+desc, tokenDomain, signature, "_sigsum_v1."+registeredDomain, records,
 			func(err error) error { return err })
 	}
-	testValidFallback := func(desc, tokenDomain string, signature *crypto.Ed25519Signature, registeredDomain string, records []string) {
+	testValidFallback := func(desc, tokenDomain string, signature crypto.Signature, registeredDomain string, records []string) {
 		t.Helper()
 		testOne("valid: "+desc+" (fallback)", tokenDomain, signature, "_sigsum_v0."+registeredDomain, records,
 			func(err error) error { return err })
 	}
-	testInvalid := func(desc, tokenDomain string, signature *crypto.Ed25519Signature, registeredDomain string, records []string, msg string) {
+	testInvalid := func(desc, tokenDomain string, signature crypto.Signature, registeredDomain string, records []string, msg string) {
 		t.Helper()
 		testOne("invalid: "+desc, tokenDomain, signature, "_sigsum_v1."+registeredDomain, records,
 			func(err error) error {
@@ -143,28 +144,28 @@ func TestVerify(t *testing.T) {
 			})
 	}
 
-	testValid("single key", "foo.example.org", &signature, "foo.example.org", []string{hexKey})
-	testInvalid("nxdomain", "foo.example.org", &signature, "bar.example.org", []string{hexKey}, "NXDOMAIN")
-	testInvalid("no matching key", "foo.example.org", &signature, "foo.example.org", []string{
+	testValid("single key", "foo.example.org", signature, "foo.example.org", []string{hexKey})
+	testInvalid("nxdomain", "foo.example.org", signature, "bar.example.org", []string{hexKey}, "NXDOMAIN")
+	testInvalid("no matching key", "foo.example.org", signature, "foo.example.org", []string{
 		logKeyHex, hexKey + "aa", "bad"},
 		"bad keys: 2")
 	testValid("multiple keys",
-		"foo.example.org", &signature, "foo.example.org", []string{
+		"foo.example.org", signature, "foo.example.org", []string{
 			logKeyHex, hexKey + "aa", "bad", hexKey})
 	testValidFallback("multiple keys",
-		"foo.example.org", &signature, "foo.example.org", []string{
+		"foo.example.org", signature, "foo.example.org", []string{
 			logKeyHex, hexKey + "aa", "bad", hexKey})
 	testInvalid("too many keys",
-		"foo.example.org", &signature, "foo.example.org", []string{
+		"foo.example.org", signature, "foo.example.org", []string{
 			logKeyHex, hexKey + "aa", "bad", "4", "5",
 			"6", "7", "8", "9", "10", hexKey},
 		"ignored keys: 1")
 }
 
-func mustSignatureFromHex(t *testing.T, ascii string) crypto.Ed25519Signature {
+func mustSignatureFromHex(t *testing.T, ascii string) crypto.Signature {
 	sig, err := crypto.Ed25519SignatureFromHex(ascii)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return sig
+	return sig[:]
 }

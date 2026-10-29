@@ -50,7 +50,7 @@ func TestSignLeaf(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			signer := mocksigner.NewMockSigner(ctrl)
-			signer.EXPECT().Sign(validLeafSignedDataBytes(t)).Return(table.wantSig, table.signErr)
+			signer.EXPECT().Sign(validLeafSignedDataBytes(t)).Return(table.wantSig[:], table.signErr)
 			sig, err := SignLeafChecksum(signer, &table.checksum)
 			if got, want := err != nil, table.wantErr; got != want {
 				t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
@@ -59,7 +59,7 @@ func TestSignLeaf(t *testing.T) {
 				return
 			}
 
-			if got, want := sig[:], table.wantSig[:]; !bytes.Equal(got, want) {
+			if got, want := sig, table.wantSig; got != want {
 				t.Errorf("got signature\n\t%v\nbut wanted\n\t%v\nin test %q", got, want, table.desc)
 			}
 		}()

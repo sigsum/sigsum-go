@@ -146,7 +146,7 @@ Options:
 		if domain != nil {
 			if err := token.NewDnsVerifier(&logKey).Verify(
 				context.Background(),
-				&token.SubmitHeader{Domain: *domain, Token: signature}); err != nil {
+				&token.SubmitHeader{Domain: *domain, Token: signature[:]}); err != nil {
 				log.Fatalf("Verifying with domain %q failed: %v", *domain, err)
 			}
 		}
@@ -155,7 +155,7 @@ Options:
 			if err != nil {
 				log.Fatal(err)
 			}
-			if err := token.VerifyToken(&key, &logKey, &signature); err != nil {
+			if err := token.VerifyToken(&key, &logKey, signature[:]); err != nil {
 				log.Fatalf("Verifying using given key failed: %v", err)
 			}
 		}

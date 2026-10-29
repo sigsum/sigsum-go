@@ -22,7 +22,7 @@ const (
 // Represents the contents of the HTTP Sigsum-Submit: header-
 type SubmitHeader struct {
 	Domain string
-	Token  crypto.Ed25519Signature
+	Token  crypto.Signature
 }
 
 func (s *SubmitHeader) ToHeader() string {
@@ -37,20 +37,21 @@ func (s *SubmitHeader) FromHeader(header string) error {
 	if len(parts[0]) == 0 {
 		return fmt.Errorf("malformed header, domain part empty")
 	}
-	var err error
-	s.Token, err = crypto.Ed25519SignatureFromHex(parts[1])
-	if err == nil {
-		s.Domain = parts[0]
+	sig, err := crypto.Ed25519SignatureFromHex(parts[1])
+	if err != nil {
+		return err
 	}
-	return err
+	s.Token = sig[:]
+	s.Domain = parts[0]
+	return nil
 }
 
-func MakeToken(signer crypto.Signer, logKey *crypto.Ed25519PublicKey) (crypto.Ed25519Signature, error) {
+func MakeToken(signer crypto.Signer, logKey *crypto.Ed25519PublicKey) (crypto.Signature, error) {
 	return signer.Sign(crypto.AttachNamespace(namespace, logKey[:]))
 }
 
 // Verify a token using a given key, with no DNS loookup.
-func VerifyToken(key *crypto.Ed25519PublicKey, logKey *crypto.Ed25519PublicKey, token *crypto.Ed25519Signature) error {
+func VerifyToken(key *crypto.Ed25519PublicKey, logKey *crypto.Ed25519PublicKey, token crypto.Signature) error {
 	if !key.Verify(crypto.AttachNamespace(namespace, logKey[:]), token) {
 		return fmt.Errorf("invalid token signature")
 	}
@@ -105,7 +106,7 @@ func (dv *DnsVerifier) Verify(ctx context.Context, header *SubmitHeader) error {
 			badKeys++
 			continue
 		}
-		if key.Verify(signedData, &header.Token) {
+		if key.Verify(signedData, header.Token) {
 			return nil
 		}
 	}

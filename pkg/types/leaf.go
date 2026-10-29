@@ -27,10 +27,10 @@ func leafSignedData(checksum *crypto.Hash) []byte {
 }
 
 func SignLeafChecksum(signer crypto.Signer, checksum *crypto.Hash) (crypto.Ed25519Signature, error) {
-	return signer.Sign(leafSignedData(checksum))
+	return signEd25519(signer, leafSignedData(checksum))
 }
 
-func VerifyLeafChecksum(key *crypto.Ed25519PublicKey, checksum *crypto.Hash, sig *crypto.Ed25519Signature) bool {
+func VerifyLeafChecksum(key *crypto.Ed25519PublicKey, checksum *crypto.Hash, sig crypto.Signature) bool {
 	return key.Verify(leafSignedData(checksum), sig)
 }
 
@@ -39,7 +39,7 @@ func SignLeafMessage(signer crypto.Signer, msg []byte) (crypto.Ed25519Signature,
 	return SignLeafChecksum(signer, &checksum)
 }
 
-func VerifyLeafMessage(key *crypto.Ed25519PublicKey, msg []byte, sig *crypto.Ed25519Signature) bool {
+func VerifyLeafMessage(key *crypto.Ed25519PublicKey, msg []byte, sig crypto.Signature) bool {
 	checksum := crypto.HashBytes(msg)
 	return VerifyLeafChecksum(key, &checksum, sig)
 }
@@ -49,7 +49,7 @@ func (l *Leaf) Verify(keys map[crypto.Hash]crypto.Ed25519PublicKey) error {
 	if !ok {
 		return ErrUnknownKeyHash
 	}
-	if !VerifyLeafChecksum(&key, &l.Checksum, &l.Signature) {
+	if !VerifyLeafChecksum(&key, &l.Checksum, l.Signature[:]) {
 		return fmt.Errorf("invalid leaf signature")
 	}
 	return nil
