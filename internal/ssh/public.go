@@ -28,9 +28,7 @@ func parsePublicEd25519(blob []byte) (crypto.Ed25519PublicKey, error) {
 	if len(pub) != crypto.Ed25519PublicKeySize {
 		return crypto.Ed25519PublicKey{}, fmt.Errorf("invalid public key length: %v", len(blob))
 	}
-	var ret crypto.Ed25519PublicKey
-	copy(ret[:], pub)
-	return ret, nil
+	return crypto.Ed25519PublicKey(pub), nil
 }
 
 // This function checks for policy name option on the form

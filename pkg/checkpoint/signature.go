@@ -23,17 +23,16 @@ var ErrUnwantedSignature = errors.New("unwanted signature")
 
 type KeyId [4]byte
 
-func NewKeyId(keyName string, sigType SignatureType, publicKey *crypto.Ed25519PublicKey) (res KeyId) {
+func NewKeyId(keyName string, sigType SignatureType, publicKey *crypto.Ed25519PublicKey) KeyId {
 	hash := crypto.HashBytes(bytes.Join([][]byte{[]byte(keyName), []byte{0xA, byte(sigType)}, publicKey[:]}, nil))
-	copy(res[:], hash[:4])
-	return
+	return KeyId(hash[:4])
 }
 
-func NewLogKeyId(keyName string, publicKey *crypto.Ed25519PublicKey) (res KeyId) {
+func NewLogKeyId(keyName string, publicKey *crypto.Ed25519PublicKey) KeyId {
 	return NewKeyId(keyName, SigTypeEd25519, publicKey)
 }
 
-func NewWitnessKeyId(keyName string, publicKey *crypto.Ed25519PublicKey) (res KeyId) {
+func NewWitnessKeyId(keyName string, publicKey *crypto.Ed25519PublicKey) KeyId {
 	return NewKeyId(keyName, SigTypeCosignature, publicKey)
 }
 
@@ -57,9 +56,7 @@ func parseNoteSignature(line string, signatureSize int) (string, KeyId, []byte, 
 	if len(blob) != 4+signatureSize {
 		return "", KeyId{}, nil, ErrUnwantedSignature
 	}
-	var keyId KeyId
-	copy(keyId[:], blob[:4])
-	return fields[1], keyId, blob[4:], nil
+	return fields[1], KeyId(blob[:4]), blob[4:], nil
 }
 
 func WriteEd25519Signature(w io.Writer, origin string, keyId KeyId, signature *crypto.Ed25519Signature) error {
@@ -79,8 +76,6 @@ func ParseEd25519SignatureLine(line, keyName string) (KeyId, crypto.Ed25519Signa
 	if name != keyName {
 		return KeyId{}, crypto.Ed25519Signature{}, ErrUnwantedSignature
 	}
-	var signature crypto.Ed25519Signature
-	copy(signature[:], blob)
 
-	return keyId, signature, nil
+	return keyId, crypto.Ed25519Signature(blob), nil
 }

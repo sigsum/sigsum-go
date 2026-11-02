@@ -92,8 +92,7 @@ func TestSignEd25519(t *testing.T) {
 }
 
 func TestVerifyEd25519(t *testing.T) {
-	var secret Ed25519PrivateKey
-	copy(secret[:], incBytes(Ed25519PrivateKeySize))
+	secret := Ed25519PrivateKey(incBytes(Ed25519PrivateKeySize))
 	signer := NewEd25519Signer(&secret)
 	pub := signer.Public()
 

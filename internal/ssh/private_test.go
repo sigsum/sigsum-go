@@ -69,14 +69,13 @@ AMY9liI/ehlhqkSxjXNHg1AXH30UH802SQBj7V1aS6vWAAAAAAECAwQF
 	}
 }
 
-func mustDecodeHex(t *testing.T, s string) (out crypto.Ed25519PrivateKey) {
+func mustDecodeHex(t *testing.T, s string) crypto.Ed25519PrivateKey {
 	b, err := hex.DecodeString(s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(b) != len(out) {
-		t.Fatalf("unexpected length of hex data, expected %d, got %d", len(out), len(b))
+	if got, want := len(b), crypto.Ed25519PrivateKeySize; got != want {
+		t.Fatalf("unexpected length of hex data, got %d, want %d", got, want)
 	}
-	copy(out[:], b)
-	return
+	return crypto.Ed25519PrivateKey(b)
 }

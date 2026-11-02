@@ -23,13 +23,12 @@ func HashBytes(b []byte) Hash {
 	return sha256.Sum256(b)
 }
 
-func HashFile(f io.Reader) (digest Hash, err error) {
+func HashFile(f io.Reader) (Hash, error) {
 	h := sha256.New()
-	if _, err = io.Copy(h, f); err != nil {
-		return
+	if _, err := io.Copy(h, f); err != nil {
+		return Hash{}, err
 	}
-	copy(digest[:], h.Sum(nil))
-	return
+	return Hash(h.Sum(nil)), nil
 }
 
 func decodeHex(out []byte, s string) error {

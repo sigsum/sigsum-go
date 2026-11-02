@@ -65,19 +65,15 @@ func (s *Ed25519Signer) Sign(msg []byte) (Ed25519Signature, error) {
 	if len(sig) != Ed25519SignatureSize {
 		return Ed25519Signature{}, fmt.Errorf("internal error, unexpected signature size %d: ", len(sig))
 	}
-	var ret Ed25519Signature
-	copy(ret[:], sig)
-	return ret, nil
+	return Ed25519Signature(sig), nil
 }
 
-func (s *Ed25519Signer) Public() (ret Ed25519PublicKey) {
-	copy(ret[:], s.secret.Public().(ed25519.PublicKey))
-	return
+func (s *Ed25519Signer) Public() Ed25519PublicKey {
+	return Ed25519PublicKey(s.secret.Public().(ed25519.PublicKey))
 }
 
-func (s *Ed25519Signer) Private() (ret Ed25519PrivateKey) {
-	copy(ret[:], s.secret.Seed())
-	return
+func (s *Ed25519Signer) Private() Ed25519PrivateKey {
+	return Ed25519PrivateKey(s.secret.Seed())
 }
 
 func NewEd25519KeyPair() (Ed25519PublicKey, *Ed25519Signer, error) {
