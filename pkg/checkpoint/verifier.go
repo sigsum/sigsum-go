@@ -41,7 +41,7 @@ func (nv *NoteVerifier) FromString(in string) error {
 	if got, want := len(hash), len(nv.KeyId); got != want {
 		return fmt.Errorf("unexpected hash length: got %d, want %d", got, want)
 	}
-	copy(nv.KeyId[:], hash)
+	nv.KeyId = KeyId(hash)
 
 	blob, err := base64.StdEncoding.DecodeString(fields[2])
 	if err != nil {
@@ -62,7 +62,7 @@ func (nv *NoteVerifier) FromString(in string) error {
 	if got, want := len(blob), crypto.Ed25519PublicKeySize; got != want {
 		return fmt.Errorf("unexpected key blob length: got %d, want %d", got, want)
 	}
-	copy(nv.PublicKey[:], blob)
+	nv.PublicKey = crypto.Ed25519PublicKey(blob)
 	return nil
 }
 

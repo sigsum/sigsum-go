@@ -43,12 +43,13 @@ func CosignatureLinesFromASCII(r io.Reader) ([]CosignatureLine, error) {
 			}
 			continue
 		}
-		csl := CosignatureLine{
-			KeyName:     name,
-			KeyId:       keyId,
-			Cosignature: types.Cosignature{Timestamp: binary.BigEndian.Uint64(blob[:8])},
-		}
-		copy(csl.Signature[:], blob[8:])
-		res = append(res, csl)
+		res = append(res, CosignatureLine{
+			KeyName: name,
+			KeyId:   keyId,
+			Cosignature: types.Cosignature{
+				Timestamp: binary.BigEndian.Uint64(blob[:8]),
+				Signature: crypto.Ed25519Signature(blob[8:]),
+			},
+		})
 	}
 }

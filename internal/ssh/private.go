@@ -121,8 +121,7 @@ func ParsePrivateKeyFile(ascii []byte) (crypto.Ed25519PublicKey, *crypto.Ed25519
 		if !bytes.Equal(pub[:], keys[32:]) {
 			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("inconsistent public key")
 		}
-		var privateKey crypto.Ed25519PrivateKey
-		copy(privateKey[:], keys[:32])
+		privateKey := crypto.Ed25519PrivateKey(keys[:32])
 		signer := crypto.NewEd25519Signer(&privateKey)
 		if signer.Public() != pub {
 			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("inconsistent private key")

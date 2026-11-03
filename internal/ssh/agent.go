@@ -109,7 +109,5 @@ func parseSignature(blob []byte) (crypto.Ed25519Signature, error) {
 	if len(signature) != crypto.Ed25519SignatureSize {
 		return crypto.Ed25519Signature{}, fmt.Errorf("bad signature length: %d", len(signature))
 	}
-	var ret crypto.Ed25519Signature
-	copy(ret[:], signature)
-	return ret, nil
+	return crypto.Ed25519Signature(signature), nil
 }

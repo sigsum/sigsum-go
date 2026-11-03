@@ -120,9 +120,7 @@ func readMessage(r io.Reader, rawHash bool) (crypto.Hash, error) {
 		return crypto.Hash{}, err
 	}
 	if len(data) == crypto.HashSize {
-		var msg crypto.Hash
-		copy(msg[:], data)
-		return msg, nil
+		return crypto.Hash(data), nil
 	}
 	return crypto.HashFromHex(strings.TrimSpace(string(data)))
 }

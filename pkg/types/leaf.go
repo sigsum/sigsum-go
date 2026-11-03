@@ -72,9 +72,9 @@ func (l *Leaf) FromBinary(b []byte) error {
 		return fmt.Errorf("types: invalid leaf size: %d", len(b))
 	}
 
-	copy(l.Checksum[:], b[:32])
-	copy(l.Signature[:], b[32:96])
-	copy(l.KeyHash[:], b[96:])
+	l.Checksum = crypto.Hash(b[:32])
+	l.Signature = crypto.Ed25519Signature(b[32:96])
+	l.KeyHash = crypto.Hash(b[96:])
 	return nil
 }
 
