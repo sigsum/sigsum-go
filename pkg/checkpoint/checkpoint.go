@@ -147,7 +147,7 @@ func (cp *Checkpoint) Verify(publicKey *crypto.Ed25519PublicKey) error {
 	if cp.KeyId != NewLogKeyId(cp.Origin, publicKey) {
 		return fmt.Errorf("unexpected checkpoint key id")
 	}
-	if !cp.SignedTreeHead.Verify(publicKey) {
+	if !publicKey.Verify([]byte(cp.FormatCheckpoint(cp.Origin)), &cp.Signature) {
 		return fmt.Errorf("invalid checkpoint signature")
 	}
 	return nil
