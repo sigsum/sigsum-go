@@ -12,10 +12,13 @@ import (
 
 const HashSize = sha256.Size
 
-type Hash [HashSize]byte
+type (
+	Hash      [HashSize]byte
+	Signature []byte
+)
 
 type Signer interface {
-	Sign([]byte) (Ed25519Signature, error)
+	Sign([]byte) (Signature, error)
 	Public() Ed25519PublicKey
 }
 

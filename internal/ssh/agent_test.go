@@ -105,7 +105,7 @@ func TestSignEd25519(t *testing.T) {
 		[]byte{sshAgentSignResponse},
 		serializeString(bytes.Join([][]byte{
 			serializeString("ssh-ed25519"),
-			serializeString(signature[:]),
+			serializeString(signature),
 		}, nil)),
 	}, nil))
 
@@ -115,7 +115,7 @@ func TestSignEd25519(t *testing.T) {
 	resp, err := c.SignEd25519(&publicKey, msg)
 	if err != nil {
 		t.Errorf("SignEd25519 failed: %v", err)
-	} else if resp != signature {
+	} else if !bytes.Equal(resp, signature) {
 		t.Errorf("unexpected signature, got %x, wanted %x", resp, signature)
 	}
 	expRequest := h("000000430d000000330000000b7373682d656432353531390000002066e0b858" +

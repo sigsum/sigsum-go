@@ -35,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("signing failed: %v", err)
 	}
-	if !publicKey.Verify(msg, &signature) {
+	if !publicKey.Verify(msg, signature) {
 		log.Fatal("signature appears invalid!")
 	}
 }

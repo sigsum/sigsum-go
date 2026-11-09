@@ -27,7 +27,7 @@ import (
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
-type bytesOrString interface{ []byte | string }
+type bytesOrString interface{ ~[]byte | string }
 
 func serializeUint32(x uint32) []byte {
 	buffer := make([]byte, 4)
