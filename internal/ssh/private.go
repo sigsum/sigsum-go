@@ -30,7 +30,7 @@ var opensshPrivateKeyPrefix = bytes.Join([][]byte{
 
 // Deterministic variant with nonce input, for unit testing.
 func writePrivateKeyFile(w io.Writer, signer *crypto.Ed25519Signer, nonce [4]byte) error {
-	pub := signer.Public()
+	pub := signer.Ed25519Public()
 	priv := signer.Private()
 
 	pubBlob := serializePublicEd25519(&pub)
@@ -123,7 +123,7 @@ func ParsePrivateKeyFile(ascii []byte) (crypto.Ed25519PublicKey, *crypto.Ed25519
 		}
 		privateKey := crypto.Ed25519PrivateKey(keys[:32])
 		signer := crypto.NewEd25519Signer(&privateKey)
-		if signer.Public() != pub {
+		if signer.Ed25519Public() != pub {
 			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("inconsistent private key")
 		}
 

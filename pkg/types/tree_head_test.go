@@ -65,7 +65,7 @@ func TestTreeHeadSign(t *testing.T) {
 			defer ctrl.Finish()
 			signer := mocksigner.NewMockSigner(ctrl)
 			signer.EXPECT().Sign(gomock.Any()).Return(table.wantSig[:], table.signErr)
-			signer.EXPECT().Public().Return(crypto.Ed25519PublicKey{})
+			signer.EXPECT().Public().Return(&crypto.Ed25519PublicKey{})
 			sth, err := table.th.Sign(signer)
 			if got, want := err != nil, table.wantErr; got != want {
 				t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)

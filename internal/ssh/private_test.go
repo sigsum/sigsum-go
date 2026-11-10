@@ -28,7 +28,7 @@ gX4rCMeNlFXpDyZqodB4AAAADm5pc3NlQGJseWdsYW5zAQIDBAUGBw==
 		mustDecodeHex(t, "300f45677b629f64237ecca512ad16a2fbfe95cf98af090aef4f5c14e3b7b54a"); got != want {
 		t.Errorf("unexpected private key: %x, expected %x", got, want)
 	}
-	if pub != signer.Public() {
+	if pub != signer.Ed25519Public() {
 		t.Errorf("inconsistent public key, doesn't match signer.Public()")
 	}
 	pubFromFile, _, err := ParsePublicEd25519(testPub)

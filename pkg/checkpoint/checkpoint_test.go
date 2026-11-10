@@ -63,7 +63,7 @@ func TestCheckpointFromASCII(t *testing.T) {
 
 func TestCheckpointSigned(t *testing.T) {
 	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
-	pub := signer.Public()
+	pub := signer.Ed25519Public()
 	origin := fmt.Sprintf("%s%x", types.CheckpointNamePrefix, pub.Hash())
 	cp := Checkpoint{
 		Origin: origin,
@@ -87,7 +87,7 @@ func TestCheckpointSigned(t *testing.T) {
 func TestCheckpointVerify(t *testing.T) {
 	// Key used to sign above checkpoint.
 	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
-	pub := signer.Public()
+	pub := signer.Ed25519Public()
 
 	var validCheckpoint Checkpoint
 	if err := validCheckpoint.FromASCII(bytes.NewBufferString(validCheckpointASCII)); err != nil {
@@ -125,7 +125,7 @@ func TestCheckpointVerify(t *testing.T) {
 func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 	// Key used to sign above checkpoint.
 	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
-	pub := signer.Public()
+	pub := signer.Ed25519Public()
 
 	paragraphs := strings.Split(validCheckpointASCII, "\n\n")
 	if len(paragraphs) != 2 {
@@ -174,7 +174,7 @@ func TestCheckpointVerifyIgnoreExtraSignature(t *testing.T) {
 
 func TestCheckpointCosignVerify(t *testing.T) {
 	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
-	pub := signer.Public()
+	pub := signer.Ed25519Public()
 	timestamp := uint64(1234)
 	cosignature, err := testCheckpoint.Cosign(signer, timestamp)
 	if err != nil {
@@ -218,7 +218,7 @@ func TestCheckpointVerifyCosignatureByKey(t *testing.T) {
 		t.Errorf("unexpected number of cosignatures: got %d, want: %d", got, want)
 	}
 	signer := crypto.NewEd25519Signer(&crypto.Ed25519PrivateKey{17})
-	pub := signer.Public()
+	pub := signer.Ed25519Public()
 	cosignature, err := testCheckpoint.VerifyCosignatureByKey(cosignatures, &pub)
 	if err != nil {
 		t.Fatal(err)

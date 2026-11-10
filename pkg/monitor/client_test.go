@@ -75,7 +75,7 @@ func (l *testLog) AddLeaf(_ context.Context, req requests.Leaf, _ *token.SubmitH
 	return true, nil
 }
 
-func makeLeafRequest(t *testing.T, signer crypto.Signer, msg *crypto.Hash) requests.Leaf {
+func makeLeafRequest(t *testing.T, signer *crypto.Ed25519Signer, msg *crypto.Hash) requests.Leaf {
 	signature, err := types.SignLeafMessage(signer, msg[:])
 	if err != nil {
 		t.Fatalf("Leaf signing failed: %v\n", err)
@@ -83,7 +83,7 @@ func makeLeafRequest(t *testing.T, signer crypto.Signer, msg *crypto.Hash) reque
 	return requests.Leaf{
 		Message:   *msg,
 		Signature: signature,
-		PublicKey: signer.Public(),
+		PublicKey: signer.Ed25519Public(),
 	}
 }
 
@@ -94,7 +94,7 @@ func TestGetTreeHead(t *testing.T) {
 	log := testLog{signer: logSigner, tree: merkle.NewTree()}
 
 	monitorClient := monitoringLogClient{
-		logKey: logSigner.Public(),
+		logKey: logSigner.Ed25519Public(),
 		client: &log,
 	}
 	r := rand.New(rand.NewSource(10))
@@ -154,7 +154,7 @@ func TestGetTreeHeadErrors(t *testing.T) {
 			})
 
 		monitorClient := monitoringLogClient{
-			logKey: logSigner.Public(),
+			logKey: logSigner.Ed25519Public(),
 			client: mockLog,
 		}
 
@@ -181,7 +181,7 @@ func TestGetTreeHeadErrors(t *testing.T) {
 	oneTest("bad consistency", nil, nil)
 }
 
-func addLeaves(t *testing.T, log *testLog, signer crypto.Signer, id, count uint64) {
+func addLeaves(t *testing.T, log *testLog, signer *crypto.Ed25519Signer, id, count uint64) {
 	oldSize := log.tree.Size()
 	for j := uint64(0); j < count; j++ {
 		var msg crypto.Hash

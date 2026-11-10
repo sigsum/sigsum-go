@@ -49,7 +49,7 @@ func (th *TreeHead) FormatCheckpoint(origin string) string {
 		base64.StdEncoding.EncodeToString(th.RootHash[:]))
 }
 
-func SigsumCheckpointOrigin(publicKey *crypto.Ed25519PublicKey) string {
+func SigsumCheckpointOrigin(publicKey crypto.PublicKey) string {
 	return fmt.Sprintf("%s%x", CheckpointNamePrefix, publicKey.Hash())
 }
 
@@ -66,7 +66,7 @@ func signEd25519(signer crypto.Signer, msg []byte) (crypto.Ed25519Signature, err
 
 func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
 	pub := signer.Public()
-	sig, err := signEd25519(signer, []byte(th.FormatCheckpoint(SigsumCheckpointOrigin(&pub))))
+	sig, err := signEd25519(signer, []byte(th.FormatCheckpoint(SigsumCheckpointOrigin(pub))))
 	if err != nil {
 		return SignedTreeHead{}, fmt.Errorf("failed signing tree head: %w", err)
 	}

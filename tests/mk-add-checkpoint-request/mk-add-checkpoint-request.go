@@ -41,7 +41,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("parsing public key failed: %v", err)
 	}
-	pub := signer.Public()
+	publicKey := signer.Public()
 	t := merkle.NewTree()
 	for i := uint64(0); i < newSize; i++ {
 		h := crypto.Hash{}
@@ -73,12 +73,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	origin := types.SigsumCheckpointOrigin(&pub)
+	origin := types.SigsumCheckpointOrigin(publicKey)
+	publicEd25519, ok := publicKey.(*crypto.Ed25519PublicKey)
+	if !ok {
+		log.Fatalf("Unexpected type %T for signing key", publicKey)
+	}
 
 	if err := (&checkpoint.Checkpoint{
 		SignedTreeHead: sth,
 		Origin:         origin,
-		KeyId:          checkpoint.NewLogKeyId(origin, &pub),
+		KeyId:          checkpoint.NewLogKeyId(origin, publicEd25519),
 	}).ToASCII(os.Stdout); err != nil {
 		log.Fatal(err)
 	}

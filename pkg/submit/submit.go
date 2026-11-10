@@ -101,6 +101,12 @@ func (c *Config) sleep(ctx context.Context) error {
 }
 
 func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, message *crypto.Hash) (proof.SigsumProof, error) {
+	publicKey := signer.Public()
+	publicEd25519, ok := signer.Public().(*crypto.Ed25519PublicKey)
+	if !ok {
+		return proof.SigsumProof{}, fmt.Errorf("unexpected type %T for signing key", publicKey)
+	}
+
 	signature, err := types.SignLeafMessage(signer, message[:])
 	if err != nil {
 		return proof.SigsumProof{}, err
@@ -108,7 +114,7 @@ func SubmitMessage(ctx context.Context, config *Config, signer crypto.Signer, me
 	proofs, err := SubmitLeafRequests(ctx, config, []requests.Leaf{requests.Leaf{
 		Message:   *message,
 		Signature: signature,
-		PublicKey: signer.Public(),
+		PublicKey: *publicEd25519,
 	}})
 	if err != nil {
 		return proof.SigsumProof{}, err

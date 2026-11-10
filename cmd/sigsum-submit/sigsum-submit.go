@@ -64,6 +64,10 @@ func getLeafRequestSignerSource(keyFile string, inputFiles []string, rawHash boo
 		log.Fatal("Reading key file failed: %v", err)
 	}
 	publicKey := signer.Public()
+	publicEd25519, ok := publicKey.(*crypto.Ed25519PublicKey)
+	if !ok {
+		log.Fatal("Unexpected type %T for signing key", publicKey)
+	}
 	if len(inputFiles) == 0 {
 		// No input files, so we use stdin
 		return func(_ LeafSkip, sink LeafSink) {
@@ -75,21 +79,21 @@ func getLeafRequestSignerSource(keyFile string, inputFiles []string, rawHash boo
 			if err != nil {
 				log.Fatal("Signing failed: %v", err)
 			}
-			sink("", &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
+			sink("", &requests.Leaf{Message: msg, Signature: signature, PublicKey: *publicEd25519})
 		}, policyNameFromPubKey, nil
 	}
 	// There are input files, so we use them
 	return func(skip LeafSkip, sink LeafSink) {
 		for _, inputFile := range inputFiles {
 			msg := readMessageFile(inputFile, rawHash)
-			if skip(inputFile, &msg, &publicKey) {
+			if skip(inputFile, &msg, publicEd25519) {
 				continue
 			}
 			signature, err := types.SignLeafMessage(signer, msg[:])
 			if err != nil {
 				log.Fatal("Signing failed: %v", err)
 			}
-			sink(inputFile, &requests.Leaf{Message: msg, Signature: signature, PublicKey: publicKey})
+			sink(inputFile, &requests.Leaf{Message: msg, Signature: signature, PublicKey: *publicEd25519})
 		}
 	}, policyNameFromPubKey, nil
 }
@@ -165,8 +169,13 @@ func main() {
 			if err != nil {
 				log.Fatal("Reading token key file failed: %v", err)
 			}
+			rateLimitPublicKey := config.RateLimitSigner.Public()
+			rateLimitPublicEd25519, ok := rateLimitPublicKey.(*crypto.Ed25519PublicKey)
+			if !ok {
+				log.Fatal("Unexpected type %T for rate limit signing key", rateLimitPublicKey)
+			}
 			// Warn if corresponding public key isn't registered for the domain.
-			if err := checkTokenDomain(ctx, config.Domain, config.RateLimitSigner.Public()); err != nil {
+			if err := checkTokenDomain(ctx, config.Domain, *rateLimitPublicEd25519); err != nil {
 				log.Warning("warn: token domain and signer does not match DNS records: %v", err)
 			}
 		}
