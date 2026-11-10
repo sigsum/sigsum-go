@@ -190,10 +190,7 @@ func (s *state) Load(pub, logPub *crypto.Ed25519PublicKey) error {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-		s.th = types.TreeHead{
-			Size:     0,
-			RootHash: crypto.HashBytes([]byte{}),
-		}
+		s.th = types.NewEmptyTreeHead()
 		return nil
 	}
 	defer f.Close()
@@ -206,7 +203,7 @@ func (s *state) Load(pub, logPub *crypto.Ed25519PublicKey) error {
 		return fmt.Errorf("Invalid log signature on stored tree head")
 	}
 
-	cs, ok := cth.Cosignatures[crypto.HashBytes(pub[:])]
+	cs, ok := cth.Cosignatures[pub.Hash()]
 	if !ok {
 		return fmt.Errorf("No matching cosignature on stored tree head")
 	}
