@@ -45,16 +45,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	pub := signer.Public()
+	publicKey := signer.Public()
+	publicEd25519, ok := publicKey.(*crypto.Ed25519PublicKey)
+	if !ok {
+		log.Fatalf("Unexpected type %T for signing key", publicKey)
+	}
 	logPub, err := key.ReadPublicKeyFile(settings.logKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 	state := state{fileName: settings.stateFile}
-	if err := state.Load(&pub, &logPub); err != nil {
+	if err := state.Load(publicEd25519, &logPub); err != nil {
 		log.Fatal(err)
 	}
-	witness := newWitness(signer, &pub, &logPub, &state)
+	witness := newWitness(signer, publicEd25519, &logPub, &state)
 
 	httpServer := http.Server{
 		Addr:    settings.hostAndPort,

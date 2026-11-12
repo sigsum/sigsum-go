@@ -19,7 +19,7 @@ type Ed25519PublicKey [Ed25519PublicKeySize]byte
 type Ed25519PrivateKey [Ed25519PrivateKeySize]byte
 type Ed25519Signature [Ed25519SignatureSize]byte
 
-func (k Ed25519PublicKey) Hash() Hash {
+func (k *Ed25519PublicKey) Hash() Hash {
 	return HashBytes(k[:])
 }
 
@@ -39,13 +39,22 @@ func (k Ed25519PublicKey) Hash() Hash {
 // (e.g., k A' = 0). The attacker can then compute a matching R, and
 // finally try a few different messages until one is found that
 // results in the right value of k A'.
-func (k Ed25519PublicKey) Verify(msg []byte, sig Signature) bool {
+func (k *Ed25519PublicKey) Verify(msg []byte, sig Signature) bool {
 	// These validation criteria are intended to be consistent
 	// with ed25519-dalek's verify_strict(). See
 	// https://github.com/C2SP/CCTV/tree/main/ed25519.
-	return validateEd25519PublicKey(&k) == nil &&
+	return validateEd25519PublicKey(k) == nil &&
 		validateEd25519Signature(sig) == nil &&
 		ed25519.Verify(ed25519.PublicKey(k[:]), msg, sig)
+}
+
+func (k *Ed25519PublicKey) Bytes() []byte {
+	return bytes.Clone(k[:])
+}
+
+func (k *Ed25519PublicKey) Equal(other PublicKey) bool {
+	otherEd25519, ok := other.(*Ed25519PublicKey)
+	return ok && *k == *otherEd25519
 }
 
 type Ed25519Signer struct {
@@ -67,8 +76,13 @@ func (s *Ed25519Signer) Sign(msg []byte) (Signature, error) {
 	return sig, nil
 }
 
-func (s *Ed25519Signer) Public() Ed25519PublicKey {
+func (s *Ed25519Signer) Ed25519Public() Ed25519PublicKey {
 	return Ed25519PublicKey(s.secret.Public().(ed25519.PublicKey))
+}
+
+func (s *Ed25519Signer) Public() PublicKey {
+	pub := s.Ed25519Public()
+	return &pub
 }
 
 func (s *Ed25519Signer) Private() Ed25519PrivateKey {
@@ -81,7 +95,7 @@ func NewEd25519KeyPair() (Ed25519PublicKey, *Ed25519Signer, error) {
 		return Ed25519PublicKey{}, nil, err
 	}
 	signer := &Ed25519Signer{priv}
-	return signer.Public(), signer, nil
+	return signer.Ed25519Public(), signer, nil
 }
 
 func Ed25519PublicKeyFromHex(s string) (pub Ed25519PublicKey, err error) {

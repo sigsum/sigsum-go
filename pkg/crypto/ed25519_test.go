@@ -104,7 +104,7 @@ func TestVerifyEd25519(t *testing.T) {
 	if !pub.Verify(message, signature) {
 		t.Errorf("verify on valid message and signature failed")
 	}
-	badSignature := append([]byte{}, signature...)
+	badSignature := bytes.Clone(signature)
 	badSignature[3]++
 	if pub.Verify(message, badSignature) {
 		t.Errorf("verify on invalid signature succeeded")
@@ -122,7 +122,7 @@ func TestPrivateEd25519(t *testing.T) {
 	}
 	priv := signer.Private()
 	signer2 := NewEd25519Signer(&priv)
-	if got := signer2.Public(); got != pub {
+	if got := signer2.Ed25519Public(); got != pub {
 		t.Errorf("roundtrip via .Private() and NewEd25519Signer failed. got: %x, want: %x",
 			got, pub)
 	}

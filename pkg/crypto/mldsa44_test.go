@@ -55,7 +55,7 @@ func TestPublicMLDSA44(t *testing.T) {
 			"2499E30EB942F22BEBF6ED5C8E37DF9557E74D67DC467BAAFA68F1CE37C8BD9B"+
 			"3A4F9DE71670128125AA16ACA7232239575E1C6819C820AD16832F23647DD53C"+
 			"5740A8552F86901AA4F883EFD5A3EFD7C3BF458C5122712D44BE43306C9B8264")
-	if got := signer.Public(); got != want {
+	if got := signer.MLDSA44Public(); got != want {
 		t.Errorf("unexpected MLDSA44 public key")
 	}
 }
@@ -320,7 +320,7 @@ func TestPrivateMLDSA44(t *testing.T) {
 	}
 	priv := signer.Private()
 	signer2 := NewMLDSA44Signer(&priv)
-	if got := signer2.Public(); got != pub {
+	if got := signer2.MLDSA44Public(); got != pub {
 		t.Errorf("roundtrip via .Private() and NewMLDSA44Signer failed. got: %x, want: %x",
 			got, pub)
 	}

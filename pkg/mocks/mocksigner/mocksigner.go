@@ -35,10 +35,10 @@ func (m *MockSigner) EXPECT() *MockSignerMockRecorder {
 }
 
 // Public mocks base method.
-func (m *MockSigner) Public() crypto.Ed25519PublicKey {
+func (m *MockSigner) Public() crypto.PublicKey {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Public")
-	ret0, _ := ret[0].(crypto.Ed25519PublicKey)
+	ret0, _ := ret[0].(crypto.PublicKey)
 	return ret0
 }
 

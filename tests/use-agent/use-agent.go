@@ -26,9 +26,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("parsing key failed: %v", err)
 	}
-	if signer.Public() != publicKey {
+	if !signer.Public().Equal(&publicKey) {
 		log.Fatalf("internal error, public key inconsistency\n  %x\n  %x\n",
-			publicKey, signer.Public())
+			publicKey, signer.Public().Bytes())
 	}
 	msg := []byte("squemish ossifrage")
 	signature, err := signer.Sign(msg)

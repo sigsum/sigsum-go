@@ -17,9 +17,16 @@ type (
 	Signature []byte
 )
 
+type PublicKey interface {
+	Hash() Hash
+	Verify([]byte, Signature) bool
+	Bytes() []byte
+	Equal(PublicKey) bool
+}
+
 type Signer interface {
 	Sign([]byte) (Signature, error)
-	Public() Ed25519PublicKey
+	Public() PublicKey
 }
 
 func HashBytes(b []byte) Hash {

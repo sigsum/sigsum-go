@@ -94,8 +94,8 @@ func (s *Signer) Sign(message []byte) (crypto.Signature, error) {
 	return s.conn.SignEd25519(&s.publicKey, message)
 }
 
-func (s *Signer) Public() crypto.Ed25519PublicKey {
-	return s.publicKey
+func (s *Signer) Public() crypto.PublicKey {
+	return &s.publicKey
 }
 
 func parseSignature(blob []byte) (crypto.Signature, error) {

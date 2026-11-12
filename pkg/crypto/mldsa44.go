@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/mldsa"
 	"fmt"
 )
@@ -15,16 +16,25 @@ type MLDSA44PublicKey [MLDSA44PublicKeySize]byte
 type MLDSA44PrivateKey [MLDSA44PrivateKeySize]byte
 type MLDSA44Signature [MLDSA44SignatureSize]byte
 
-func (k MLDSA44PublicKey) Hash() Hash {
+func (k *MLDSA44PublicKey) Hash() Hash {
 	return HashBytes(k[:])
 }
 
-func (k MLDSA44PublicKey) Verify(msg []byte, sig Signature) bool {
+func (k *MLDSA44PublicKey) Verify(msg []byte, sig Signature) bool {
 	pub, err := mldsa.NewPublicKey(mldsa.MLDSA44(), k[:])
 	if err != nil {
 		return false
 	}
 	return mldsa.Verify(pub, msg, sig, nil) == nil
+}
+
+func (k *MLDSA44PublicKey) Bytes() []byte {
+	return bytes.Clone(k[:])
+}
+
+func (k *MLDSA44PublicKey) Equal(other PublicKey) bool {
+	otherMLDSA44, ok := other.(*MLDSA44PublicKey)
+	return ok && *k == *otherMLDSA44
 }
 
 type MLDSA44Signer struct {
@@ -50,9 +60,14 @@ func (s *MLDSA44Signer) Sign(msg []byte) (Signature, error) {
 	return sig, nil
 }
 
-func (s *MLDSA44Signer) Public() MLDSA44PublicKey {
+func (s *MLDSA44Signer) MLDSA44Public() MLDSA44PublicKey {
 	pub := s.secret.Public().(*mldsa.PublicKey)
 	return MLDSA44PublicKey(pub.Bytes())
+}
+
+func (s *MLDSA44Signer) Public() PublicKey {
+	pub := s.MLDSA44Public()
+	return &pub
 }
 
 func (s *MLDSA44Signer) Private() MLDSA44PrivateKey {
@@ -65,7 +80,7 @@ func NewMLDSA44KeyPair() (MLDSA44PublicKey, *MLDSA44Signer, error) {
 		return MLDSA44PublicKey{}, nil, err
 	}
 	signer := &MLDSA44Signer{secret}
-	return signer.Public(), signer, nil
+	return signer.MLDSA44Public(), signer, nil
 }
 
 func MLDSA44PublicKeyFromHex(s string) (pub MLDSA44PublicKey, err error) {

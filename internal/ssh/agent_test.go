@@ -93,7 +93,7 @@ func TestRequest(t *testing.T) {
 func TestSignEd25519(t *testing.T) {
 	privateKey := crypto.Ed25519PrivateKey{17}
 	signer := crypto.NewEd25519Signer(&privateKey)
-	publicKey := signer.Public()
+	publicKey := signer.Ed25519Public()
 
 	msg := []byte("abc")
 	signature, err := signer.Sign(msg)
