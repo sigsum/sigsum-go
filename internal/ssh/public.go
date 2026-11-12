@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"strings"
 
 	"sigsum.org/sigsum-go/pkg/crypto"
@@ -16,17 +17,13 @@ func serializePublicEd25519(pub *crypto.Ed25519PublicKey) []byte {
 		nil)
 }
 
-func parsePublicEd25519(blob []byte) (crypto.Ed25519PublicKey, error) {
-	pub := skipPrefix(blob, bytes.Join([][]byte{
-		serializeString("ssh-ed25519"),
-		serializeUint32(crypto.Ed25519PublicKeySize),
-	}, nil))
-
-	if pub == nil {
-		return crypto.Ed25519PublicKey{}, fmt.Errorf("invalid public key blob prefix")
+func readPublicEd25519(r io.Reader) (crypto.Ed25519PublicKey, error) {
+	if err := readSkip(r, serializeString("ssh-ed25519")); err != nil {
+		return crypto.Ed25519PublicKey{}, fmt.Errorf("invalid public key blob prefix: %v", err)
 	}
-	if len(pub) != crypto.Ed25519PublicKeySize {
-		return crypto.Ed25519PublicKey{}, fmt.Errorf("invalid public key length: %v", len(blob))
+	pub, err := readStringOfLength(r, crypto.Ed25519PublicKeySize)
+	if err != nil {
+		return crypto.Ed25519PublicKey{}, fmt.Errorf("invalid public key: %v", err)
 	}
 	return crypto.Ed25519PublicKey(pub), nil
 }
@@ -84,7 +81,7 @@ func ParsePublicEd25519(asciiKey string) (crypto.Ed25519PublicKey, string, error
 	if err != nil {
 		return crypto.Ed25519PublicKey{}, "", err
 	}
-	pubkey, err := parsePublicEd25519(blob)
+	pubkey, err := parseBytes(blob, nil, readPublicEd25519)
 	return pubkey, policyName, err
 }
 
