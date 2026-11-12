@@ -23,8 +23,6 @@ import (
 	"encoding/binary"
 	"log"
 	"math"
-
-	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
 type bytesOrString interface{ ~[]byte | string }
@@ -43,21 +41,6 @@ func serializeString[T bytesOrString](s T) []byte {
 	binary.BigEndian.PutUint32(buffer, uint32(len(s)))
 	copy(buffer[4:], s)
 	return buffer
-}
-
-func signedDataFromHash(namespace string, hash *crypto.Hash) []byte {
-	return bytes.Join([][]byte{
-		[]byte("SSHSIG"),
-		serializeString(namespace),
-		serializeString(""), // Empty reserved string
-		serializeString("sha256"),
-		serializeString(hash[:])}, nil)
-}
-
-// Deprecated; only for backwards compatibility in SignedTreeHead.VerifyVersion0.
-func SignedData(namespace string, msg []byte) []byte {
-	hash := crypto.HashBytes(msg)
-	return signedDataFromHash(namespace, &hash)
 }
 
 // Skips prefix, if present, otherwise return nil.
