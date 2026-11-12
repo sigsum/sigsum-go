@@ -21,9 +21,14 @@ package ssh
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"io"
 	"log"
 	"math"
 )
+
+// Arbitrary maximum read size for readString
+const readStringMaxSize = 20000
 
 type bytesOrString interface{ ~[]byte | string }
 
@@ -43,33 +48,66 @@ func serializeString[T bytesOrString](s T) []byte {
 	return buffer
 }
 
-// Skips prefix, if present, otherwise return nil.
-func skipPrefix(buffer []byte, prefix []byte) []byte {
-	if !bytes.HasPrefix(buffer, prefix) {
-		return nil
+func readBytes(r io.Reader, size int) ([]byte, error) {
+	buf := make([]byte, size)
+	if _, err := io.ReadFull(r, buf); err != nil {
+		return nil, err
 	}
-	return buffer[len(prefix):]
+	return buf, nil
 }
 
-// Skips an ssh-encoded string, including length field.
-func skipPrefixString[T bytesOrString](buffer []byte, prefix T) []byte {
-	return skipPrefix(buffer, serializeString(prefix))
+func readUint32(r io.Reader) (uint32, error) {
+	lenBuf, err := readBytes(r, 4)
+	if err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint32(lenBuf), nil
 }
 
-func parseUint32(buffer []byte) (uint32, []byte) {
-	if buffer == nil || len(buffer) < 4 {
-		return 0, nil
+func readString(r io.Reader) ([]byte, error) {
+	len, err := readUint32(r)
+	if err != nil {
+		return nil, err
 	}
-	return binary.BigEndian.Uint32(buffer[:4]), buffer[4:]
+	if len > readStringMaxSize {
+		return nil, fmt.Errorf("length %d exceeds max %d", len, readStringMaxSize)
+	}
+	return readBytes(r, int(len))
 }
 
-func parseString(buffer []byte) ([]byte, []byte) {
-	length, buffer := parseUint32(buffer)
-	if buffer == nil {
-		return nil, nil
+func readStringOfLength(r io.Reader, len int) ([]byte, error) {
+	if err := readSkip(r, serializeUint32(uint32(len))); err != nil {
+		return nil, fmt.Errorf("expected length %d: %w", len, err)
 	}
-	if int64(len(buffer)) < int64(length) {
-		return nil, nil
+	return readBytes(r, len)
+}
+
+// Reads and skips raw prefix.
+func readSkip(r io.Reader, prefix []byte) error {
+	buf, err := readBytes(r, len(prefix))
+	if err != nil {
+		return err
 	}
-	return buffer[:int(length)], buffer[int(length):]
+	if !bytes.Equal(buf, prefix) {
+		return fmt.Errorf("unexpected data: %x", buf)
+	}
+	return nil
+}
+
+// Apply a reader function to a byte slice. Requires that the reader
+// consumes all bytes, except for optional padding bytes.
+func parseBytes[T any](blob []byte, padding []byte, reader func(io.Reader) (T, error)) (T, error) {
+	buf := bytes.NewBuffer(blob)
+	res, err := reader(buf)
+	if err != nil {
+		return res, err
+	}
+	leftOver := buf.Bytes()
+	if len(leftOver) > len(padding) {
+		return res, fmt.Errorf("trailing %d bytes of garbage", len(leftOver))
+	}
+	if !bytes.Equal(leftOver, padding[:len(leftOver)]) {
+		return res, fmt.Errorf("unexpected padding bytes: %x", leftOver)
+	}
+	return res, nil
 }

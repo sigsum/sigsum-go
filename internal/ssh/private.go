@@ -17,16 +17,21 @@ import (
 //
 // This implementation supports only unencrypted ed25519 keys.
 
-const pemPrivateKeyTag = "OPENSSH PRIVATE KEY"
+const (
+	pemPrivateKeyTag = "OPENSSH PRIVATE KEY"
+)
 
-var NoPEMError = errors.New("not a PEM file")
+var (
+	ErrNotPEM = errors.New("not a PEM file")
 
-var opensshPrivateKeyPrefix = bytes.Join([][]byte{
-	[]byte("openssh-key-v1"), []byte{0},
-	// cipher "none", kdf "none"
-	serializeString("none"), serializeString("none"),
-	serializeUint32(0), serializeUint32(1), // empty kdf, and #keys = 1
-}, nil)
+	opensshPrivateKeyPrefix = bytes.Join([][]byte{
+		[]byte("openssh-key-v1"), {0},
+		// cipher "none", kdf "none"
+		serializeString("none"), serializeString("none"),
+		serializeUint32(0), serializeUint32(1), // empty kdf, and #keys = 1
+	}, nil)
+	opensshPrivateKeyPadding = []byte{1, 2, 3, 4, 5, 6, 7}
+)
 
 // Deterministic variant with nonce input, for unit testing.
 func writePrivateKeyFile(w io.Writer, signer *crypto.Ed25519Signer, nonce [4]byte) error {
@@ -66,7 +71,7 @@ func writePrivateKeyFile(w io.Writer, signer *crypto.Ed25519Signer, nonce [4]byt
 		// Empty comment.
 		serializeUint32(0),
 		// Padding
-		[]byte{1, 2, 3, 4, 5},
+		{1, 2, 3, 4, 5},
 	}, nil)
 	return pem.Encode(w, &pem.Block{Type: pemPrivateKeyTag, Bytes: blob})
 }
@@ -82,59 +87,95 @@ func WritePrivateKeyFile(w io.Writer, signer *crypto.Ed25519Signer) error {
 }
 
 func ParsePrivateKeyFile(ascii []byte) (crypto.Ed25519PublicKey, *crypto.Ed25519Signer, error) {
-	parseBlob := func(blob []byte) (crypto.Ed25519PublicKey, *crypto.Ed25519Signer, error) {
-		blob = skipPrefix(blob, opensshPrivateKeyPrefix)
-		if blob == nil {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("invalid or encrypted private key")
-		}
-		publicKeyBlob, blob := parseString(blob)
-		if blob == nil {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("invalid private key, pubkey missing")
-		}
-		pub, err := parsePublicEd25519(publicKeyBlob)
-		if err != nil {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("invalid private key, pubkey invalid: %w", err)
-		}
-		length, blob := parseUint32(blob)
-		if blob == nil || int64(length) != int64(len(blob)) ||
-			length%8 != 0 {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("invalid private key")
-		}
-		n1, blob := parseUint32(blob)
-		n2, blob := parseUint32(blob)
-		if blob == nil || n1 != n2 {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("invalid private key, bad nonce")
-		}
-		blob = skipPrefix(blob, publicKeyBlob)
-		if blob == nil {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("invalid private key, inconsistent public key")
-		}
-		keys, blob := parseString(blob)
-		if blob == nil {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("invalid private key, private key missing")
-		}
-		// The keys blob consists of the 32-byte private key +
-		// 32 byte public key.
-		if len(keys) != 64 {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("unexpected private key size: %d", len(keys))
-		}
-		if !bytes.Equal(pub[:], keys[32:]) {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("inconsistent public key")
-		}
-		privateKey := crypto.Ed25519PrivateKey(keys[:32])
-		signer := crypto.NewEd25519Signer(&privateKey)
-		if signer.Ed25519Public() != pub {
-			return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("inconsistent private key")
-		}
-
-		return pub, signer, nil
+	data, err := parsePrivateKeyFile(ascii)
+	if err != nil {
+		return crypto.Ed25519PublicKey{}, nil, err
 	}
+
+	keys, err := parseBytes(data.privateKeyBlob, opensshPrivateKeyPadding, func(r io.Reader) (*keyPair, error) {
+		return readPrivateKeyInner(r, data.publicKeyBlob)
+	})
+	if err != nil {
+		return crypto.Ed25519PublicKey{}, nil, err
+	}
+	return keys.pub, keys.priv, nil
+}
+
+type privateKeyData struct {
+	publicKeyBlob  []byte
+	privateKeyBlob []byte
+}
+
+func parsePrivateKeyFile(ascii []byte) (*privateKeyData, error) {
 	block, _ := pem.Decode(ascii)
 	if block == nil {
-		return crypto.Ed25519PublicKey{}, nil, NoPEMError
+		return nil, ErrNotPEM
 	}
 	if block.Type != pemPrivateKeyTag {
-		return crypto.Ed25519PublicKey{}, nil, fmt.Errorf("unexpected PEM tag: %q", block.Type)
+		return nil, fmt.Errorf("unexpected PEM tag: %q", block.Type)
 	}
-	return parseBlob(block.Bytes)
+	return parseBytes(block.Bytes, nil, func(r io.Reader) (*privateKeyData, error) {
+		if err := readSkip(r, opensshPrivateKeyPrefix); err != nil {
+			return nil, err
+		}
+		publicKeyBlob, err := readString(r)
+		if err != nil {
+			return nil, fmt.Errorf("reading pubkey: %w", err)
+		}
+		privBlob, err := readString(r)
+		if err != nil {
+			return nil, fmt.Errorf("invalid private key: %v", err)
+		}
+		return &privateKeyData{
+			publicKeyBlob:  publicKeyBlob,
+			privateKeyBlob: privBlob,
+		}, nil
+	})
+}
+
+type keyPair struct {
+	pub  crypto.Ed25519PublicKey
+	priv *crypto.Ed25519Signer
+}
+
+// readPrivateKeyInner reads the inner private key data, i.e. the
+// section that is potentially encrypted.
+func readPrivateKeyInner(r io.Reader, publicKeyBlob []byte) (*keyPair, error) {
+	publicKey, err := parseBytes(publicKeyBlob, nil, readPublicEd25519)
+	if err != nil {
+		return nil, err
+	}
+	n1, err := readUint32(r)
+	if err != nil {
+		return nil, err
+	}
+	n2, err := readUint32(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if n1 != n2 {
+		return nil, fmt.Errorf("wrong passphrase or invalid private key")
+	}
+
+	if err := readSkip(r, publicKeyBlob); err != nil {
+		return nil, fmt.Errorf("invalid private key, inconsistent public key: %v", err)
+	}
+	// The keys blob consists of the private key + public key.
+	keys, err := readStringOfLength(r, crypto.Ed25519PrivateKeySize+crypto.Ed25519PublicKeySize)
+	if err != nil {
+		return nil, fmt.Errorf("invalid private key, private key missing: %v", err)
+	}
+	if !bytes.Equal(publicKey[:], keys[crypto.Ed25519PrivateKeySize:]) {
+		return nil, fmt.Errorf("inconsistent public key")
+	}
+	_, err = readString(r)
+	if err != nil {
+		return nil, fmt.Errorf("comment string missing")
+	}
+
+	priv := crypto.Ed25519PrivateKey(keys[:crypto.Ed25519PrivateKeySize])
+	return &keyPair{
+		pub: publicKey, priv: crypto.NewEd25519Signer(&priv),
+	}, nil
 }

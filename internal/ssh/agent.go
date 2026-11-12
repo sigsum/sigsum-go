@@ -78,7 +78,7 @@ func (c Connection) SignEd25519(publicKey *crypto.Ed25519PublicKey, msg []byte) 
 	case sshAgentFailure:
 		return nil, fmt.Errorf("ssh-agent refused signature request")
 	case sshAgentSignResponse:
-		return parseSignature(body)
+		return parseBytes(body, nil, readSignature)
 	default:
 		return nil, fmt.Errorf("unexpected ssh-agent response, type %d", msgType)
 	}
@@ -98,16 +98,11 @@ func (s *Signer) Public() crypto.PublicKey {
 	return &s.publicKey
 }
 
-func parseSignature(blob []byte) (crypto.Signature, error) {
-	signature := skipPrefix(blob, bytes.Join([][]byte{
+func readSignature(r io.Reader) (crypto.Signature, error) {
+	if err := readSkip(r, bytes.Join([][]byte{
 		serializeUint32(83), // length of signature
-		serializeString("ssh-ed25519"),
-		serializeUint32(crypto.Ed25519SignatureSize)}, nil))
-	if signature == nil {
-		return nil, fmt.Errorf("invalid signature blob")
+		serializeString("ssh-ed25519")}, nil)); err != nil {
+		return nil, fmt.Errorf("invalid signature blob: %v", err)
 	}
-	if len(signature) != crypto.Ed25519SignatureSize {
-		return nil, fmt.Errorf("bad signature length: %d", len(signature))
-	}
-	return signature, nil
+	return readStringOfLength(r, crypto.Ed25519SignatureSize)
 }

@@ -46,7 +46,7 @@ func ParsePrivateKey(ascii string) (crypto.Signer, string, error) {
 	}
 	// ParsePublicEd25519 failed, assume private key case
 	_, signer, err := ssh.ParsePrivateKeyFile([]byte(ascii))
-	if err == ssh.NoPEMError {
+	if err == ssh.ErrNotPEM {
 		// TODO: Delete support for raw keys.
 		signer, err = crypto.Ed25519SignerFromHex(ascii)
 	}
