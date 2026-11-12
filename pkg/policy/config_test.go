@@ -114,7 +114,7 @@ witness W6 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 		for _, i := range table.witnesses {
 			processor.addVerifiedWitness(witnessHashes[i-1])
 		}
-		if got, want := policy.ProcessQuorum(processor).(bool), table.sufficient; got != want {
+		if got, want := policy.ProcessQuorum(processor), table.sufficient; got != want {
 			t.Errorf("Unexpected result of quorum validation for set %v, got %v, expected %v", table.witnesses, got, want)
 		}
 	}
@@ -201,7 +201,7 @@ quorum G
 		for _, i := range table.bWitnesses {
 			processor.addVerifiedWitness(bHashes[i-1])
 		}
-		if got, want := policy.ProcessQuorum(processor).(bool), table.sufficient; got != want {
+		if got, want := policy.ProcessQuorum(processor), table.sufficient; got != want {
 			t.Errorf("Unexpected result of quorum validation for set A %v, B %v, got %v, expected %v", table.aWitnesses, table.bWitnesses, got, want)
 		}
 	}
