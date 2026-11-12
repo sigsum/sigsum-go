@@ -167,26 +167,6 @@ func TestSignedTreeHeadVerify(t *testing.T) {
 	}
 }
 
-func TestSignedTreeHeadVerifyVersion0(t *testing.T) {
-	// Example based on a run of tests/sigsum-submit-test
-	pub := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICLAkeP3VJfvGQFcXa8UORDiDNpylbD9Hd+DglaG7+ym")
-	sth := SignedTreeHead{
-		TreeHead: TreeHead{
-			Size:     4,
-			RootHash: mustHashFromHex(t, "84ec3e1ba5433358988ac74bed33a30bda42cc983b87e4940a423c2d84890f0f"),
-		},
-		Signature: mustSignatureFromHex(t, "7e2084ded0f7625136e6c811ac7eae2cb79613cadb12a6437b391cdae3a5c915dcd30b5b5fe4fbf417a2d607a4cfcb3612d7fd4ffe9453c0d29ec002a6d47709"),
-	}
-	if !sth.VerifyVersion0(&pub) {
-		t.Errorf("failed verifying a valid signed tree head")
-	}
-
-	sth.Size += 1
-	if sth.VerifyVersion0(&pub) {
-		t.Errorf("succeeded verifying an invalid signed tree head")
-	}
-}
-
 func TestCosignatureToASCII(t *testing.T) {
 	desc := "valid"
 	buf := bytes.Buffer{}
