@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"sigsum.org/sigsum-go/pkg/checkpoint"
 	"sigsum.org/sigsum-go/pkg/crypto"
 )
 
@@ -24,11 +25,31 @@ const (
 	ConfigNone = "none"
 )
 
+// Parse a public key, which is either raw hex, or a vkey using the
+// given signature type. In the vkey case, the key name is discarded.
+func parsePublicKey(ascii string, sigType checkpoint.SignatureType) (crypto.Ed25519PublicKey, error) {
+	if !strings.Contains(ascii, "+") {
+		// Must be raw hex key.
+		return crypto.Ed25519PublicKeyFromHex(ascii)
+	}
+	var nv checkpoint.NoteVerifier
+	if err := nv.FromString(ascii); err != nil {
+		return crypto.Ed25519PublicKey{}, err
+	}
+	if nv.Type != sigType {
+		return crypto.Ed25519PublicKey{}, fmt.Errorf("unexpected vkey type 0x%02x, want 0x%02x", nv.Type, sigType)
+	}
+	if nv.KeyId != checkpoint.NewKeyId(nv.Name, sigType, &nv.PublicKey) {
+		return crypto.Ed25519PublicKey{}, fmt.Errorf("inconsistent vkey key id %x", nv.KeyId)
+	}
+	return nv.PublicKey, nil
+}
+
 func parseLog(args []string) (Setting, error) {
 	if len(args) < 1 || len(args) > 2 {
 		return nil, fmt.Errorf("invalid log policy line, public key required, url optional")
 	}
-	key, err := crypto.Ed25519PublicKeyFromHex(args[0])
+	key, err := parsePublicKey(args[0], checkpoint.SigTypeEd25519)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +65,7 @@ func parseWitness(args []string) (Setting, error) {
 		return nil, fmt.Errorf("invalid witness policy line, public key and name required, url optional")
 	}
 	name := args[0]
-	key, err := crypto.Ed25519PublicKeyFromHex(args[1])
+	key, err := parsePublicKey(args[1], checkpoint.SigTypeCosignature)
 	if err != nil {
 		return nil, err
 	}
