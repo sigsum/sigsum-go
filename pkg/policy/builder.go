@@ -10,7 +10,7 @@ type leafWitness struct {
 	kh crypto.Hash
 }
 
-func (w *leafWitness) depthFirst(processor Processor) any {
+func (w *leafWitness) depthFirst(processor Processor[any]) any {
 	return processor.ProcessWitness(w.kh)
 }
 
@@ -19,7 +19,7 @@ type groupKofN struct {
 	k       int
 }
 
-func (g *groupKofN) depthFirst(processor Processor) any {
+func (g *groupKofN) depthFirst(processor Processor[any]) any {
 	r := make([]any, len(g.members))
 	for i, m := range g.members {
 		r[i] = m.depthFirst(processor)

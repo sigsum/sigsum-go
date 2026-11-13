@@ -13,15 +13,16 @@ type Entity struct {
 	URL       string
 }
 
-type Processor interface {
-	ProcessWitness(kh crypto.Hash) any
-	ProcessGroup(k int, members []any) any
+type Processor[T any] interface {
+	ProcessWitness(kh crypto.Hash) T
+	ProcessGroup(k int, members []T) T
 }
 
 type tree interface {
 	// Do a depth-first traversal, invoking the Processor for each
-	// group and witness in the tree.
-	depthFirst(processor Processor) any
+	// group and witness in the tree. Ideally, this should be a
+	// generic method, but that's not allowed on an interface.
+	depthFirst(processor Processor[any]) any
 }
 
 type Policy struct {
@@ -30,13 +31,31 @@ type Policy struct {
 	quorum    tree
 }
 
+// processorWrapper implements the Processor[any] interface on top of
+// a Processor[T]. The wrapper adds type conversions where needed.
+type processorWrapper[T any] struct {
+	processor Processor[T]
+}
+
+func (w processorWrapper[T]) ProcessWitness(kh crypto.Hash) any {
+	return w.processor.ProcessWitness(kh)
+}
+
+func (w processorWrapper[T]) ProcessGroup(k int, members []any) any {
+	typedMembers := make([]T, len(members))
+	for i, m := range members {
+		typedMembers[i] = m.(T)
+	}
+	return w.processor.ProcessGroup(k, typedMembers)
+}
+
 // Performs a depth-first traversal of the quorum tree.
-func (p *Policy) ProcessQuorum(processor Processor) any {
-	return p.quorum.depthFirst(processor)
+func (p *Policy) ProcessQuorum[T any](processor Processor[T]) T {
+	return p.quorum.depthFirst(processorWrapper[T]{processor}).(T)
 }
 
 // This processor evaluates if the quorum is satisfied, using bool
-// values everywhere the Processor interface uses any.
+// values.
 type quorumProcessor struct {
 	// The set of witnesses for which a cosignature was verified.
 	verified map[crypto.Hash]struct{}
@@ -57,15 +76,15 @@ func (qp quorumProcessor) addVerifiedWitness(kh crypto.Hash) {
 }
 
 // Implement Processor interface
-func (qp quorumProcessor) ProcessWitness(kh crypto.Hash) any {
+func (qp quorumProcessor) ProcessWitness(kh crypto.Hash) bool {
 	_, ok := qp.verified[kh]
 	return ok
 }
 
-func (_ quorumProcessor) ProcessGroup(k int, members []any) any {
+func (_ quorumProcessor) ProcessGroup(k int, members []bool) bool {
 	c := 0
 	for _, m := range members {
-		if m.(bool) {
+		if m {
 			c++
 		}
 	}
@@ -93,7 +112,7 @@ func (p *Policy) VerifyCosignedTreeHead(logKeyHash *crypto.Hash,
 			}
 		}
 	}
-	if !p.ProcessQuorum(processor).(bool) {
+	if !p.ProcessQuorum(processor) {
 		return fmt.Errorf("not enough cosignatures, total: %d, verified: %d, failed to verify: %d",
 			len(cth.Cosignatures), processor.count(), failed)
 	}
