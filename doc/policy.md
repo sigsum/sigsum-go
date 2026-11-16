@@ -91,9 +91,14 @@ characters *only*. Leading and trailing whitespace is allowed. Comment
 lines are written with "#" at the start of the line (possibly preceded
 by whitespace).
 
-Public keys are written in raw hex representation, case insensitive.
-(The `sigsum-key` command can be used to convert public keys between
-raw hex, OpenSSH, and [vkey][] formats).
+Public keys are written in either raw hex representation, case
+insensitive, or in [vkey][] format. Policy files exclusively using
+vkeys are intended to be fully compatible with [tlog-policy][]. When
+vkeys are used, the signature type must be appropriate (0x01 for log
+keys, 0x04 for witness keys), and the key id must be consistent with
+the given key name, key type, and public key. (The `sigsum-key`
+command can be used to convert public keys between raw hex, OpenSSH,
+and vkey formats).
 
 Lines defining witnesses and logs can appear in any order; the order
 does not imply any preference or priority. A line defining a group can
@@ -101,7 +106,8 @@ only reference names of groups and witnesses defined on preceding
 lines. Similarly, the quorum line must specify a witness or group
 defined earlier.
 
-[vkey]: https://github.com/C2SP/C2SP/blob/main/signed-note.md#verifier-keys
+[vkey]: https://c2sp.org/signed-note@v1.1.0#verifier-keys
+[tlog-policy]: https://c2sp.org/tlog-policy
 
 ### Defining a log
 

@@ -6,9 +6,11 @@ set -e
 ./bin/sigsum-key generate -o test.submit.key
 ./bin/sigsum-key generate -o test.witness.key
 
-echo "log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965" > test.policy
-echo "witness W $(./bin/sigsum-key to-hex -k test.witness.key.pub) http://localhost:7777" >> test.policy
-echo "quorum W" >> test.policy
+cat <<EOF >test.policy
+log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965
+witness W $(./bin/sigsum-key to-hex -k test.witness.key.pub) http://localhost:7777
+quorum W
+EOF
 
 # Start witness server
 rm -f test.witness.cth
