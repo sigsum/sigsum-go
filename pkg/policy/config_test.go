@@ -279,3 +279,89 @@ quorum G
 		}
 	}
 }
+
+func TestVKeyLog(t *testing.T) {
+	for _, table := range []struct {
+		desc   string
+		config string
+		expErr string // Empty if valid
+	}{
+		{desc: "raw hex key",
+			config: `
+log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+quorum none
+`},
+		{desc: "valid vkey",
+			config: `
+log sigsum.org/v1/tree/e0e77a507412b120f6ede61f62295b1a7b2ff19d3dcc8f7253e51663470c888e+123bdf62+Aaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+quorum none
+`},
+		{desc: "bad vkey type",
+			config: `
+log witness.example.org+448c5279+BKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+quorum none
+`,
+			expErr: "unexpected vkey type 0x04"},
+	} {
+		policy, err := ParseConfig(bytes.NewBufferString(table.config))
+		if err != nil {
+			if table.expErr == "" {
+				t.Errorf("%s: valid config rejected: %v", table.desc, err)
+			} else if !strings.Contains(err.Error(), table.expErr) {
+				t.Errorf("%s: unexpected error for invalid config: %v", table.desc, err)
+			}
+		} else if table.expErr != "" {
+			t.Errorf("%s: invalid config not rejected", table.desc)
+		} else {
+			if got, want := len(policy.logs), 1; got != want {
+				t.Errorf("%s: unexpected number of logs in policy, got %d, expected %d",
+					table.desc, got, want)
+			}
+		}
+	}
+}
+
+func TestVKeyWitness(t *testing.T) {
+	for _, table := range []struct {
+		desc   string
+		config string
+		expErr string // Empty if valid
+	}{
+		{
+			desc: "raw hex key",
+			config: `
+witness W aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+quorum none
+`},
+		{
+			desc: "valid vkey",
+			config: `
+witness W witness.example.org+448c5279+BKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+
+quorum none
+`},
+		{
+			desc: "bad vkey type",
+			config: `
+witness W witness.example.org+16d69a48+Aaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
+quorum none
+`,
+			expErr: "unexpected vkey type 0x01"},
+	} {
+		policy, err := ParseConfig(bytes.NewBufferString(table.config))
+		if err != nil {
+			if table.expErr == "" {
+				t.Errorf("%s: valid config rejected: %v", table.desc, err)
+			} else if !strings.Contains(err.Error(), table.expErr) {
+				t.Errorf("%s: unexpected error for invalid config: %v", table.desc, err)
+			}
+		} else if table.expErr != "" {
+			t.Errorf("%s: invalid config not rejected", table.desc)
+		} else {
+			if got, want := len(policy.witnesses), 1; got != want {
+				t.Errorf("%s: unexpected number of logs in policy, got %d, expected %d",
+					table.desc, got, want)
+			}
+		}
+	}
+}

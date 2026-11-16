@@ -1,0 +1,57 @@
+#! /bin/sh
+
+set -e
+
+./bin/sigsum-key generate -o test.log.key
+./bin/sigsum-key generate -o test.submit.key
+./bin/sigsum-key generate -o test.witness.key
+
+cat <<EOF >test.policy
+log $(./bin/sigsum-key to-hex -k test.log.key.pub) http://localhost:6965
+witness W $(./bin/sigsum-key to-hex -k test.witness.key.pub) http://localhost:7777
+quorum W
+EOF
+
+cat <<EOF >test.vkey.policy
+log $(./bin/sigsum-key to-vkey -k test.log.key.pub) http://localhost:6965
+witness W $(./bin/sigsum-key to-vkey -n w.example.org -t cosignature/v1 -k test.witness.key.pub) http://localhost:7777
+quorum W
+EOF
+
+# Start witness server
+rm -f test.witness.cth
+./bin/sigsum-witness -k test.witness.key --log-key test.log.key.pub \
+  --state-file test.witness.cth localhost:7777 &
+
+WITNESS_PID=$!
+
+# Start sigsum log server
+rm -f test.log.sth
+echo "startup=empty" > test.log.sth.startup
+./bin/sigsum-log-primary --key-file test.log.key \
+    --policy-file=test.policy \
+    --interval=1s --log-level=error --backend=ephemeral --sth-file test.log.sth &
+
+SIGSUM_PID=$!
+
+cleanup () {
+    kill ${SIGSUM_PID} ${WITNESS_PID}
+}
+
+trap cleanup EXIT
+
+# Give log server some time to get ready.
+sleep 2
+
+for x in $(seq 5); do
+    echo >&2 "submit $x"
+    # Must be exactly 32 bytes
+    printf "%31s\n" "foo-$x" \
+	| ./bin/sigsum-submit --diagnostics=warning --raw-hash -o "test.$x.proof" -k test.submit.key --policy test.vkey.policy
+done
+
+for x in $(seq 5); do
+    echo >&2 "verify $x"
+    printf "%31s\n" "foo-$x" \
+	| ./bin/sigsum-verify --raw-hash --key test.submit.key.pub --policy test.vkey.policy "test.$x.proof"
+done

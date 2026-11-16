@@ -10,7 +10,9 @@ TESTS = ssh-agent-test \
 	policyinpubkey-test \
 	sigsum-policy-test \
 	witness-add-checkpoint-test \
-	sigsum-submit-witness-test
+	sigsum-submit-witness-test \
+	sigsum-submit-vkey-test
+
 all:
 
 check:
