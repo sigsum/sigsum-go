@@ -10,11 +10,11 @@ import (
 	"os"
 	"strconv"
 
-	"sigsum.org/sigsum-go/pkg/checkpoint"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/key"
-	"sigsum.org/sigsum-go/pkg/merkle"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/checkpoint"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/key"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func main() {

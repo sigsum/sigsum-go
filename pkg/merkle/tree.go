@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/bits"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 // Represents a compact range starting at index zero. See

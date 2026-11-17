@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 var testOrigin = "example.org/log"

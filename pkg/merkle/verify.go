@@ -6,7 +6,7 @@ import (
 	"math/bits"
 	"slices"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func pathLength(index, size uint64) int {

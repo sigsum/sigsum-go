@@ -7,9 +7,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/mocks/mockapi"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/mocks/mockapi"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func TestGetSecondaryTreeHead(t *testing.T) {

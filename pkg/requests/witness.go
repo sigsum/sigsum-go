@@ -5,9 +5,9 @@ import (
 	"io"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/checkpoint"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/ascii"
+	"sigsum.org/sigsum-go/v2/pkg/checkpoint"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 type AddCheckpoint struct {

@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func serializePublicEd25519(pub *crypto.Ed25519PublicKey) []byte {

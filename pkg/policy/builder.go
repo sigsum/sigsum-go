@@ -3,7 +3,7 @@ package policy
 import (
 	"fmt"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 type leafWitness struct {

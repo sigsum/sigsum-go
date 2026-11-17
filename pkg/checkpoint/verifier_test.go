@@ -3,7 +3,7 @@ package checkpoint
 import (
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func TestNoteVerifierString(t *testing.T) {

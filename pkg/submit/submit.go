@@ -8,15 +8,15 @@ import (
 	"net/http"
 	"time"
 
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/client"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/log"
-	"sigsum.org/sigsum-go/pkg/policy"
-	"sigsum.org/sigsum-go/pkg/proof"
-	"sigsum.org/sigsum-go/pkg/requests"
-	token "sigsum.org/sigsum-go/pkg/submit-token"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/api"
+	"sigsum.org/sigsum-go/v2/pkg/client"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/log"
+	"sigsum.org/sigsum-go/v2/pkg/policy"
+	"sigsum.org/sigsum-go/v2/pkg/proof"
+	"sigsum.org/sigsum-go/v2/pkg/requests"
+	token "sigsum.org/sigsum-go/v2/pkg/submit-token"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 const (

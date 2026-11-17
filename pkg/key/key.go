@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"sigsum.org/sigsum-go/internal/ssh"
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/internal/ssh"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 // Expects an Openssh public key (single-line format)

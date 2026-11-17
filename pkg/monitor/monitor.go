@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/policy"
-	"sigsum.org/sigsum-go/pkg/requests"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/policy"
+	"sigsum.org/sigsum-go/v2/pkg/requests"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 const (

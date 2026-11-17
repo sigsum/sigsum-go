@@ -3,8 +3,8 @@ package server
 import (
 	"net/http"
 
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/api"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func NewSecondary(config *Config, secondary api.Secondary) http.Handler {

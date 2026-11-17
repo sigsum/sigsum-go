@@ -7,7 +7,7 @@ import (
 
 // Can be configured at link time using
 //
-//	-ldflags="-X sigsum.org/sigsum-go/internal/version.ConfiguredVersion=..."
+//	-ldflags="-X sigsum.org/sigsum-go/v2/internal/version.ConfiguredVersion=..."
 //
 // to override the use of debug.ReadBuildInfo() for the version
 // string.
@@ -22,7 +22,7 @@ func ModuleVersion() string {
 		return "unknown"
 	}
 
-	// When built, e.g., using go install .../sigsum-go@vX.Y.Z.
+	// When built, e.g., using go install .../sigsum-go/v2/@vX.Y.Z.
 	version := info.Main.Version
 	if version != "(devel)" {
 		return version

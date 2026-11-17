@@ -10,9 +10,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/mocks/mocksigner"
+	"sigsum.org/sigsum-go/v2/pkg/ascii"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/mocks/mocksigner"
 )
 
 func TestLeafSignedData(t *testing.T) {

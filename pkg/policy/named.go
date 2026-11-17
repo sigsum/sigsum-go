@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sigsum.org/sigsum-go/pkg/log"
+	"sigsum.org/sigsum-go/v2/pkg/log"
 	"slices"
 	"strings"
 )

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func main() {

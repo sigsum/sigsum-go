@@ -4,7 +4,7 @@ package merkle
 
 import (
 	"bytes"
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 type Prefix uint8

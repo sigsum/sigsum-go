@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func TestParsePrivateKeyFile(t *testing.T) {

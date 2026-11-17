@@ -10,12 +10,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/mocks/mockapi"
-	"sigsum.org/sigsum-go/pkg/requests"
-	"sigsum.org/sigsum-go/pkg/submit-token"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/api"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/mocks/mockapi"
+	"sigsum.org/sigsum-go/v2/pkg/requests"
+	"sigsum.org/sigsum-go/v2/pkg/submit-token"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func TestGetTreeHead(t *testing.T) {

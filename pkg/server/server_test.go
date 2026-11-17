@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/api"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 // Run HTTP request

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func TestValidConfig(t *testing.T) {
