@@ -66,6 +66,17 @@ func NewLog(config *Config, log api.Log) http.Handler {
 				logError(r.URL, err)
 			}
 		}))
+	server.register(http.MethodPost, types.EndpointCheckpoint, "",
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// cth, err := log.GetTreeHead(r.Context())
+			// if err != nil {
+			// 	reportError(w, r.URL, err)
+			// 	return
+			// }
+			// if err = cth.ToASCII(w); err != nil {
+			// 	logError(r.URL, err)
+			// }
+		}))
 	server.register(http.MethodGet, types.EndpointGetInclusionProof, "", handlerBadRequest)
 	server.register(http.MethodGet, types.EndpointGetInclusionProof, "{size}/{hash}",
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -6,6 +6,7 @@ const (
 	// Sigsum log api.
 	EndpointAddLeaf             = Endpoint("add-leaf")
 	EndpointGetTreeHead         = Endpoint("get-tree-head")
+	EndpointCheckpoint          = Endpoint("checkpoint")
 	EndpointGetInclusionProof   = Endpoint("get-inclusion-proof/")
 	EndpointGetConsistencyProof = Endpoint("get-consistency-proof/")
 	EndpointGetLeaves           = Endpoint("get-leaves/")
