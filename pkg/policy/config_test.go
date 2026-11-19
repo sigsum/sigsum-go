@@ -2,6 +2,8 @@ package policy
 
 import (
 	"bytes"
+	"maps"
+	"slices"
 	"strings"
 	"testing"
 
@@ -282,21 +284,27 @@ quorum G
 
 func TestVKeyLog(t *testing.T) {
 	for _, table := range []struct {
-		desc   string
-		config string
-		expErr string // Empty if valid
+		desc    string
+		config  string
+		expName string
+		expErr  string // Empty if valid
 	}{
-		{desc: "raw hex key",
+		{
+			desc: "raw hex key",
 			config: `
 log aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 quorum none
 `},
-		{desc: "valid vkey",
+		{
+			desc: "valid vkey",
 			config: `
 log sigsum.org/v1/tree/e0e77a507412b120f6ede61f62295b1a7b2ff19d3dcc8f7253e51663470c888e+123bdf62+Aaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 quorum none
-`},
-		{desc: "bad vkey type",
+`,
+			expName: "sigsum.org/v1/tree/e0e77a507412b120f6ede61f62295b1a7b2ff19d3dcc8f7253e51663470c888e",
+		},
+		{
+			desc: "bad vkey type",
 			config: `
 log witness.example.org+448c5279+BKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 quorum none
@@ -317,15 +325,19 @@ quorum none
 				t.Errorf("%s: unexpected number of logs in policy, got %d, expected %d",
 					table.desc, got, want)
 			}
+			if got, want := slices.Collect(maps.Values(policy.logs))[0].VKeyName, table.expName; got != want {
+				t.Errorf("%s: unexpected vkey name, got %q, expected %q", table.desc, got, want)
+			}
 		}
 	}
 }
 
 func TestVKeyWitness(t *testing.T) {
 	for _, table := range []struct {
-		desc   string
-		config string
-		expErr string // Empty if valid
+		desc    string
+		config  string
+		expName string
+		expErr  string // Empty if valid
 	}{
 		{
 			desc: "raw hex key",
@@ -339,7 +351,9 @@ quorum none
 witness W witness.example.org+448c5279+BKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq
 
 quorum none
-`},
+`,
+			expName: "witness.example.org",
+		},
 		{
 			desc: "bad vkey type",
 			config: `
@@ -361,6 +375,9 @@ quorum none
 			if got, want := len(policy.witnesses), 1; got != want {
 				t.Errorf("%s: unexpected number of logs in policy, got %d, expected %d",
 					table.desc, got, want)
+			}
+			if got, want := slices.Collect(maps.Values(policy.witnesses))[0].VKeyName, table.expName; got != want {
+				t.Errorf("%s: unexpected vkey name, got %q, expected %q", table.desc, got, want)
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import (
 
 type Entity struct {
 	PublicKey crypto.Ed25519PublicKey
+	VKeyName  string // Key name, if configured via a vkey.
 	URL       string
 }
 
