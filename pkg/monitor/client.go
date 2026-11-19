@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/client"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/merkle"
-	"sigsum.org/sigsum-go/pkg/requests"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/api"
+	"sigsum.org/sigsum-go/v2/pkg/client"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
+	"sigsum.org/sigsum-go/v2/pkg/requests"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 // A monitoringLogClient can retrieve tree heads and leaves from a log,

@@ -1,4 +1,4 @@
-module sigsum.org/sigsum-go
+module sigsum.org/sigsum-go/v2
 
 // We don't want to depend on golang version later than is available
 // in debian's stable or backports repos.

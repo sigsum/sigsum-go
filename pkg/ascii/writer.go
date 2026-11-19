@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func writeItem(w io.Writer, item interface{}) error {

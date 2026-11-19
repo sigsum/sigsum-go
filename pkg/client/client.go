@@ -12,12 +12,12 @@ import (
 	"io"
 	"net/http"
 
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/checkpoint"
-	"sigsum.org/sigsum-go/pkg/requests"
-	token "sigsum.org/sigsum-go/pkg/submit-token"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/api"
+	"sigsum.org/sigsum-go/v2/pkg/ascii"
+	"sigsum.org/sigsum-go/v2/pkg/checkpoint"
+	"sigsum.org/sigsum-go/v2/pkg/requests"
+	token "sigsum.org/sigsum-go/v2/pkg/submit-token"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 type Config struct {

@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"math/bits"
 	"math/rand"
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func TestSize(t *testing.T) {

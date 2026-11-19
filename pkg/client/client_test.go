@@ -11,11 +11,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"sigsum.org/sigsum-go/internal/mocks"
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/requests"
-	token "sigsum.org/sigsum-go/pkg/submit-token"
+	"sigsum.org/sigsum-go/v2/internal/mocks"
+	"sigsum.org/sigsum-go/v2/pkg/api"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/requests"
+	token "sigsum.org/sigsum-go/v2/pkg/submit-token"
 )
 
 func newTestConfig(transport http.RoundTripper) Config {

@@ -3,7 +3,7 @@ package ssh
 import (
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func TestParsePublicEd25519(t *testing.T) {

@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"sigsum.org/sigsum-go/pkg/policy"
+	"sigsum.org/sigsum-go/v2/pkg/policy"
 )
 
 type PolicyParams struct {

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/checkpoint"
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/checkpoint"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 // Config file syntax is

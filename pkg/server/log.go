@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"sigsum.org/sigsum-go/pkg/api"
-	"sigsum.org/sigsum-go/pkg/requests"
-	"sigsum.org/sigsum-go/pkg/submit-token"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/api"
+	"sigsum.org/sigsum-go/v2/pkg/requests"
+	"sigsum.org/sigsum-go/v2/pkg/submit-token"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func newGetLeavesServer(config *Config, getLeaves func(context.Context, requests.Leaves) ([]types.Leaf, error)) *server {

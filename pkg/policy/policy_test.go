@@ -3,8 +3,8 @@ package policy
 import (
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func TestLogPolicy(t *testing.T) {

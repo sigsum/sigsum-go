@@ -10,13 +10,13 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
-	"sigsum.org/sigsum-go/internal/ui"
-	"sigsum.org/sigsum-go/internal/version"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/key"
-	"sigsum.org/sigsum-go/pkg/log"
-	"sigsum.org/sigsum-go/pkg/monitor"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/internal/ui"
+	"sigsum.org/sigsum-go/v2/internal/version"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/key"
+	"sigsum.org/sigsum-go/v2/pkg/log"
+	"sigsum.org/sigsum-go/v2/pkg/monitor"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 type Settings struct {

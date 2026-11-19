@@ -10,12 +10,12 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
-	"sigsum.org/sigsum-go/internal/ssh"
-	"sigsum.org/sigsum-go/internal/version"
-	"sigsum.org/sigsum-go/pkg/checkpoint"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/key"
-	"sigsum.org/sigsum-go/pkg/types"
+	"sigsum.org/sigsum-go/v2/internal/ssh"
+	"sigsum.org/sigsum-go/v2/internal/version"
+	"sigsum.org/sigsum-go/v2/pkg/checkpoint"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/key"
+	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 type GenSettings struct {

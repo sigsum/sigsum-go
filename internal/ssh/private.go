@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 // For documentation of the openssh private key format, see

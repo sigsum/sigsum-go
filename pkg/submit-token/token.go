@@ -8,7 +8,7 @@ import (
 	"net"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 const (

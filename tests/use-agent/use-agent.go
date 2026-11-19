@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/key"
+	"sigsum.org/sigsum-go/v2/pkg/key"
 )
 
 func main() {

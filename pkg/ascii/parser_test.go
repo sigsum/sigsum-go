@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func TestValidIntFromDecimal(t *testing.T) {

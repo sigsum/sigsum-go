@@ -3,10 +3,10 @@ MOCK_FILES = mockapi/mockapi.go mocksigner/mocksigner.go
 all: $(MOCK_FILES)
 
 mockapi/mockapi.go: ../api/api.go
-	go run github.com/golang/mock/mockgen --destination $@ --package mockapi --mock_names Log=MockLog,Secondary=MockSecondary,Witness=MockWitness sigsum.org/sigsum-go/pkg/api Log,Secondary,Witness
+	go run github.com/golang/mock/mockgen --destination $@ --package mockapi --mock_names Log=MockLog,Secondary=MockSecondary,Witness=MockWitness sigsum.org/sigsum-go/v2/pkg/api Log,Secondary,Witness
 
 mocksigner/mocksigner.go: ../crypto/crypto.go
-	go run github.com/golang/mock/mockgen --destination $@ --package mocksigner sigsum.org/sigsum-go/pkg/crypto Signer
+	go run github.com/golang/mock/mockgen --destination $@ --package mocksigner sigsum.org/sigsum-go/v2/pkg/crypto Signer
 
 clean:
 	rm -f $(MOCK_FILES)

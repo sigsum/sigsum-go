@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 // See https://github.com/C2SP/C2SP/blob/signed-note/v1.0.0-rc.1/signed-note.md

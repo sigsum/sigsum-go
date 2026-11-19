@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/key"
-	"sigsum.org/sigsum-go/pkg/policy"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/key"
+	"sigsum.org/sigsum-go/v2/pkg/policy"
 )
 
 func TestASCII(t *testing.T) {

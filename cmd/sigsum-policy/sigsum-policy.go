@@ -7,8 +7,8 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
-	"sigsum.org/sigsum-go/internal/version"
-	"sigsum.org/sigsum-go/pkg/policy"
+	"sigsum.org/sigsum-go/v2/internal/version"
+	"sigsum.org/sigsum-go/v2/pkg/policy"
 )
 
 type listSettings struct {

@@ -10,10 +10,10 @@ import (
 
 	"github.com/pborman/getopt/v2"
 
-	"sigsum.org/sigsum-go/internal/version"
-	"sigsum.org/sigsum-go/pkg/crypto"
-	"sigsum.org/sigsum-go/pkg/key"
-	token "sigsum.org/sigsum-go/pkg/submit-token"
+	"sigsum.org/sigsum-go/v2/internal/version"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/key"
+	token "sigsum.org/sigsum-go/v2/pkg/submit-token"
 )
 
 type createSettings struct {

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"sigsum.org/sigsum-go/pkg/ascii"
-	"sigsum.org/sigsum-go/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/ascii"
+	"sigsum.org/sigsum-go/v2/pkg/crypto"
 )
 
 func TestInclusionProofToASCII(t *testing.T) {
