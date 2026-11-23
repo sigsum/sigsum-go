@@ -44,9 +44,28 @@ const (
 	ContentTypeTlogSize = "text/x.tlog.size"
 )
 
+// — <key name> base64(32-bit key ID || signature)
+// key ID = SHA-256(key name || 0x0A || signature type || public key)[:4]
+// signature type =
+// 0x01 — Ed25519 signatures as specified by this document.
+//        NOTE: Used when log signs with ed25519
+// 0x04 — Timestamped Ed25519 checkpoint cosignatures, as specified by c2sp.org/tlog-checkpoint.
+//        NOTE: For witness
+// 0x06 — Timestamped ML-DSA-44 checkpoint cosignatures, as specified by c2sp.org/tlog-checkpoint.
+//        NOTE: for log and witness
+
+// The checkpoint MUST contain at least one signature from the log. It
+// MAY contain cosignatures from other cosigners.
+
+// There MAY be multiple signature lines with the same key name [So
+// multiple algo signatures]. However, there MUST NOT be multiple
+// signature lines with both the same key name and the same key id.
+
 // Represents only the log's own signature on the checkpoint, i.e., a
 // signature line where the key name equals the checkpoint origin.
 type Checkpoint struct {
+	// TODO Not use SignedTreeHead
+	// TODO extended to have list of (co)signatures
 	types.SignedTreeHead
 	Origin string // Checkpoint origin
 	KeyId  KeyId  // The key id associated with SignedTreeHead.Signature
