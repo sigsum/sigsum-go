@@ -12,16 +12,17 @@ import (
 
 	"sigsum.org/sigsum-go/v2/pkg/api"
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/mocks/mockapi"
 	"sigsum.org/sigsum-go/v2/pkg/requests"
-	"sigsum.org/sigsum-go/v2/pkg/submit-token"
+	token "sigsum.org/sigsum-go/v2/pkg/submit-token"
 	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func TestGetTreeHead(t *testing.T) {
 	cth := types.CosignedTreeHead{
 		SignedTreeHead: types.SignedTreeHead{
-			TreeHead: types.TreeHead{
+			TreeHead: merkle.TreeHead{
 				Size:     3,
 				RootHash: crypto.Hash{1},
 			},

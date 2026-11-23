@@ -147,14 +147,14 @@ func (cp *Checkpoint) Verify(publicKey *crypto.Ed25519PublicKey) error {
 	if cp.KeyId != NewLogKeyId(cp.Origin, publicKey) {
 		return fmt.Errorf("unexpected checkpoint key id")
 	}
-	if !publicKey.Verify([]byte(cp.FormatCheckpoint(cp.Origin)), cp.Signature[:]) {
+	if !publicKey.Verify([]byte(cp.TreeHead.FormatCheckpoint(cp.Origin)), cp.Signature[:]) {
 		return fmt.Errorf("invalid checkpoint signature")
 	}
 	return nil
 }
 
 func (cp *Checkpoint) Cosign(signer crypto.Signer, timestamp uint64) (types.Cosignature, error) {
-	return cp.TreeHead.Cosign(signer, cp.Origin, timestamp)
+	return cp.SignedTreeHead.Cosign(signer, cp.Origin, timestamp)
 }
 
 func (cp *Checkpoint) VerifyCosignature(publicKey *crypto.Ed25519PublicKey, cosignature *types.Cosignature) bool {

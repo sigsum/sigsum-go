@@ -13,6 +13,7 @@ import (
 
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
 	"sigsum.org/sigsum-go/v2/pkg/key"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/mocks/mocksigner"
 )
 
@@ -34,7 +35,7 @@ func TestTreeHeadToCosignedData(t *testing.T) {
 	desc := "valid"
 	origin := "sigsum.org/v1/tree/66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
 	th := validTreeHead(t)
-	if got, want := th.toCosignedData(origin, testCosignTimestamp),
+	if got, want := th.ToCosignedData(origin, testCosignTimestamp),
 		validTreeHeadCosignedData(t); got != want {
 		t.Errorf("got tree head checkpoint\n\t%q\nbut wanted\n\t%q\nin test %q\n", got, want, desc)
 	}
@@ -43,7 +44,7 @@ func TestTreeHeadToCosignedData(t *testing.T) {
 func TestTreeHeadSign(t *testing.T) {
 	for _, table := range []struct {
 		desc    string
-		th      TreeHead
+		th      merkle.TreeHead
 		signErr error
 		wantSig crypto.Ed25519Signature
 		wantErr bool
@@ -66,7 +67,7 @@ func TestTreeHeadSign(t *testing.T) {
 			signer := mocksigner.NewMockSigner(ctrl)
 			signer.EXPECT().Sign(gomock.Any()).Return(table.wantSig[:], table.signErr)
 			signer.EXPECT().Public().Return(&crypto.Ed25519PublicKey{})
-			sth, err := table.th.Sign(signer)
+			sth, err := SignTreeHead(signer, &table.th)
 			if got, want := err != nil, table.wantErr; got != want {
 				t.Errorf("got error %v but wanted %v in test %q: %v", got, want, table.desc, err)
 			}
@@ -133,7 +134,7 @@ func TestTreeHeadSignAndVerify(t *testing.T) {
 	th := validTreeHead(t)
 	pub, signer := newKeyPair(t)
 
-	sth, err := th.Sign(signer)
+	sth, err := SignTreeHead(signer, &th)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +152,7 @@ func TestTreeHeadSignAndVerify(t *testing.T) {
 func TestSignedTreeHeadVerify(t *testing.T) {
 	pub := mustParsePublicKey(t, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN6kw3w2BWjlKLdrtnv4IaN+zg8/RpKGA98AbbTwjpdQ")
 	sth := SignedTreeHead{
-		TreeHead: TreeHead{
+		TreeHead: merkle.TreeHead{
 			Size:     4,
 			RootHash: mustHashFromHex(t, "7bca01e88737999fde5c1d6ecac27ae3cb49e14f21bcd3e7245c276877b899c9"),
 		},
@@ -216,11 +217,11 @@ func TestCosignatureFromASCII(t *testing.T) {
 }
 
 func TestCosignAndVerify(t *testing.T) {
-	th := validTreeHead(t)
+	sth := validSignedTreeHead(t)
 	pub, signer := newKeyPair(t)
 	origin := "example.org/log"
 
-	cosignature, err := th.Cosign(signer, origin, testCosignTimestamp)
+	cosignature, err := sth.Cosign(signer, origin, testCosignTimestamp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,27 +230,27 @@ func TestCosignAndVerify(t *testing.T) {
 		t.Errorf("unexpected cosignature timestamp, wanted %d, got %d",
 			testCosignTimestamp, cosignature.Timestamp)
 	}
-	if !cosignature.Verify(&pub, origin, &th) {
+	if !cosignature.Verify(&pub, origin, &sth.TreeHead) {
 		t.Errorf("failed verifying a valid cosignature")
 	}
 
 	// Test mutation of signed items.
-	for _, f := range [](func() (string, TreeHead, Cosignature, string)){
-		func() (string, TreeHead, Cosignature, string) {
-			mTh := th
+	for _, f := range [](func() (string, merkle.TreeHead, Cosignature, string)){
+		func() (string, merkle.TreeHead, Cosignature, string) {
+			mTh := sth.TreeHead
 			mTh.Size++
 			return "bad size", mTh, cosignature, origin
 		},
-		func() (string, TreeHead, Cosignature, string) {
+		func() (string, merkle.TreeHead, Cosignature, string) {
 			mCs := cosignature
 			mCs.Timestamp++
-			return "bad timestamp", th, mCs, origin
+			return "bad timestamp", sth.TreeHead, mCs, origin
 		},
-		func() (string, TreeHead, Cosignature, string) {
-			return "bad log origin", th, cosignature, origin[1:]
+		func() (string, merkle.TreeHead, Cosignature, string) {
+			return "bad log origin", sth.TreeHead, cosignature, origin[1:]
 		},
-		func() (string, TreeHead, Cosignature, string) {
-			return "", th, cosignature, origin
+		func() (string, merkle.TreeHead, Cosignature, string) {
+			return "", sth.TreeHead, cosignature, origin
 		},
 	} {
 		desc, mTh, mCs, mOrigin := f()
@@ -317,8 +318,8 @@ func TestCosignedTreeHeadFromASCII(t *testing.T) {
 	}
 }
 
-func validTreeHead(t *testing.T) TreeHead {
-	return TreeHead{
+func validTreeHead(t *testing.T) merkle.TreeHead {
+	return merkle.TreeHead{
 		Size:     257,
 		RootHash: newHashBufferInc(t),
 	}
@@ -345,7 +346,7 @@ AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
 func validSignedTreeHead(t *testing.T) SignedTreeHead {
 	t.Helper()
 	return SignedTreeHead{
-		TreeHead: TreeHead{
+		TreeHead: merkle.TreeHead{
 			Size:     2,
 			RootHash: newHashBufferInc(t),
 		},
@@ -385,7 +386,7 @@ func validCosignedTreeHead(t *testing.T) CosignedTreeHead {
 	t.Helper()
 	return CosignedTreeHead{
 		SignedTreeHead: SignedTreeHead{
-			TreeHead: TreeHead{
+			TreeHead: merkle.TreeHead{
 				Size:     2,
 				RootHash: newHashBufferInc(t),
 			},

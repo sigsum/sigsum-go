@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 var testOrigin = "example.org/log"
 
-var testTreeHead = types.TreeHead{
+var testTreeHead = merkle.TreeHead{
 	Size:     10,
 	RootHash: crypto.Hash{28, 14, 71}, // Base64 "HA5H"
 }
@@ -70,7 +71,7 @@ func TestCheckpointSigned(t *testing.T) {
 		KeyId:  NewLogKeyId(origin, &pub),
 	}
 	var err error
-	cp.SignedTreeHead, err = testTreeHead.Sign(signer)
+	cp.SignedTreeHead, err = types.SignTreeHead(signer, &testTreeHead)
 
 	if err != nil {
 		t.Fatal(err)
