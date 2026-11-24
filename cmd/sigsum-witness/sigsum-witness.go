@@ -23,6 +23,7 @@ import (
 	"sigsum.org/sigsum-go/v2/pkg/checkpoint"
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
 	"sigsum.org/sigsum-go/v2/pkg/key"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/requests"
 	"sigsum.org/sigsum-go/v2/pkg/server"
 	"sigsum.org/sigsum-go/v2/pkg/types"
@@ -185,7 +186,7 @@ type state struct {
 	// Synchronizes all updates to both the size field and the
 	// underlying file.
 	m  sync.Mutex
-	th types.TreeHead
+	th merkle.TreeHead
 }
 
 func (s *state) Load(pub, logPub *crypto.Ed25519PublicKey) error {
@@ -194,7 +195,7 @@ func (s *state) Load(pub, logPub *crypto.Ed25519PublicKey) error {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-		s.th = types.NewEmptyTreeHead()
+		s.th = merkle.NewEmptyTreeHead()
 		return nil
 	}
 	defer f.Close()

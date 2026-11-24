@@ -15,13 +15,8 @@ const (
 	CheckpointNamePrefix = "sigsum.org/v1/tree/"
 )
 
-type TreeHead struct {
-	Size     uint64
-	RootHash crypto.Hash
-}
-
 type SignedTreeHead struct {
-	TreeHead
+	merkle.TreeHead
 	Signature crypto.Ed25519Signature
 }
 
@@ -35,13 +30,9 @@ type CosignedTreeHead struct {
 	Cosignatures map[crypto.Hash]Cosignature
 }
 
-func NewEmptyTreeHead() TreeHead {
-	return TreeHead{Size: 0, RootHash: merkle.HashEmptyTree()}
-}
-
 // Produces the checkpoint body, i.e., the data to be signed when
 // represented as a "signed note".
-func (th *TreeHead) FormatCheckpoint(origin string) string {
+func FormatCheckpoint(origin string, th *merkle.TreeHead) string {
 	return fmt.Sprintf("%s\n%d\n%s\n",
 		origin, th.Size,
 		base64.StdEncoding.EncodeToString(th.RootHash[:]))
@@ -62,9 +53,9 @@ func signEd25519(signer crypto.Signer, msg []byte) (crypto.Ed25519Signature, err
 	return crypto.Ed25519Signature(sig), nil
 }
 
-func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
+func SignTreeHead(signer crypto.Signer, th *merkle.TreeHead) (SignedTreeHead, error) {
 	pub := signer.Public()
-	sig, err := signEd25519(signer, []byte(th.FormatCheckpoint(SigsumCheckpointOrigin(pub))))
+	sig, err := signEd25519(signer, []byte(FormatCheckpoint(SigsumCheckpointOrigin(pub), th)))
 	if err != nil {
 		return SignedTreeHead{}, fmt.Errorf("failed signing tree head: %w", err)
 	}
@@ -76,14 +67,14 @@ func (th *TreeHead) Sign(signer crypto.Signer) (SignedTreeHead, error) {
 }
 
 // TODO: Should the Cosign method be attached to SignedTreeHead instead?
-func (th *TreeHead) toCosignedData(origin string, timestamp uint64) string {
+func toCosignedData(origin string, th *merkle.TreeHead, timestamp uint64) string {
 	return fmt.Sprintf("%s\ntime %d\n%s",
 		CosignatureNamespace, timestamp,
-		th.FormatCheckpoint(origin))
+		FormatCheckpoint(origin, th))
 }
 
-func (th *TreeHead) Cosign(signer crypto.Signer, origin string, timestamp uint64) (Cosignature, error) {
-	signature, err := signEd25519(signer, []byte(th.toCosignedData(origin, timestamp)))
+func CosignTreeHead(signer crypto.Signer, origin string, th *merkle.TreeHead, timestamp uint64) (Cosignature, error) {
+	signature, err := signEd25519(signer, []byte(toCosignedData(origin, th, timestamp)))
 	if err != nil {
 		return Cosignature{}, fmt.Errorf("failed co-signing tree head: %w", err)
 	}
@@ -93,43 +84,25 @@ func (th *TreeHead) Cosign(signer crypto.Signer, origin string, timestamp uint64
 	}, nil
 }
 
-func (th *TreeHead) ToASCII(w io.Writer) error {
-	if err := ascii.WriteInt(w, "size", th.Size); err != nil {
-		return err
-	}
-	return ascii.WriteHash(w, "root_hash", &th.RootHash)
-}
-
-// Doesn't require EOF, so it can be used for parsing a tree head
-// embedded in a larger struct.
-func (th *TreeHead) Parse(p *ascii.Parser) error {
-	var err error
-	th.Size, err = p.GetInt("size")
-	if err != nil {
-		return err
-	}
-	th.RootHash, err = p.GetHash("root_hash")
-	return err
-}
-
-func (th *TreeHead) FromASCII(r io.Reader) error {
-	p := ascii.NewParser(r)
-	err := th.Parse(&p)
-	if err != nil {
-		return err
-	}
-	return p.GetEOF()
-}
-
 func (sth *SignedTreeHead) ToASCII(w io.Writer) error {
-	if err := sth.TreeHead.ToASCII(w); err != nil {
+	if err := ascii.WriteInt(w, "size", sth.Size); err != nil {
+		return err
+	}
+	if err := ascii.WriteHash(w, "root_hash", &sth.RootHash); err != nil {
 		return err
 	}
 	return ascii.WriteSignature(w, "signature", &sth.Signature)
 }
 
+// Doesn't require EOF, so it can be used for parsing a signed tree
+// head embedded in a larger struct.
 func (sth *SignedTreeHead) Parse(p *ascii.Parser) error {
-	err := sth.TreeHead.Parse(p)
+	var err error
+	sth.Size, err = p.GetInt("size")
+	if err != nil {
+		return err
+	}
+	sth.RootHash, err = p.GetHash("root_hash")
 	if err != nil {
 		return err
 	}
@@ -147,11 +120,11 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 }
 
 func (sth *SignedTreeHead) Verify(key *crypto.Ed25519PublicKey) bool {
-	return key.Verify([]byte(sth.FormatCheckpoint(SigsumCheckpointOrigin(key))), sth.Signature[:])
+	return key.Verify([]byte(FormatCheckpoint(SigsumCheckpointOrigin(key), &sth.TreeHead)), sth.Signature[:])
 }
 
-func (cs *Cosignature) Verify(key *crypto.Ed25519PublicKey, origin string, th *TreeHead) bool {
-	return key.Verify([]byte(th.toCosignedData(origin, cs.Timestamp)), cs.Signature[:])
+func (cs *Cosignature) Verify(key *crypto.Ed25519PublicKey, origin string, th *merkle.TreeHead) bool {
+	return key.Verify([]byte(toCosignedData(origin, th, cs.Timestamp)), cs.Signature[:])
 }
 
 func (cs *Cosignature) ToASCII(w io.Writer, keyHash *crypto.Hash) error {

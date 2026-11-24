@@ -14,14 +14,13 @@ const (
 	PrefixInteriorNode
 )
 
-func formatLeafNode(b []byte) []byte {
-	prefixLeafNode := []byte{byte(PrefixLeafNode)}
-	return bytes.Join([][]byte{prefixLeafNode, b}, nil)
+type TreeHead struct {
+	Size     uint64
+	RootHash crypto.Hash
 }
 
-func formatInternalNode(left, right *crypto.Hash) []byte {
-	prefixInteriorNode := []byte{byte(PrefixInteriorNode)}
-	return bytes.Join([][]byte{prefixInteriorNode, (*left)[:], (*right)[:]}, nil)
+func NewEmptyTreeHead() TreeHead {
+	return TreeHead{Size: 0, RootHash: HashEmptyTree()}
 }
 
 func HashLeafNode(leaf []byte) crypto.Hash {
@@ -34,4 +33,14 @@ func HashInteriorNode(left, right *crypto.Hash) crypto.Hash {
 
 func HashEmptyTree() crypto.Hash {
 	return crypto.HashBytes([]byte{})
+}
+
+func formatLeafNode(b []byte) []byte {
+	prefixLeafNode := []byte{byte(PrefixLeafNode)}
+	return bytes.Join([][]byte{prefixLeafNode, b}, nil)
+}
+
+func formatInternalNode(left, right *crypto.Hash) []byte {
+	prefixInteriorNode := []byte{byte(PrefixInteriorNode)}
+	return bytes.Join([][]byte{prefixInteriorNode, (*left)[:], (*right)[:]}, nil)
 }

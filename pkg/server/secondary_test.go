@@ -8,13 +8,14 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/mocks/mockapi"
 	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func TestGetSecondaryTreeHead(t *testing.T) {
 	sth := types.SignedTreeHead{
-		TreeHead: types.TreeHead{
+		TreeHead: merkle.TreeHead{
 			Size:     3,
 			RootHash: crypto.Hash{1},
 		},

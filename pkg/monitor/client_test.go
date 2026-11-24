@@ -28,11 +28,11 @@ type testLog struct {
 }
 
 func (l *testLog) GetTreeHead(_ context.Context) (types.CosignedTreeHead, error) {
-	th := types.TreeHead{
+	th := merkle.TreeHead{
 		Size:     uint64(l.tree.Size()),
 		RootHash: l.tree.GetRootHash(),
 	}
-	sth, err := th.Sign(l.signer)
+	sth, err := types.SignTreeHead(l.signer, &th)
 	return types.CosignedTreeHead{SignedTreeHead: sth}, err
 }
 
@@ -99,7 +99,7 @@ func TestGetTreeHead(t *testing.T) {
 	}
 	r := rand.New(rand.NewSource(10))
 
-	prevTree := types.NewEmptyTreeHead()
+	prevTree := merkle.NewEmptyTreeHead()
 
 	for i := 0; i < 100; i++ {
 		// Ensures that batch is of zero size, so that first

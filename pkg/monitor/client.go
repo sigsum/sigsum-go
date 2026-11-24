@@ -30,7 +30,7 @@ func newMonitoringLogClient(logKey *crypto.Ed25519PublicKey, URL string) *monito
 // state. TODO: Figure out cosignatures should be processed; it would
 // make some sense to return a CosignedTreeHead but where only
 // properly verified cosignatures are kept.
-func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.TreeHead) (types.SignedTreeHead, error) {
+func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *merkle.TreeHead) (types.SignedTreeHead, error) {
 	cth, err := c.client.GetTreeHead(ctx)
 	if err != nil {
 		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-tree-head failed: %w", err)
@@ -75,7 +75,7 @@ type getLeavesState struct {
 
 // Retrieves at most count leaves, starting at index, and check that
 // they are included in the latest retrieved tree head.
-func (c *monitoringLogClient) getLeaves(ctx context.Context, state *getLeavesState, treeHead *types.TreeHead, req requests.Leaves) ([]types.Leaf, *getLeavesState, error) {
+func (c *monitoringLogClient) getLeaves(ctx context.Context, state *getLeavesState, treeHead *merkle.TreeHead, req requests.Leaves) ([]types.Leaf, *getLeavesState, error) {
 	leaves, err := c.client.GetLeaves(ctx, req)
 	if err != nil {
 		return nil, nil, err

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/policy"
 	"sigsum.org/sigsum-go/v2/pkg/requests"
 	"sigsum.org/sigsum-go/v2/pkg/types"
@@ -40,7 +41,7 @@ type Callbacks interface {
 }
 
 type MonitorState struct {
-	TreeHead types.TreeHead
+	TreeHead merkle.TreeHead
 	// Index of next leaf to process.
 	NextLeafIndex uint64
 }
@@ -157,7 +158,7 @@ func StartMonitoring(
 		initialState, ok := state[keyHash]
 		if !ok {
 			initialState = MonitorState{
-				TreeHead:      types.NewEmptyTreeHead(),
+				TreeHead:      merkle.NewEmptyTreeHead(),
 				NextLeafIndex: 0,
 			}
 		}

@@ -201,11 +201,11 @@ func prepareResponse(t *testing.T, submitSigner, logSigner *crypto.Ed25519Signer
 		t.Fatalf("unexpected leaf duplicate, leaf %d", i)
 	}
 
-	th := types.TreeHead{
+	th := merkle.TreeHead{
 		RootHash: tree.GetRootHash(),
 		Size:     tree.Size(),
 	}
-	sth, err := th.Sign(logSigner)
+	sth, err := types.SignTreeHead(logSigner, &th)
 	if err != nil {
 		t.Fatalf("signing tree head failed: %v", err)
 	}

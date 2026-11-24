@@ -54,7 +54,7 @@ type Checkpoint struct {
 }
 
 func (cp *Checkpoint) ToASCII(w io.Writer) error {
-	if _, err := fmt.Fprintf(w, "%s\n", cp.TreeHead.FormatCheckpoint(cp.Origin)); err != nil {
+	if _, err := fmt.Fprintf(w, "%s\n", types.FormatCheckpoint(cp.Origin, &cp.TreeHead)); err != nil {
 		return err
 	}
 	return WriteEd25519Signature(w, cp.Origin, cp.KeyId, &cp.Signature)
@@ -147,14 +147,14 @@ func (cp *Checkpoint) Verify(publicKey *crypto.Ed25519PublicKey) error {
 	if cp.KeyId != NewLogKeyId(cp.Origin, publicKey) {
 		return fmt.Errorf("unexpected checkpoint key id")
 	}
-	if !publicKey.Verify([]byte(cp.FormatCheckpoint(cp.Origin)), cp.Signature[:]) {
+	if !publicKey.Verify([]byte(types.FormatCheckpoint(cp.Origin, &cp.TreeHead)), cp.Signature[:]) {
 		return fmt.Errorf("invalid checkpoint signature")
 	}
 	return nil
 }
 
 func (cp *Checkpoint) Cosign(signer crypto.Signer, timestamp uint64) (types.Cosignature, error) {
-	return cp.TreeHead.Cosign(signer, cp.Origin, timestamp)
+	return types.CosignTreeHead(signer, cp.Origin, &cp.TreeHead, timestamp)
 }
 
 func (cp *Checkpoint) VerifyCosignature(publicKey *crypto.Ed25519PublicKey, cosignature *types.Cosignature) bool {

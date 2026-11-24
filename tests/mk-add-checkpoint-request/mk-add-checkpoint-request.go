@@ -50,11 +50,11 @@ func main() {
 			log.Fatalf("Unexpected leaf duplicate for leaf %d", i)
 		}
 	}
-	th := types.TreeHead{Size: t.Size(), RootHash: t.GetRootHash()}
+	th := merkle.TreeHead{Size: t.Size(), RootHash: t.GetRootHash()}
 	if th.Size != newSize {
 		panic("internal error")
 	}
-	sth, err := th.Sign(signer)
+	sth, err := types.SignTreeHead(signer, &th)
 	if err != nil {
 		log.Fatal(err)
 	}
