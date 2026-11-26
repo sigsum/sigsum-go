@@ -32,7 +32,7 @@ type CosignedTreeHead struct {
 
 // Produces the checkpoint body, i.e., the data to be signed when
 // represented as a "signed note".
-func FormatCheckpoint(origin string, th *merkle.TreeHead) string {
+func FormatCheckpointBody(origin string, th *merkle.TreeHead) string {
 	return fmt.Sprintf("%s\n%d\n%s\n",
 		origin, th.Size,
 		base64.StdEncoding.EncodeToString(th.RootHash[:]))
@@ -55,7 +55,7 @@ func signEd25519(signer crypto.Signer, msg []byte) (crypto.Ed25519Signature, err
 
 func SignTreeHead(signer crypto.Signer, th *merkle.TreeHead) (SignedTreeHead, error) {
 	pub := signer.Public()
-	sig, err := signEd25519(signer, []byte(FormatCheckpoint(SigsumCheckpointOrigin(pub), th)))
+	sig, err := signEd25519(signer, []byte(FormatCheckpointBody(SigsumCheckpointOrigin(pub), th)))
 	if err != nil {
 		return SignedTreeHead{}, fmt.Errorf("failed signing tree head: %w", err)
 	}
@@ -66,11 +66,10 @@ func SignTreeHead(signer crypto.Signer, th *merkle.TreeHead) (SignedTreeHead, er
 	}, nil
 }
 
-// TODO: Should the Cosign method be attached to SignedTreeHead instead?
 func toCosignedData(origin string, th *merkle.TreeHead, timestamp uint64) string {
 	return fmt.Sprintf("%s\ntime %d\n%s",
 		CosignatureNamespace, timestamp,
-		FormatCheckpoint(origin, th))
+		FormatCheckpointBody(origin, th))
 }
 
 func CosignTreeHead(signer crypto.Signer, origin string, th *merkle.TreeHead, timestamp uint64) (Cosignature, error) {
@@ -120,7 +119,7 @@ func (sth *SignedTreeHead) FromASCII(r io.Reader) error {
 }
 
 func (sth *SignedTreeHead) Verify(key *crypto.Ed25519PublicKey) bool {
-	return key.Verify([]byte(FormatCheckpoint(SigsumCheckpointOrigin(key), &sth.TreeHead)), sth.Signature[:])
+	return key.Verify([]byte(FormatCheckpointBody(SigsumCheckpointOrigin(key), &sth.TreeHead)), sth.Signature[:])
 }
 
 func (cs *Cosignature) Verify(key *crypto.Ed25519PublicKey, origin string, th *merkle.TreeHead) bool {

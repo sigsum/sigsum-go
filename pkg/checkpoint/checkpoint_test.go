@@ -273,7 +273,7 @@ mXfgRcJ0bG0j3CPdKwgGWtUzBUbX67saZGRmFuJGGsM=
 		t.Errorf("unexpected keyId: got %x, want: %x", got, want)
 	}
 
-	checkpointASCII := types.FormatCheckpoint(cp.Origin, &cp.TreeHead)
+	checkpointASCII := types.FormatCheckpointBody(cp.Origin, &cp.TreeHead)
 	if got, want := checkpointASCII, dbCheckpointBody; got != want {
 		t.Errorf("formatting roundtrip failed: got:\n%q\nwant:\n%q", got, want)
 	}

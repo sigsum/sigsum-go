@@ -21,11 +21,11 @@ const (
 	testCosignTimestamp uint64 = 72623859790382856
 )
 
-func TestFormatCheckpoint(t *testing.T) {
+func TestFormatCheckpointBody(t *testing.T) {
 	desc := "valid"
 	pub := crypto.Ed25519PublicKey{}
 	th := validTreeHead(t)
-	if got, want := FormatCheckpoint(SigsumCheckpointOrigin(&pub), &th),
+	if got, want := FormatCheckpointBody(SigsumCheckpointOrigin(&pub), &th),
 		validTreeHeadCheckpoint(t); got != want {
 		t.Errorf("got tree head checkpoint\n\t%q\nbut wanted\n\t%q\nin test %q\n", got, want, desc)
 	}
