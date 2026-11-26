@@ -7,6 +7,7 @@ import (
 
 	"sigsum.org/sigsum-go/v2/pkg/checkpoint"
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
@@ -17,7 +18,7 @@ var testAddCheckpoint = AddCheckpoint{
 	}},
 	Checkpoint: checkpoint.Checkpoint{
 		SignedTreeHead: types.SignedTreeHead{
-			TreeHead: types.TreeHead{
+			TreeHead: merkle.TreeHead{
 				Size:     5,
 				RootHash: crypto.Hash{28, 14, 71}, // Base64 "HA5H...",
 			},

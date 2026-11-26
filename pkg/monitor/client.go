@@ -30,7 +30,7 @@ func newMonitoringLogClient(logKey *crypto.Ed25519PublicKey, URL string) *monito
 // state. TODO: Figure out cosignatures should be processed; it would
 // make some sense to return a CosignedTreeHead but where only
 // properly verified cosignatures are kept.
-func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *types.TreeHead) (types.SignedTreeHead, error) {
+func (c *monitoringLogClient) getTreeHead(ctx context.Context, treeHead *merkle.TreeHead) (types.SignedTreeHead, error) {
 	cth, err := c.client.GetTreeHead(ctx)
 	if err != nil {
 		return types.SignedTreeHead{}, newAlert(AlertLogError, "get-tree-head failed: %w", err)
@@ -75,7 +75,7 @@ type getLeavesState struct {
 
 // Retrieves at most count leaves, starting at index, and check that
 // they are included in the latest retrieved tree head.
-func (c *monitoringLogClient) getLeaves(ctx context.Context, state *getLeavesState, treeHead *types.TreeHead, req requests.Leaves) ([]types.Leaf, *getLeavesState, error) {
+func (c *monitoringLogClient) getLeaves(ctx context.Context, state *getLeavesState, treeHead *merkle.TreeHead, req requests.Leaves) ([]types.Leaf, *getLeavesState, error) {
 	leaves, err := c.client.GetLeaves(ctx, req)
 	if err != nil {
 		return nil, nil, err
@@ -128,7 +128,7 @@ func (c *monitoringLogClient) getLeaves(ctx context.Context, state *getLeavesSta
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := merkle.VerifyInclusionBatch(leafHashes, start, treeHead.Size, &treeHead.RootHash, proof.Path, endProof.Path); err != nil {
+	if err := merkle.VerifyInclusionBatch(leafHashes, start, treeHead, proof.Path, endProof.Path); err != nil {
 		return nil, nil, newAlert(AlertLogError, "inclusion proof not valid for range %d:%d: %w", start, end, err)
 	}
 

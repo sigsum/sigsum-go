@@ -76,8 +76,8 @@ func (pr *InclusionProof) FromASCII(r io.Reader) error {
 	return pr.Parse(ascii.NewParser(r))
 }
 
-func (pr *InclusionProof) Verify(leaf *crypto.Hash, th *TreeHead) error {
-	return merkle.VerifyInclusion(leaf, pr.LeafIndex, th.Size, &th.RootHash, pr.Path)
+func (pr *InclusionProof) Verify(leaf *crypto.Hash, th *merkle.TreeHead) error {
+	return merkle.VerifyInclusion(leaf, pr.LeafIndex, th, pr.Path)
 }
 
 func (pr *ConsistencyProof) ToASCII(w io.Writer) error {
@@ -130,7 +130,6 @@ func (pr *ConsistencyProof) ParseBase64(r *ascii.LineReader) (bool, error) {
 	}
 }
 
-func (pr *ConsistencyProof) Verify(oldTree, newTree *TreeHead) error {
-	return merkle.VerifyConsistency(
-		oldTree.Size, newTree.Size, &oldTree.RootHash, &newTree.RootHash, pr.Path)
+func (pr *ConsistencyProof) Verify(oldTree, newTree *merkle.TreeHead) error {
+	return merkle.VerifyConsistency(oldTree, newTree, pr.Path)
 }

@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/types"
 )
 
 func TestLogPolicy(t *testing.T) {
-	th := types.TreeHead{Size: 3}
+	th := merkle.TreeHead{Size: 3}
 	var cths []types.CosignedTreeHead
 	var logKeys []crypto.Ed25519PublicKey
 	var logHashes []crypto.Hash
@@ -17,7 +18,7 @@ func TestLogPolicy(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		sth, err := th.Sign(s)
+		sth, err := types.SignTreeHead(s, &th)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -55,13 +56,13 @@ type testData struct {
 }
 
 func newTestData(t *testing.T, count int) testData {
-	th := types.TreeHead{Size: 3}
+	th := merkle.TreeHead{Size: 3}
 	logPub, logSigner, err := crypto.NewEd25519KeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sth, err := th.Sign(logSigner)
+	sth, err := types.SignTreeHead(logSigner, &th)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +80,7 @@ func newTestData(t *testing.T, count int) testData {
 		if err != nil {
 			t.Fatal(err)
 		}
-		cosignature, err := th.Cosign(s, origin, 0)
+		cosignature, err := types.CosignTreeHead(s, origin, &th, 0)
 		if err != nil {
 			t.Fatal(err)
 		}

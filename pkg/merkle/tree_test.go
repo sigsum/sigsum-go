@@ -138,7 +138,8 @@ func TestInclusionValid(t *testing.T) {
 				t.Fatalf("ProveInclusion %d, %d failed: %v", i, n, err)
 			}
 			leaf := hashes[i]
-			if err := VerifyInclusion(&leaf, uint64(i), uint64(n), &rootHashes[n-1], proof); err != nil {
+			if err := VerifyInclusion(&leaf, uint64(i),
+				&TreeHead{Size: uint64(n), RootHash: rootHashes[n-1]}, proof); err != nil {
 				t.Errorf("inclusion proof not valid, i %d, n %d: %v\n  proof: %x\n",
 					i, n, err, proof)
 			}
@@ -149,7 +150,7 @@ func TestInclusionValid(t *testing.T) {
 			} else {
 				leaf[bitToFlip/8] ^= 1 << (bitToFlip % 8)
 			}
-			if err := VerifyInclusion(&leaf, uint64(i), uint64(n), &rootHashes[n-1], proof); err == nil {
+			if err := VerifyInclusion(&leaf, uint64(i), &TreeHead{Size: uint64(n), RootHash: rootHashes[n-1]}, proof); err == nil {
 				t.Errorf("inclusion proof should have failed, i %d, n %d: flipped bit %d of hash %d\n",
 					i, n, bitToFlip, hashToFlip)
 			}
@@ -186,7 +187,7 @@ func TestInclusionBatchValid(t *testing.T) {
 			leaves := make([]crypto.Hash, batchSize)
 			copy(leaves, hashes[i:])
 
-			if err := VerifyInclusionBatch(leaves, uint64(i), uint64(n), &rootHashes[n-1], sProof, eProof); err != nil {
+			if err := VerifyInclusionBatch(leaves, uint64(i), &TreeHead{Size: uint64(n), RootHash: rootHashes[n-1]}, sProof, eProof); err != nil {
 				t.Errorf("inclusion proof not valid, i %d, n %d, batch %d: %v\n  proofs: %x %x\n",
 					i, n, batchSize, err, sProof, eProof)
 			}
@@ -201,7 +202,7 @@ func TestInclusionBatchValid(t *testing.T) {
 				eProof[hashToFlip-len(leaves)-len(sProof)][bitToFlip/8] ^= 1 << (bitToFlip % 8)
 			}
 
-			if err := VerifyInclusionBatch(leaves, uint64(i), uint64(n), &rootHashes[n-1], sProof, eProof); err == nil {
+			if err := VerifyInclusionBatch(leaves, uint64(i), &TreeHead{Size: uint64(n), RootHash: rootHashes[n-1]}, sProof, eProof); err == nil {
 				t.Errorf("inclusion proof should have failed, i %d, n %d, batch: %d: flipped bit %d of hash %d\n",
 					i, n, batchSize, bitToFlip, hashToFlip)
 			}
@@ -320,10 +321,9 @@ func TestConsistencyValid(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ProveConsistency %d, %d failed: %v", m, n, err)
 			}
-			oldRoot := rootHashes[m]
-			newRoot := rootHashes[n]
-			if err := VerifyConsistency(
-				uint64(m), uint64(n), &oldRoot, &newRoot, proof); err != nil {
+			old := TreeHead{Size: uint64(m), RootHash: rootHashes[m]}
+			new := TreeHead{Size: uint64(n), RootHash: rootHashes[n]}
+			if err := VerifyConsistency(&old, &new, proof); err != nil {
 				t.Errorf("consistency proof not valid, m %d, n %d: %v\n  proof: %x\n",
 					m, n, err, proof)
 			}
@@ -331,18 +331,17 @@ func TestConsistencyValid(t *testing.T) {
 			hashToFlip := r.Intn(len(proof) + 2)
 			switch hashToFlip {
 			case 0:
-				oldRoot[bitToFlip/8] ^= 1 << (bitToFlip % 8)
+				old.RootHash[bitToFlip/8] ^= 1 << (bitToFlip % 8)
 			case 1:
 				if m == 0 {
 					// Any new root is consistent.
 					continue
 				}
-				newRoot[bitToFlip/8] ^= 1 << (bitToFlip % 8)
+				new.RootHash[bitToFlip/8] ^= 1 << (bitToFlip % 8)
 			default:
 				proof[hashToFlip-2][bitToFlip/8] ^= 1 << (bitToFlip % 8)
 			}
-			if err := VerifyConsistency(
-				uint64(m), uint64(n), &oldRoot, &newRoot, proof); err == nil {
+			if err := VerifyConsistency(&old, &new, proof); err == nil {
 				t.Errorf("consistency proof should have failed, m %d, n %d: flipped bit %d of hash %d\n",
 					m, n, bitToFlip, hashToFlip)
 			}

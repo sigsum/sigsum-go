@@ -12,6 +12,7 @@ import (
 	"sigsum.org/sigsum-go/v2/pkg/api"
 	"sigsum.org/sigsum-go/v2/pkg/checkpoint"
 	"sigsum.org/sigsum-go/v2/pkg/crypto"
+	"sigsum.org/sigsum-go/v2/pkg/merkle"
 	"sigsum.org/sigsum-go/v2/pkg/mocks/mockapi"
 	"sigsum.org/sigsum-go/v2/pkg/requests"
 	"sigsum.org/sigsum-go/v2/pkg/types"
@@ -33,7 +34,7 @@ func TestAddCheckpoint(t *testing.T) {
 		Checkpoint: checkpoint.Checkpoint{
 			Origin: "example.org/log",
 			SignedTreeHead: types.SignedTreeHead{
-				TreeHead: types.TreeHead{
+				TreeHead: merkle.TreeHead{
 					Size:     5,
 					RootHash: crypto.Hash{4, 5, 6}},
 				Signature: crypto.Ed25519Signature{7, 8, 9},
