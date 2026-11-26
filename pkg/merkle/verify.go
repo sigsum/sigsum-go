@@ -1,7 +1,6 @@
 package merkle
 
 import (
-	"bytes"
 	"fmt"
 	"math/bits"
 	"slices"
@@ -18,26 +17,26 @@ func pathLength(index, size uint64) int {
 
 // VerifyConsistency verifies that a Merkle tree is consistent.  The algorithm
 // used is in RFC 9162, §2.1.4.2.  It is the same proof technique as RFC 6962.
-func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, path []crypto.Hash) error {
+func VerifyConsistency(old, new *TreeHead, path []crypto.Hash) error {
 	// First handle the easy cases where an empty proof is valid.
-	if oldSize == newSize {
+	if old.Size == new.Size {
 		// Consistent if and only if roots are equal.
 		// Require empty path.
 		if len(path) > 0 {
 			return fmt.Errorf("non-empty consistency path for trees of equal size")
 		}
-		if *oldRoot != *newRoot {
+		if old.RootHash != new.RootHash {
 			return fmt.Errorf("consistency check failed: same size, but roots differ")
 		}
 		return nil
 	}
-	if oldSize == 0 {
+	if old.Size == 0 {
 		// Anything is consistent with the empty tree.
 		// Require empty path.
 		if len(path) > 0 {
 			return fmt.Errorf("non-empty consistency path for empty old tree")
 		}
-		if *oldRoot != HashEmptyTree() {
+		if old.RootHash != HashEmptyTree() {
 			return fmt.Errorf("unexpected root hash for the empty tree")
 		}
 		return nil
@@ -48,9 +47,9 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 	// that is a left child; that subtree is included as-is also
 	// in the new tree, and that is the starting point for the
 	// traversal.
-	trimBits := bits.TrailingZeros64(oldSize) // Ones of oldSize - 1
-	fn := (oldSize - 1) >> trimBits
-	sn := (newSize - 1) >> trimBits
+	trimBits := bits.TrailingZeros64(old.Size) // Ones of oldSize - 1
+	fn := (old.Size - 1) >> trimBits
+	sn := (new.Size - 1) >> trimBits
 
 	wantLength := pathLength(fn, sn+1)
 	if fn > 0 {
@@ -64,7 +63,7 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 	// starting point is the first element of the supplied path.
 	var fr crypto.Hash
 	if fn == 0 {
-		fr = *oldRoot
+		fr = old.RootHash
 	} else {
 		fr, path = path[0], path[1:]
 	}
@@ -86,10 +85,10 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 		panic("internal error: left over path elements")
 	}
 
-	if !bytes.Equal(fr[:], oldRoot[:]) {
+	if fr != old.RootHash {
 		return fmt.Errorf("invalid proof: old root mismatch")
 	}
-	if !bytes.Equal(sr[:], newRoot[:]) {
+	if sr != new.RootHash {
 		return fmt.Errorf("invalid proof: new root mismatch")
 	}
 	return nil
@@ -99,12 +98,12 @@ func VerifyConsistency(oldSize, newSize uint64, oldRoot, newRoot *crypto.Hash, p
 // algorithm used is equivalent to the one in in RFC 9162, §2.1.3.2.
 // Note that with index == 0, size == 1, the empty path is considered
 // a valid inclusion proof, and inclusion means that *leaf == *root.
-func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, path []crypto.Hash) error {
-	if index >= size {
+func VerifyInclusion(leaf *crypto.Hash, index uint64, th *TreeHead, path []crypto.Hash) error {
+	if index >= th.Size {
 		return fmt.Errorf("proof input is malformed: index out of range")
 	}
 
-	if got, want := len(path), pathLength(index, size); got != want {
+	if got, want := len(path), pathLength(index, th.Size); got != want {
 		return fmt.Errorf("proof input is malformed: path length %d, should be %d", got, want)
 	}
 
@@ -126,7 +125,7 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 	r := *leaf
 	fn := index
 
-	for sn := size - 1; sn > 0; fn, sn = fn>>1, sn>>1 {
+	for sn := th.Size - 1; sn > 0; fn, sn = fn>>1, sn>>1 {
 		if isOdd(fn) {
 			// Node on path is left sibling
 			r = HashInteriorNode(&path[0], &r)
@@ -141,7 +140,7 @@ func VerifyInclusion(leaf *crypto.Hash, index, size uint64, root *crypto.Hash, p
 		panic("internal error: left over path elements")
 	}
 
-	if r != *root {
+	if r != th.RootHash {
 		return fmt.Errorf("invalid proof: root mismatch")
 	}
 	return nil
@@ -194,12 +193,12 @@ func verifyInclusionLeft(leaves []crypto.Hash, path []crypto.Hash) (crypto.Hash,
 // included in a Merkle tree. The algorithm is an extension of the
 // inclusion proof in RFC 9162, §2.1.3.2, using inclusion proofs for
 // the first and last (inclusive) leaves in the sequence.
-func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Hash, startPath []crypto.Hash, endPath []crypto.Hash) error {
+func VerifyInclusionBatch(leaves []crypto.Hash, fn uint64, th *TreeHead, startPath []crypto.Hash, endPath []crypto.Hash) error {
 	if len(leaves) == 0 {
 		return fmt.Errorf("range must be non-empty")
 	}
 	en := fn + uint64(len(leaves)) - 1
-	if en >= size {
+	if en >= th.Size {
 		return fmt.Errorf("end of range exceeds tree size")
 	}
 
@@ -207,12 +206,12 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 		if !slices.Equal(startPath, endPath) {
 			return fmt.Errorf("proof invalid, inconsistent paths")
 		}
-		return VerifyInclusion(&leaves[0], fn, size, root, startPath)
+		return VerifyInclusion(&leaves[0], fn, th, startPath)
 	}
-	if len(startPath) != pathLength(fn, size) {
+	if len(startPath) != pathLength(fn, th.Size) {
 		return fmt.Errorf("proof invalid, wrong inclusion path length for first node")
 	}
-	if len(endPath) != pathLength(en, size) {
+	if len(endPath) != pathLength(en, th.Size) {
 		return fmt.Errorf("proof invalid, wrong inclusion path length for last node")
 	}
 	// Find the bit index of the most significant bit where fn and en differ.
@@ -232,7 +231,7 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 
 	// Process right path; left siblings for the first k levels
 	// should match the compact range.
-	sn := size - 1
+	sn := th.Size - 1
 	er := leaves[len(leaves)-1]
 
 	for i := 0; i < k; en, sn, i = en>>1, sn>>1, i+1 {
@@ -264,7 +263,7 @@ func VerifyInclusionBatch(leaves []crypto.Hash, fn, size uint64, root *crypto.Ha
 	}
 
 	fr = HashInteriorNode(&fr, &er)
-	return VerifyInclusion(&fr, fn>>(k+1), (sn>>1)+1, root, startPath[k+1:])
+	return VerifyInclusion(&fr, fn>>(k+1), &TreeHead{Size: (sn >> 1) + 1, RootHash: th.RootHash}, startPath[k+1:])
 }
 
 // Verifies inclusion of all the leaves, to a root hash
@@ -274,7 +273,7 @@ func VerifyInclusionTail(leaves []crypto.Hash, fn uint64, root *crypto.Hash, pat
 		return fmt.Errorf("range must be non-empty")
 	}
 	if len(leaves) == 1 {
-		return VerifyInclusion(&leaves[0], fn, fn+1, root, path)
+		return VerifyInclusion(&leaves[0], fn, &TreeHead{Size: fn + 1, RootHash: *root}, path)
 	}
 	sn := fn + uint64(len(leaves)) - 1
 	if got, want := len(path), pathLength(fn, sn+1); got != want {
@@ -297,7 +296,7 @@ func VerifyInclusionTail(leaves []crypto.Hash, fn uint64, root *crypto.Hash, pat
 		return fmt.Errorf("unexpected path, inconsistent with leaf range")
 	}
 	fr = HashInteriorNode(&fr, &er)
-	return VerifyInclusion(&fr, fn>>(k+1), (sn>>(k+1))+1, root, path[k+1:])
+	return VerifyInclusion(&fr, fn>>(k+1), &TreeHead{Size: (sn >> (k + 1)) + 1, RootHash: *root}, path[k+1:])
 }
 
 func isOdd(num uint64) bool {

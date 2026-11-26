@@ -128,7 +128,7 @@ func (c *monitoringLogClient) getLeaves(ctx context.Context, state *getLeavesSta
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := merkle.VerifyInclusionBatch(leafHashes, start, treeHead.Size, &treeHead.RootHash, proof.Path, endProof.Path); err != nil {
+	if err := merkle.VerifyInclusionBatch(leafHashes, start, treeHead, proof.Path, endProof.Path); err != nil {
 		return nil, nil, newAlert(AlertLogError, "inclusion proof not valid for range %d:%d: %w", start, end, err)
 	}
 
